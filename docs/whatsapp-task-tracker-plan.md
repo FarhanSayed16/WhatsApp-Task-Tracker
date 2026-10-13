@@ -1,5 +1,9 @@
 # WhatsApp Group Task Tracker — Final Plan (v2)
 
+> **Status:** ⚠️ **SUPERSEDED for building.** Keep for historical context and product intent.  
+> **Build from:** [`MASTER-EXECUTION-PLAN.md`](./MASTER-EXECUTION-PLAN.md) (v1.1) — schema, roadmap, and checklists there override this file on any conflict.  
+> Review fixes: [`plan-review-suggested-changes.md`](./plan-review-suggested-changes.md) · Product vision: [`whatsapp-task-tracker-master-blueprint.md`](./whatsapp-task-tracker-master-blueprint.md)
+
 > **Summary:** A free web app (PWA) where the professor creates task checklists per group, shares them to WhatsApp in 3 taps via `wa.me`, members tick tasks through a link (no login), and he tracks everything on one live dashboard. He logs in with a **6-digit PIN** and stays signed in on his phone for 30 days.
 
 ---

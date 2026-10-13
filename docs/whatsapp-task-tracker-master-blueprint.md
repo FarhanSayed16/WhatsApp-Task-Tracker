@@ -1,6 +1,7 @@
 # WhatsApp Task Tracker — Master Blueprint (v3)
 
-> **This document combines:** the [original plan (v2)](file:///d:/WhatsApp-Task-Tracker/docs/whatsapp-task-tracker-plan.md), the [review & suggested fixes](file:///C:/Users/farha/.gemini/antigravity-ide/brain/d48621c1-a7f7-498a-9648-8136a152b34f/plan-review-suggested-changes.md), and **5 premium features** that transform this from a personal tool into a sellable product.
+> **Status:** ✅ **Decisions locked** (14 Oct 2026). Product vision + full SQL schema live here; **day-to-day build checklist is** [`MASTER-EXECUTION-PLAN.md`](./MASTER-EXECUTION-PLAN.md) v1.1.  
+> **This document combines:** the [original plan (v2)](./whatsapp-task-tracker-plan.md), the [review & suggested fixes](./plan-review-suggested-changes.md), and **5 premium features** that transform this from a personal tool into a sellable product.
 
 ---
 
@@ -725,26 +726,32 @@ GET    /api/cron/keepalive                             (daily, cleans login_atte
 ## 10. Final Decision Checklist
 
 > [!IMPORTANT]
-> Review each item and decide **yes/no/later** before we start building.
+> Locked 14 Oct 2026 for execution. See also **Decisions Locked** in [`MASTER-EXECUTION-PLAN.md`](./MASTER-EXECUTION-PLAN.md).
 
-### Review Fixes (All recommended — mark any you want to skip)
-- [ ] Apply all 6 critical fixes to the plan
-- [ ] Apply all 10 gap fixes to the plan
-- [ ] Apply all 14 enhancement fixes to the plan
+### Review Fixes
+- [x] Apply all 6 critical fixes to the plan
+- [x] Apply all 10 gap fixes to the plan
+- [x] Apply all 14 enhancement fixes to the plan
 
-### Premium Features (Pick which to include)
-- [ ] **Feature A — Multi-Tenant SaaS** ⭐ (build DB for it from Day 1?)
-- [ ] **Feature B — WhatsApp Business API** (Phase 3 or 4?)
-- [ ] **Feature C — Analytics & PDF Reports** (Phase 2 basic, Phase 3 full?)
-- [ ] **Feature D — AI Smart Task Engine** (Phase 3?)
-- [ ] **Feature E — Gamification & Scores** (Phase 4?)
+### Premium Features
+- [x] **Feature A — Multi-Tenant SaaS** — `org_id` from Day 1; signup/billing in Execution Phase 14
+- [x] **Feature B — WhatsApp Business API** — Execution Phase 16
+- [x] **Feature C — Analytics & PDF Reports** — Execution Phase 13
+- [x] **Feature D — AI Smart Task Engine** — Execution Phase 15
+- [x] **Feature E — Gamification & Scores** — Execution Phase 17
 
 ### Architecture Decisions
-- [ ] Keep Vercel Hobby for now, upgrade to Pro when selling?
-- [ ] Keep Supabase free tier for dev, upgrade when multi-tenant?
-- [ ] Use Razorpay or Stripe for billing?
-- [ ] Custom domain from the start or later?
+- [x] Keep Vercel Hobby for now, upgrade to Pro when selling
+- [x] Keep Supabase free tier for MVP, upgrade when multi-tenant scale needs it
+- [x] Use **Razorpay** for billing
+- [x] Custom domain later (Enterprise / after multi-tenant)
+
+### Explicitly deferred (documented in Master Execution Plan)
+- Calendar/timeline view — only if professor asks
+- Personal member links (Mode B) — after MVP
+- Photo proof upload UI — schema keeps `proof_path`; UI after MVP
+- Passkeys / web push / full i18n — post Phase 18 backlog
 
 ---
 
-> **Next step:** Review this document, mark your decisions on the checklist above, and tell me which features are in and which are out. I'll then update the [original plan](file:///d:/WhatsApp-Task-Tracker/docs/whatsapp-task-tracker-plan.md) with all the fixes and your chosen features, and we start building.
+> **Next step:** Start building from [`MASTER-EXECUTION-PLAN.md`](./MASTER-EXECUTION-PLAN.md) Phase 1. Tick checkboxes there as you go. MVP ship gate is after Phase 11.

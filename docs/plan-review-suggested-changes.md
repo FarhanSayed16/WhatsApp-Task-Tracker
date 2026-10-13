@@ -1,6 +1,7 @@
 # WhatsApp Task Tracker — Plan Review & Suggested Changes
 
-> Review of [whatsapp-task-tracker-plan.md](file:///d:/WhatsApp-Task-Tracker/docs/whatsapp-task-tracker-plan.md)
+> **Status:** ✅ **INCORPORATED.** All 30 items are reflected in [`MASTER-EXECUTION-PLAN.md`](./MASTER-EXECUTION-PLAN.md) v1.1 and the blueprint schema. Do not treat this as an open punch list — use it only to understand *why* a design choice exists.  
+> Reviewed file: [`whatsapp-task-tracker-plan.md`](./whatsapp-task-tracker-plan.md)
 
 ---
 
