@@ -23,6 +23,7 @@ import {
   Layers,
   Users,
   FileSpreadsheet,
+  Mail,
 } from "lucide-react";
 
 export default function AdminSettingsPage() {
@@ -51,6 +52,13 @@ export default function AdminSettingsPage() {
   const [timezone, setTimezone] = useState("Asia/Kolkata");
   const [profileSaving, setProfileSaving] = useState(false);
 
+  // Email Digest State
+  const [digestFreq, setDigestFreq] = useState<"off" | "daily" | "weekly" | "monthly">("off");
+  const [digestRecipients, setDigestRecipients] = useState("");
+  const [digestDay, setDigestDay] = useState(1);
+  const [digestSaving, setDigestSaving] = useState(false);
+  const [isTestingDigest, setIsTestingDigest] = useState(false);
+
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -59,6 +67,11 @@ export default function AdminSettingsPage() {
     if (profileData) {
       setName(profileData.name || "");
       setTimezone(profileData.timezone || "Asia/Kolkata");
+      if (profileData.report_digest) {
+        setDigestFreq(profileData.report_digest.frequency || "off");
+        setDigestRecipients((profileData.report_digest.recipients || []).join(", "));
+        setDigestDay(profileData.report_digest.day_of_week ?? 1);
+      }
     }
   }, [profileData]);
 
@@ -156,6 +169,73 @@ export default function AdminSettingsPage() {
       toast.error(err.message || "Failed to save preferences");
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  const handleDigestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setDigestSaving(true);
+      const emails = digestRecipients
+        .split(",")
+        .map((e) => e.trim())
+        .filter(Boolean);
+
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          report_digest: {
+            frequency: digestFreq,
+            recipients: emails,
+            day_of_week: Number(digestDay),
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        throw new Error(data?.error?.message || "Failed to save digest settings");
+      }
+
+      toast.success("Email digest preferences saved successfully");
+      mutateProfile();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save digest preferences");
+    } finally {
+      setDigestSaving(false);
+    }
+  };
+
+  const handleTestDigestClick = async () => {
+    try {
+      setIsTestingDigest(true);
+      const emails = digestRecipients
+        .split(",")
+        .map((e) => e.trim())
+        .filter(Boolean);
+
+      if (emails.length === 0) {
+        toast.error("Please add at least one recipient email address");
+        return;
+      }
+
+      const res = await fetch("/api/admin/reports/digest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipients: emails }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        throw new Error(data?.error?.message || "Failed to send test digest");
+      }
+
+      toast.success(`Test digest sent to ${emails.join(", ")}`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send test digest");
+    } finally {
+      setIsTestingDigest(false);
     }
   };
 
@@ -357,6 +437,103 @@ export default function AdminSettingsPage() {
               </Button>
             </form>
           )}
+        </section>
+
+        {/* Automated Email Digests Section (Phase 13.5) */}
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm space-y-5">
+          <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <Mail className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                Automated Email Digest
+              </h2>
+              <p className="text-xs text-slate-500">
+                Receive periodic email summaries of completion rates, top performers, and overdue tasks.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleDigestSubmit} className="space-y-4 max-w-lg">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                Digest Frequency
+              </label>
+              <select
+                value={digestFreq}
+                onChange={(e) => setDigestFreq(e.target.value as any)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="off">Off (Disabled)</option>
+                <option value="daily">Daily (Every morning at 8:30 AM IST)</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly (1st of each month)</option>
+              </select>
+            </div>
+
+            {digestFreq === "weekly" && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Send on Day
+                </label>
+                <select
+                  value={digestDay}
+                  onChange={(e) => setDigestDay(Number(e.target.value))}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value={1}>Monday</option>
+                  <option value={2}>Tuesday</option>
+                  <option value={3}>Wednesday</option>
+                  <option value={4}>Thursday</option>
+                  <option value={5}>Friday</option>
+                  <option value={6}>Saturday</option>
+                  <option value={0}>Sunday</option>
+                </select>
+              </div>
+            )}
+
+            {digestFreq !== "off" && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Recipient Email(s)
+                </label>
+                <input
+                  type="text"
+                  placeholder="professor@university.edu, admin@college.edu"
+                  value={digestRecipients}
+                  onChange={(e) => setDigestRecipients(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Separate multiple recipients with commas. Requires RESEND_API_KEY environment variable.
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={digestSaving}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {digestSaving ? "Saving..." : "Save Digest Schedule"}
+              </Button>
+
+              {digestFreq !== "off" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTestDigestClick}
+                  disabled={isTestingDigest}
+                >
+                  <Mail className="w-4 h-4 mr-2 text-purple-600" />
+                  {isTestingDigest ? "Sending Test..." : "Send Test Digest Now"}
+                </Button>
+              )}
+            </div>
+          </form>
         </section>
 
         {/* PWA & Mobile Installation Section */}

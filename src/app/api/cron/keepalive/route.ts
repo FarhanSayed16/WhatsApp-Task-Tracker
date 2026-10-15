@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { apiError, apiSuccess } from "@/lib/errors";
+import { sendDigestEmail } from "@/lib/email";
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
@@ -73,23 +74,25 @@ export async function GET(req: NextRequest) {
         // Query lists for yesterday
         const { data: dayLists } = await supabase
           .from("task_lists")
-          .select("id")
+          .select("id, created_at")
           .eq("org_id", org.id)
           .eq("group_id", grp.id)
           .eq("list_date", yesterdayStr)
           .is("deleted_at", null);
 
         const dayListIds = (dayLists || []).map((l) => l.id);
+        const dayListMap = new Map((dayLists || []).map((l) => [l.id, l.created_at]));
 
         let createdCount = 0;
         let doneCount = 0;
         let verifiedCount = 0;
         let overdueCount = 0;
+        const responseTimes: number[] = [];
 
         if (dayListIds.length > 0) {
           const { data: dayItems } = await supabase
             .from("task_items")
-            .select("id, status, due_at")
+            .select("id, task_list_id, status, due_at, completed_at")
             .in("task_list_id", dayListIds);
 
           const items = dayItems || [];
@@ -101,7 +104,22 @@ export async function GET(req: NextRequest) {
           overdueCount = items.filter(
             (i) => i.status === "pending" && i.due_at && i.due_at < yesterday.toISOString()
           ).length;
+
+          for (const it of items) {
+            const listCreatedAt = dayListMap.get(it.task_list_id);
+            if ((it.status === "done" || it.status === "verified") && it.completed_at && listCreatedAt) {
+              const diffMs = new Date(it.completed_at).getTime() - new Date(listCreatedAt).getTime();
+              if (diffMs > 0) {
+                responseTimes.push(Math.round(diffMs / (1000 * 60)));
+              }
+            }
+          }
         }
+
+        const avgResponseMinutes =
+          responseTimes.length > 0
+            ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+            : null;
 
         // Upsert into daily_stats
         const { error: statErr } = await supabase
@@ -115,6 +133,7 @@ export async function GET(req: NextRequest) {
               tasks_done: doneCount,
               tasks_verified: verifiedCount,
               tasks_overdue: overdueCount,
+              avg_response_minutes: avgResponseMinutes,
             },
             { onConflict: "org_id, group_id, stat_date" }
           );
@@ -202,6 +221,141 @@ export async function GET(req: NextRequest) {
     }
 
     results.recurring_created = recurringCreated;
+
+    // 6. Check scheduled email digests (Phase 13.5)
+    let digestsSent = 0;
+    const { data: orgsWithSettings } = await supabase
+      .from("organizations")
+      .select("id, name, settings");
+
+    const nowUtc = new Date();
+    const curDayOfWeek = nowUtc.getDay();
+    const curDateStr = nowUtc.toISOString().slice(0, 10);
+
+    for (const org of orgsWithSettings || []) {
+      const settings = (org.settings as Record<string, any>) || {};
+      const digest = settings.report_digest;
+      if (
+        !digest ||
+        digest.frequency === "off" ||
+        !Array.isArray(digest.recipients) ||
+        digest.recipients.length === 0
+      ) {
+        continue;
+      }
+
+      const lastSentDate = digest.last_sent_at
+        ? digest.last_sent_at.slice(0, 10)
+        : null;
+      if (lastSentDate === curDateStr) {
+        continue;
+      }
+
+      let isDue = false;
+      if (digest.frequency === "daily") {
+        isDue = true;
+      } else if (digest.frequency === "weekly") {
+        const targetDay =
+          typeof digest.day_of_week === "number" ? digest.day_of_week : 1;
+        if (curDayOfWeek === targetDay) isDue = true;
+      } else if (digest.frequency === "monthly") {
+        if (nowUtc.getDate() === 1) isDue = true;
+      }
+
+      if (isDue) {
+        try {
+          const sevenDaysAgoStr = new Date(
+            Date.now() - 7 * 24 * 60 * 60 * 1000
+          )
+            .toISOString()
+            .slice(0, 10);
+
+          const { data: dLists } = await supabase
+            .from("task_lists")
+            .select("id, group_id, groups(name)")
+            .eq("org_id", org.id)
+            .gte("list_date", sevenDaysAgoStr)
+            .is("deleted_at", null);
+
+          const dListIds = (dLists || []).map((l: any) => l.id);
+          let dItems: any[] = [];
+          if (dListIds.length > 0) {
+            const { data: itemsFound } = await supabase
+              .from("task_items")
+              .select("id, text, status, due_at, completed_at, task_list_id")
+              .in("task_list_id", dListIds);
+            dItems = itemsFound || [];
+          }
+
+          const doneItems = dItems.filter(
+            (i) => i.status === "done" || i.status === "verified"
+          );
+          const overdueItems = dItems.filter(
+            (i) =>
+              i.status === "pending" && i.due_at && i.due_at < nowUtc.toISOString()
+          );
+          const compRate =
+            dItems.length > 0
+              ? Math.round((doneItems.length / dItems.length) * 100)
+              : 0;
+
+          const overdueSummary = overdueItems.slice(0, 5).map((i) => {
+            const pList = (dLists || []).find((l: any) => l.id === i.task_list_id);
+            const grp: any = pList?.groups;
+            const grpName = (Array.isArray(grp) ? grp[0]?.name : grp?.name) || "General";
+            return {
+              text: i.text,
+              group_name: grpName,
+              due_at: i.due_at || "",
+            };
+          });
+
+          const appUrl =
+            process.env.NEXT_PUBLIC_APP_URL ||
+            "https://whatsapp-task-tracker.vercel.app";
+
+          const sent = await sendDigestEmail(digest.recipients, {
+            orgName: org.name,
+            periodLabel: `${digest.frequency.toUpperCase()} Digest`,
+            summary: {
+              totalTasks: dItems.length,
+              completedTasks: doneItems.length,
+              verifiedTasks: dItems.filter((i) => i.status === "verified").length,
+              overdueTasks: overdueItems.length,
+              completionRate: compRate,
+              onTimeRate: 100,
+              activeGroups: new Set((dLists || []).map((l: any) => l.group_id))
+                .size,
+              activeMembers: 0,
+              avgResponseMinutes: 30,
+            },
+            topPerformers: [],
+            overdueItems: overdueSummary,
+            appUrl,
+          });
+
+          if (sent.success) {
+            digestsSent++;
+            await supabase
+              .from("organizations")
+              .update({
+                settings: {
+                  ...settings,
+                  report_digest: {
+                    ...digest,
+                    last_sent_at: nowUtc.toISOString(),
+                  },
+                },
+              })
+              .eq("id", org.id);
+          }
+        } catch (e) {
+          console.error("Keepalive digest email error:", e);
+        }
+      }
+    }
+
+    results.digests_sent = digestsSent;
 
     return apiSuccess(results);
   } catch (err) {

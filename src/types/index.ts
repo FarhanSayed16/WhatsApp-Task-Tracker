@@ -412,3 +412,86 @@ export interface DateRangeFilter {
   group_id?: string;
   status?: TaskListStatus;
 }
+
+// ═════════════════════════════════════════════════════════════
+// Phase 13: Reports & Analytics DTOs
+// ═════════════════════════════════════════════════════════════
+
+export interface ReportSummary {
+  totalTasks: number;
+  completedTasks: number;
+  verifiedTasks: number;
+  overdueTasks: number;
+  completionRate: number;
+  onTimeRate: number;
+  activeGroups: number;
+  activeMembers: number;
+  avgResponseMinutes: number;
+}
+
+export interface ReportCompletionTrend {
+  date: string;
+  label: string;
+  created: number;
+  done: number;
+  verified: number;
+  overdue: number;
+  completionRate: number;
+}
+
+export interface ReportGroupStat {
+  group_id: string;
+  group_name: string;
+  total_tasks: number;
+  completed_tasks: number;
+  verified_tasks: number;
+  overdue_tasks: number;
+  completion_rate: number;
+  avg_response_mins: number;
+  member_count: number;
+}
+
+export interface ReportMemberStat {
+  member_id: string;
+  name: string;
+  phone?: string | null;
+  group_id: string;
+  group_name: string;
+  assigned_count: number;
+  completed_count: number;
+  verified_count: number;
+  on_time_count: number;
+  on_time_rate: number;
+  avg_response_mins: number;
+  score: number;
+}
+
+export interface ReportOnTimeBreakdown {
+  onTime: number;
+  late: number;
+  pending: number;
+  overdue: number;
+}
+
+export interface ReportHeatmapDay {
+  date: string;
+  count: number;
+  intensity: number; // 0 (none) to 4 (high)
+}
+
+export interface ReportsData {
+  summary: ReportSummary;
+  completionTrends: ReportCompletionTrend[];
+  groupStats: ReportGroupStat[];
+  memberStats: ReportMemberStat[];
+  onTimeBreakdown: ReportOnTimeBreakdown;
+  heatmap: ReportHeatmapDay[];
+}
+
+export interface ReportDigestConfig {
+  frequency: "off" | "daily" | "weekly" | "monthly";
+  recipients: string[];
+  day_of_week?: number; // 1 = Monday
+  last_sent_at?: string | null;
+}
+

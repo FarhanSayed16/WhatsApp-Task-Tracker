@@ -40,6 +40,14 @@ export async function GET(_req: NextRequest) {
       ? dbAdmin.organization[0]
       : dbAdmin.organization;
 
+    const { data: orgData } = await supabase
+      .from("organizations")
+      .select("settings")
+      .eq("id", admin.orgId)
+      .single();
+
+    const orgSettings = (orgData?.settings as Record<string, any>) || {};
+
     return apiSuccess({
       id: dbAdmin.id,
       name: dbAdmin.name,
@@ -48,6 +56,11 @@ export async function GET(_req: NextRequest) {
       timezone: dbAdmin.timezone || "Asia/Kolkata",
       org_name: orgObj?.name || "WhatsApp Task Tracker",
       created_at: dbAdmin.created_at,
+      report_digest: orgSettings.report_digest || {
+        frequency: "off",
+        recipients: [],
+        day_of_week: 1,
+      },
       stats: {
         total_groups: groupCount || 0,
         total_lists: listCount || 0,
@@ -65,7 +78,7 @@ export async function PATCH(req: NextRequest) {
     if (!admin) return apiError("Unauthorized", "UNAUTHORIZED", 401);
 
     const body = await req.json();
-    const { name, timezone } = body;
+    const { name, timezone, report_digest } = body;
 
     const updates: Record<string, any> = {
       updated_at: new Date().toISOString(),
@@ -88,6 +101,29 @@ export async function PATCH(req: NextRequest) {
 
     if (updateErr || !updatedAdmin) {
       return apiError("Failed to update profile", "DB_ERROR", 500);
+    }
+
+    // If report_digest preferences provided, update organization settings
+    if (report_digest && typeof report_digest === "object") {
+      const { data: currentOrg } = await supabase
+        .from("organizations")
+        .select("settings")
+        .eq("id", admin.orgId)
+        .single();
+
+      const existingSettings = (currentOrg?.settings as Record<string, any>) || {};
+      await supabase
+        .from("organizations")
+        .update({
+          settings: {
+            ...existingSettings,
+            report_digest: {
+              ...(existingSettings.report_digest || {}),
+              ...report_digest,
+            },
+          },
+        })
+        .eq("id", admin.orgId);
     }
 
     // Refresh JWT session cookie with updated name/timezone

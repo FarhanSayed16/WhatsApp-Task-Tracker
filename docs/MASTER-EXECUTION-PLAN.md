@@ -1421,24 +1421,24 @@ vercel.json                             # Cron config
 
 ## 13.1 — Daily Stats Pre-computation
 
-- [ ] In keep-alive cron: compute and upsert daily stats per group per day:
+- [x] In keep-alive cron: compute and upsert daily stats per group per day:
   - `tasks_created`: count of task_items for that group + date
   - `tasks_done`: count with status = done or verified
   - `tasks_verified`: count with status = verified
   - `tasks_overdue`: count overdue items
   - `avg_response_minutes`: average time between `shared_at` and first completion
-- [ ] Also: manual recompute endpoint for backfilling historical data
+- [x] Also: manual recompute endpoint for backfilling historical data
 
 ---
 
 ## 13.2 — Reports API
 
-- [ ] `GET /api/admin/reports` — Analytics data:
+- [x] `GET /api/admin/reports` — Analytics data:
   - Query params: `type` (completion | member | group), `from`, `to`, `group_id`
   - `type=completion`: daily completion counts and rates over time
   - `type=member`: per-member stats (completion rate, avg response time, on-time %)
   - `type=group`: per-group comparison stats
-- [ ] `GET /api/admin/reports/pdf` — Generate branded PDF:
+- [x] `GET /api/admin/reports/pdf` — Generate branded PDF:
   - Date range filter
   - Includes: KPI summary, group charts, member table, trends
   - Returns: PDF file download
@@ -1447,56 +1447,56 @@ vercel.json                             # Cron config
 
 ## 13.3 — Reports Page (`src/app/admin/reports/page.tsx`)
 
-- [ ] Install Recharts: `npm install recharts`
-- [ ] **Filters bar:** date range, group selector, report type tabs
-- [ ] **Completion Trends chart (line chart):**
+- [x] Install Recharts: `npm install recharts`
+- [x] **Filters bar:** date range, group selector, report type tabs
+- [x] **Completion Trends chart (line chart):**
   - X-axis: dates, Y-axis: count/percentage
   - Lines: created, done, verified, overdue
   - Toggle between count and percentage view
-- [ ] **Group Comparison chart (bar chart):**
+- [x] **Group Comparison chart (bar chart):**
   - Bars for each group showing completion rate
   - Color coded: green (>80%), yellow (50-80%), red (<50%)
-- [ ] **On-time vs Late chart (pie/donut chart):**
+- [x] **On-time vs Late chart (pie/donut chart):**
   - Segments: on-time, late, never completed
-- [ ] **Member Performance table:**
+- [x] **Member Performance table:**
   - Columns: Name, Tasks Assigned, Completed, On-time %, Avg Response Time, Score
   - Sortable columns
   - Highlight top/bottom performers
-- [ ] **Activity Heatmap (calendar view):**
+- [x] **Activity Heatmap (calendar view):**
   - Color intensity by activity level per day
   - Hover to see details
-- [ ] **Export buttons:**
+- [x] **Export buttons:**
   - "Download CSV" → existing CSV export
   - "Download PDF Report" → branded PDF
-- [ ] **Responsive:** charts resize for mobile
+- [x] **Responsive:** charts resize for mobile
 
 ---
 
 ## 13.4 — PDF Report Generation
 
-- [ ] Install: `npm install @react-pdf/renderer`
-- [ ] Create PDF template with:
+- [x] Install: `npm install @react-pdf/renderer`
+- [x] Create PDF template with:
   - Header: org name/logo, report title, date range
   - KPI summary section
   - Group completion table
   - Member performance table
   - Footer: generated date, page numbers
-- [ ] Generate server-side and stream as download
+- [x] Generate server-side and stream as download
 
 ---
 
 ## 13.5 — Email Digests
 
-- [ ] Install: `npm install resend`
-- [ ] Store digest config in `organizations.settings` JSONB first (avoid extra table unless needed):
+- [x] Install: `npm install resend`
+- [x] Store digest config in `organizations.settings` JSONB first (avoid extra table unless needed):
   ```json
   { "report_digest": { "frequency": "weekly", "recipients": ["a@b.com"], "last_sent_at": null } }
   ```
   - Frequency: `daily` / `weekly` / `monthly` / `off`
-- [ ] Digest content: KPI summary, overdue alerts, top/bottom performers
-- [ ] Send via Resend API (triggered from keepalive cron when due — still once/day max on Hobby)
-- [ ] Configure in settings page
-- [ ] Add `RESEND_API_KEY` to Vercel env
+- [x] Digest content: KPI summary, overdue alerts, top/bottom performers
+- [x] Send via Resend API (triggered from keepalive cron when due — still once/day max on Hobby)
+- [x] Configure in settings page
+- [x] Add `RESEND_API_KEY` to Vercel env
 
 **Acceptance Criteria:**
 > ✅ Analytics page shows charts for completion trends, group comparison, member performance. PDF report downloads correctly with branding. Email digests send on schedule.
