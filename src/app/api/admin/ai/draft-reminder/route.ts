@@ -29,10 +29,10 @@ export async function POST(req: NextRequest) {
       return apiError("Task list not found", "NOT_FOUND", 404);
     }
 
-    // Fetch task items
+    // Fetch task items (with assignees for pending context)
     const { data: items, error: itemsErr } = await supabase
       .from("task_items")
-      .select("text, status, due_at")
+      .select("text, status, due_at, assigned_member_id")
       .eq("task_list_id", task_list_id);
 
     if (itemsErr) throw itemsErr;
@@ -43,12 +43,32 @@ export async function POST(req: NextRequest) {
       (i) => i.status === "done" || i.status === "verified"
     ).length;
 
-    const pendingItems = allItems
-      .filter((i) => i.status === "pending")
-      .map((i) => i.text);
+    const pendingRows = allItems.filter((i) => i.status === "pending");
+    const assigneeIds = [
+      ...new Set(
+        pendingRows
+          .map((i) => i.assigned_member_id)
+          .filter(Boolean) as string[]
+      ),
+    ];
+    const nameById: Record<string, string> = {};
+    if (assigneeIds.length > 0) {
+      const { data: members } = await supabase
+        .from("members")
+        .select("id, name")
+        .in("id", assigneeIds);
+      for (const m of members || []) nameById[m.id] = m.name;
+    }
 
-    const overdueCount = allItems.filter(
-      (i) => i.status === "pending" && i.due_at && i.due_at < nowIso
+    const pendingItems = pendingRows.map((i) => {
+      const who = i.assigned_member_id
+        ? nameById[i.assigned_member_id]
+        : null;
+      return who ? `${i.text} (@${who})` : i.text;
+    });
+
+    const overdueCount = pendingRows.filter(
+      (i) => i.due_at && i.due_at < nowIso
     ).length;
 
     const grp: any = list.groups;

@@ -46,10 +46,12 @@ export default function AdminSettingsPage() {
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [pinLoading, setPinLoading] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   // Profile Form State
   const [name, setName] = useState("");
   const [timezone, setTimezone] = useState("Asia/Kolkata");
+  const [defaultWaPhone, setDefaultWaPhone] = useState("919324826414");
   const [profileSaving, setProfileSaving] = useState(false);
 
   // Email Digest State
@@ -67,6 +69,7 @@ export default function AdminSettingsPage() {
     if (profileData) {
       setName(profileData.name || "");
       setTimezone(profileData.timezone || "Asia/Kolkata");
+      setDefaultWaPhone(profileData.default_wa_phone || "919324826414");
       if (profileData.report_digest) {
         setDigestFreq(profileData.report_digest.frequency || "off");
         setDigestRecipients((profileData.report_digest.recipients || []).join(", "));
@@ -155,7 +158,11 @@ export default function AdminSettingsPage() {
       const res = await fetch("/api/admin/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, timezone }),
+        body: JSON.stringify({
+          name,
+          timezone,
+          default_wa_phone: defaultWaPhone,
+        }),
       });
 
       const data = await res.json();
@@ -243,6 +250,32 @@ export default function AdminSettingsPage() {
     total_groups: 0,
     total_lists: 0,
     total_members: 0,
+  };
+
+  const handleExportBackup = async () => {
+    try {
+      setExportingCsv(true);
+      const res = await fetch("/api/admin/export");
+      const contentType = res.headers.get("content-type") || "";
+      if (!res.ok || contentType.includes("application/json")) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error?.message || "Export failed — check you are logged in");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tasks-backup-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("CSV backup downloaded");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to export backup");
+    } finally {
+      setExportingCsv(false);
+    }
   };
 
   return (
@@ -419,6 +452,23 @@ export default function AdminSettingsPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Default WhatsApp number (testing)
+                </label>
+                <Input
+                  type="tel"
+                  value={defaultWaPhone}
+                  onChange={(e) => setDefaultWaPhone(e.target.value.replace(/[^\d]/g, ""))}
+                  placeholder="919324826414"
+                />
+                <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                  Country code + number (no +). Used when you tap <strong>Open WhatsApp</strong> on a
+                  share sheet — opens a chat with the checklist message and member link. This is{" "}
+                  <em>wa.me</em> deep-link sharing, not WhatsApp Business API login.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                   Language Preference
                 </label>
                 <p className="text-xs text-slate-500 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
@@ -536,6 +586,29 @@ export default function AdminSettingsPage() {
           </form>
         </section>
 
+        {/* Default WhatsApp message format preview */}
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Default WhatsApp Message Format
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Preview of the share message students receive (editable per-list in Share sheet).
+            </p>
+          </div>
+          <pre className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-[11px] font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+{`📋 *Lab Checklist — Week 3*
+👥 Group A  |  📅 2026-10-15
+
+1️⃣ Calibrate photodiode sensor
+2️⃣ Run 10 baseline samples
+3️⃣ Record temperature readings
+
+⏰ *Due:* 2026-10-15T17:00:00Z
+👉 *Tick done here:* https://your-app/t/abc123xyz`}
+          </pre>
+        </section>
+
         {/* PWA & Mobile Installation Section */}
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm space-y-5">
           <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -635,14 +708,15 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className="pt-2 flex flex-wrap items-center gap-3">
-            <a
-              href="/api/admin/export"
-              download
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm shadow-sm transition-all"
+            <button
+              type="button"
+              onClick={handleExportBackup}
+              disabled={exportingCsv}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-medium text-sm shadow-sm transition-all"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              Export Full CSV Backup
-            </a>
+              {exportingCsv ? "Preparing backup…" : "Export Full CSV Backup"}
+            </button>
 
             <span className="text-xs text-slate-500">
               Includes full audit log, timestamps, notes, and verify statuses.

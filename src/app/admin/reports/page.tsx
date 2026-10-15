@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/hooks/useSession";
-import { cn } from "@/lib/utils";
+import { cn, getDateRange, calendarDateInTimeZone } from "@/lib/utils";
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import type {
   ReportsData,
   ReportSummary,
@@ -88,35 +89,32 @@ export default function ReportsPage() {
   const [isDigestModalOpen, setIsDigestModalOpen] = useState(false);
   const [digestEmailInput, setDigestEmailInput] = useState("");
   const [isSendingDigest, setIsSendingDigest] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
 
-  // Calculate dates based on preset
+  const adminTz = session?.timezone || DEFAULT_TIMEZONE;
+
+  // Calculate dates based on preset (admin timezone, not UTC)
   const { fromDate, toDate } = useMemo(() => {
-    const now = new Date();
-    const to = now.toISOString().slice(0, 10);
-
-    if (datePreset === "today") {
-      return { fromDate: to, toDate: to };
+    const today = calendarDateInTimeZone(new Date(), adminTz);
+    if (datePreset === "custom") {
+      return {
+        fromDate: customFrom || today,
+        toDate: customTo || today,
+      };
     }
-    if (datePreset === "week") {
-      const d = new Date();
-      d.setDate(d.getDate() - 6);
-      return { fromDate: d.toISOString().slice(0, 10), toDate: to };
+    if (datePreset === "week" || datePreset === "month" || datePreset === "today") {
+      const range = getDateRange(datePreset, customFrom, customTo, adminTz);
+      return { fromDate: range.from, toDate: range.to };
     }
-    if (datePreset === "month") {
-      const d = new Date();
-      d.setDate(d.getDate() - 29);
-      return { fromDate: d.toISOString().slice(0, 10), toDate: to };
-    }
-    if (datePreset === "quarter") {
-      const d = new Date();
-      d.setDate(d.getDate() - 89);
-      return { fromDate: d.toISOString().slice(0, 10), toDate: to };
-    }
+    // Last 90 days (quarter preset)
+    const [y, m, d] = today.split("-").map(Number);
+    const noon = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+    noon.setUTCDate(noon.getUTCDate() - 89);
     return {
-      fromDate: customFrom || to,
-      toDate: customTo || to,
+      fromDate: calendarDateInTimeZone(noon, adminTz),
+      toDate: today,
     };
-  }, [datePreset, customFrom, customTo]);
+  }, [datePreset, customFrom, customTo, adminTz]);
 
   // SWR query params
   const apiUrl = useMemo(() => {
@@ -200,9 +198,33 @@ export default function ReportsPage() {
   };
 
   // Export URLs
-  const csvExportUrl = `/api/admin/export?from=${fromDate}&to=${toDate}${
-    selectedGroup !== "all" ? `&group_id=${selectedGroup}` : ""
-  }`;
+  const handleExportCsv = async () => {
+    try {
+      setExportingCsv(true);
+      const qs = new URLSearchParams({ from: fromDate, to: toDate });
+      if (selectedGroup !== "all") qs.set("group_id", selectedGroup);
+      const res = await fetch(`/api/admin/export?${qs.toString()}`);
+      const contentType = res.headers.get("content-type") || "";
+      if (!res.ok || contentType.includes("application/json")) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error?.message || "Export failed — check you are logged in");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tasks-export-${fromDate}_${toDate}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("CSV export downloaded");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to export CSV");
+    } finally {
+      setExportingCsv(false);
+    }
+  };
   const pdfExportUrl = `/api/admin/reports/pdf?from=${fromDate}&to=${toDate}${
     selectedGroup !== "all" ? `&group_id=${selectedGroup}` : ""
   }`;
@@ -291,14 +313,15 @@ export default function ReportsPage() {
               <span>Email Digest</span>
             </button>
 
-            <a
-              href={csvExportUrl}
-              download
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-all shadow-sm"
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={exportingCsv}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-all shadow-sm disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Export CSV</span>
-            </a>
+              <span>{exportingCsv ? "Exporting…" : "Export CSV"}</span>
+            </button>
 
             <a
               href={pdfExportUrl}

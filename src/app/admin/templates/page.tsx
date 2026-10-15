@@ -28,7 +28,9 @@ import {
   Sparkles,
   ListPlus,
   Send,
+  Repeat,
 } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 
 export default function TemplatesPage() {
   const router = useRouter();
@@ -45,6 +47,42 @@ export default function TemplatesPage() {
   const templates = Array.isArray(templatesData) ? templatesData : [];
   const checklistTemplates = templates.filter((t) => t.type === "checklist");
   const messageTemplates = templates.filter((t) => t.type === "message");
+
+  // Recurring schedules (parent lists with freq, not auto-generated children)
+  const {
+    data: listsData,
+    isLoading: listsLoading,
+    mutate: mutateLists,
+  } = useSWRFetch<any>("/api/admin/task-lists?limit=100");
+  const allLists = Array.isArray(listsData)
+    ? listsData
+    : listsData?.data || [];
+  const recurringLists = allLists.filter((l: any) => {
+    const rec = l.recurrence;
+    return rec && typeof rec === "object" && rec.freq && !rec.auto_generated;
+  });
+  const [stoppingId, setStoppingId] = useState<string | null>(null);
+
+  const handleStopRecurrence = async (listId: string) => {
+    try {
+      setStoppingId(listId);
+      const res = await fetch(`/api/admin/task-lists/${listId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recurrence: null }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json?.error?.message || "Failed to stop recurrence");
+      }
+      toast.success("Recurrence stopped");
+      mutateLists();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to stop recurrence");
+    } finally {
+      setStoppingId(null);
+    }
+  };
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -197,6 +235,78 @@ export default function TemplatesPage() {
       }
     >
       <div className="space-y-6 pb-12">
+        {/* Active Recurring Schedules */}
+        <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-3">
+          <div className="flex items-center gap-2">
+            <Repeat className="w-4 h-4 text-purple-600" />
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+              Active Recurring Schedules
+            </h2>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">
+              {recurringLists.length}
+            </span>
+          </div>
+          <p className="text-xs text-slate-500">
+            Parent lists that auto-create drafts on schedule. Stop recurrence anytime without deleting the list.
+          </p>
+          {listsLoading ? (
+            <Skeleton className="h-12 w-full" />
+          ) : recurringLists.length === 0 ? (
+            <p className="text-xs text-slate-400 py-2">
+              No active schedules. Enable recurrence when creating a task list.
+            </p>
+          ) : (
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+              {recurringLists.map((l: any) => {
+                const rec = l.recurrence || {};
+                const freqLabel =
+                  rec.freq === "custom"
+                    ? `Every ${rec.interval_days || "?"} day(s)`
+                    : rec.freq === "weekly"
+                    ? `Weekly${Array.isArray(rec.days) ? ` (${rec.days.length}d)` : ""}`
+                    : "Daily";
+                return (
+                  <li
+                    key={l.id}
+                    className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <Link
+                        href={`/admin/tasks/${l.id}`}
+                        className="font-semibold text-slate-800 dark:text-slate-200 hover:text-emerald-600 truncate block"
+                      >
+                        {l.title}
+                      </Link>
+                      <span className="text-slate-500">
+                        {l.group_name || "Group"} · {freqLabel}
+                        {rec.end_date ? ` · ends ${formatDate(rec.end_date)}` : ""}
+                        {" · since "}
+                        {formatDate(l.list_date)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Link href={`/admin/tasks/${l.id}`}>
+                        <Button size="sm" variant="ghost" className="text-xs h-7">
+                          Open
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs h-7 text-rose-600 border-rose-200 hover:bg-rose-50"
+                        disabled={stoppingId === l.id}
+                        onClick={() => handleStopRecurrence(l.id)}
+                      >
+                        {stoppingId === l.id ? "Stopping…" : "Stop"}
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
         {/* Tab Controls */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
           <Tabs

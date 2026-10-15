@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     // 1. Fetch current period task lists
     let currentListsQuery = supabase
       .from("task_lists")
-      .select("id, title, token, list_date, due_at, status, group_id, group:groups(id, name, verify_required)")
+      .select("id, title, token, list_date, due_at, status, recurrence, group_id, group:groups(id, name, verify_required)")
       .eq("org_id", admin.orgId)
       .is("deleted_at", null)
       .gte("list_date", from)
@@ -267,6 +267,7 @@ export async function GET(req: NextRequest) {
       const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
       const groupObj = Array.isArray(list.group) ? list.group[0] : list.group;
 
+      const rec = list.recurrence as Record<string, unknown> | null;
       return {
         id: list.id,
         token: list.token,
@@ -279,6 +280,7 @@ export async function GET(req: NextRequest) {
         progress,
         total_items: total,
         completed_items: completed,
+        recurrence: rec || null,
       };
     });
 

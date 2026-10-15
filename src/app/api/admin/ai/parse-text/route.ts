@@ -15,10 +15,20 @@ export async function POST(req: NextRequest) {
       return apiError("Text input is required for AI parsing", "EMPTY_TEXT", 400);
     }
 
-    const items = await parseTextToTasks(text);
+    if (text.length > 12000) {
+      return apiError(
+        "Text is too long (max 12,000 characters)",
+        "TEXT_TOO_LONG",
+        400
+      );
+    }
+
+    const { items, source } = await parseTextToTasks(text);
+
     return apiSuccess({
       items,
       count: items.length,
+      source,
     });
   } catch (err: unknown) {
     console.error("POST /api/admin/ai/parse-text error:", err);

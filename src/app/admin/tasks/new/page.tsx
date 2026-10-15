@@ -85,8 +85,9 @@ function NewTaskForm() {
 
   // Recurrence Schedule State (Phase 12.5)
   const [isRecurring, setIsRecurring] = useState(false);
-  const [recurrenceFreq, setRecurrenceFreq] = useState<"daily" | "weekly">("daily");
+  const [recurrenceFreq, setRecurrenceFreq] = useState<"daily" | "weekly" | "custom">("daily");
   const [recurrenceDays, setRecurrenceDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [recurrenceIntervalDays, setRecurrenceIntervalDays] = useState(3);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
   const [isAiParsing, setIsAiParsing] = useState(false);
 
@@ -244,15 +245,29 @@ function NewTaskForm() {
       const itemsToAdd = aiItems.slice(0, availableSlots);
       const newDrafts: ItemDraft[] = itemsToAdd.map((it) => ({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        text: it.text,
+        text: it.suggested_category
+          ? `[${it.suggested_category}] ${it.text}`
+          : it.text,
         priority: it.suggested_priority || "normal",
         assigned_member_id: null,
       }));
 
+      // Apply first clock-like suggested_due to list due time if empty
+      if (!dueTime) {
+        const dueHint = itemsToAdd.find((it) => it.suggested_due)?.suggested_due;
+        const clockMatch = dueHint?.match(/(\d{1,2}):(\d{2})/);
+        if (clockMatch) {
+          const hh = String(Math.min(23, Number(clockMatch[1]))).padStart(2, "0");
+          const mm = clockMatch[2];
+          setDueTime(`${hh}:${mm}`);
+        }
+      }
+
       setItems([...items, ...newDrafts]);
       setMultiPasteText("");
       setShowMultiPaste(false);
-      toast.success(`Gemini AI extracted and added ${newDrafts.length} tasks!`);
+      const source = json.data?.source === "fallback" ? "rule-based parser" : "AI";
+      toast.success(`${source} extracted and added ${newDrafts.length} tasks!`);
     } catch (err: any) {
       toast.error(err.message || "Failed to parse with AI");
     } finally {
@@ -265,10 +280,20 @@ function NewTaskForm() {
     const itemsToAdd = voiceItems.slice(0, availableSlots);
     const newDrafts: ItemDraft[] = itemsToAdd.map((it) => ({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      text: it.text,
+      text: it.suggested_category
+        ? `[${it.suggested_category}] ${it.text}`
+        : it.text,
       priority: it.suggested_priority || "normal",
       assigned_member_id: null,
     }));
+    if (!dueTime) {
+      const dueHint = itemsToAdd.find((it) => it.suggested_due)?.suggested_due;
+      const clockMatch = dueHint?.match(/(\d{1,2}):(\d{2})/);
+      if (clockMatch) {
+        const hh = String(Math.min(23, Number(clockMatch[1]))).padStart(2, "0");
+        setDueTime(`${hh}:${clockMatch[2]}`);
+      }
+    }
     setItems((prev) => [...prev, ...newDrafts]);
     toast.success(`Added ${newDrafts.length} task(s) from voice dictation!`);
   };
@@ -309,6 +334,9 @@ function NewTaskForm() {
           ? {
               freq: recurrenceFreq,
               days: recurrenceFreq === "weekly" ? recurrenceDays : undefined,
+              interval_days:
+                recurrenceFreq === "custom" ? recurrenceIntervalDays : undefined,
+              anchor_date: recurrenceFreq === "custom" ? listDate : undefined,
               end_date: recurrenceEndDate || undefined,
             }
           : null;
@@ -427,40 +455,56 @@ function NewTaskForm() {
             required
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Dropdown
-              label="Group"
-              value={groupId}
-              onChange={(e) => setGroupId(e.target.value)}
-              error={errors.group}
-              placeholder="Select a group"
-              options={groups.map((g: any) => ({
-                value: g.id,
-                label: g.name,
-              }))}
-            />
+          {groups.length === 0 ? (
+            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 space-y-3">
+              <p className="text-sm font-semibold">No groups yet</p>
+              <p className="text-xs text-amber-800/90 leading-relaxed">
+                Task lists belong to a <strong>group</strong> (e.g. Lab Batch A). Create a group,
+                add members with WhatsApp numbers, then come back here. After you save, you&apos;ll
+                get a <strong>wa.me</strong> share link to open WhatsApp — no WhatsApp Business login needed.
+              </p>
+              <Link href="/admin/groups/new">
+                <Button size="sm" variant="primary" className="gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> Create your first group
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Dropdown
+                label="Group"
+                value={groupId}
+                onChange={(e) => setGroupId(e.target.value)}
+                error={errors.group}
+                placeholder="Select a group"
+                options={groups.map((g: any) => ({
+                  value: g.id,
+                  label: g.name,
+                }))}
+              />
 
-            <DatePicker
-              label="List Date"
-              value={listDate}
-              onChange={setListDate}
-              showQuickPicks={true}
-            />
+              <DatePicker
+                label="List Date"
+                value={listDate}
+                onChange={setListDate}
+                showQuickPicks={true}
+              />
 
-            <Input
-              type="time"
-              label="Due Time (Optional)"
-              value={dueTime}
-              onChange={(e) => setDueTime(e.target.value)}
-            />
-          </div>
+              <Input
+                type="time"
+                label="Due Time (Optional)"
+                value={dueTime}
+                onChange={(e) => setDueTime(e.target.value)}
+              />
+            </div>
+          )}
         </Card>
 
         {/* Recurrence Schedule Card (Phase 12.5) */}
         <Card className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
                 <Repeat className="w-4 h-4" />
               </div>
               <div>
@@ -480,7 +524,7 @@ function NewTaskForm() {
                 onChange={(e) => setIsRecurring(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
             </label>
           </div>
 
@@ -496,7 +540,7 @@ function NewTaskForm() {
                   className={cn(
                     "px-3 py-1 rounded-lg text-xs font-semibold transition-all",
                     recurrenceFreq === "daily"
-                      ? "bg-purple-600 text-white"
+                      ? "bg-emerald-600 text-white"
                       : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
                   )}
                 >
@@ -508,13 +552,46 @@ function NewTaskForm() {
                   className={cn(
                     "px-3 py-1 rounded-lg text-xs font-semibold transition-all",
                     recurrenceFreq === "weekly"
-                      ? "bg-purple-600 text-white"
+                      ? "bg-emerald-600 text-white"
                       : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
                   )}
                 >
                   Weekly
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setRecurrenceFreq("custom")}
+                  className={cn(
+                    "px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                    recurrenceFreq === "custom"
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                  )}
+                >
+                  Every N days
+                </button>
               </div>
+
+              {recurrenceFreq === "custom" && (
+                <div className="flex items-center gap-2 max-w-xs">
+                  <label className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                    Every
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={recurrenceIntervalDays}
+                    onChange={(e) =>
+                      setRecurrenceIntervalDays(
+                        Math.max(1, Math.min(90, Number(e.target.value) || 1))
+                      )
+                    }
+                    className="w-20 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-slate-200"
+                  />
+                  <span className="text-xs text-slate-500">day(s)</span>
+                </div>
+              )}
 
               {recurrenceFreq === "weekly" && (
                 <div className="space-y-1.5">
@@ -544,7 +621,7 @@ function NewTaskForm() {
                           className={cn(
                             "w-8 h-8 rounded-lg text-xs font-bold transition-all",
                             active
-                              ? "bg-purple-600 text-white"
+                              ? "bg-emerald-600 text-white"
                               : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
                           )}
                         >
@@ -663,7 +740,7 @@ function NewTaskForm() {
                     size="sm"
                     onClick={handleAiParseText}
                     disabled={!multiPasteText.trim() || isAiParsing}
-                    className="bg-purple-600 hover:bg-purple-500 text-white"
+                    className="bg-emerald-700 hover:bg-emerald-600 text-white"
                   >
                     {isAiParsing ? (
                       <>

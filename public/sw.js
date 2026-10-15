@@ -1,14 +1,32 @@
-const CACHE_NAME = "task-tracker-v1";
+const CACHE_NAME = "task-tracker-v2";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
   "/icon.svg",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/apple-touch-icon.png",
 ];
+
+function isCacheableRequest(request) {
+  try {
+    const url = new URL(request.url);
+    // Cache API only supports http/https — never chrome-extension:, data:, blob:, etc.
+    if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+    // Only same-origin assets (avoid caching extension or third-party noise)
+    if (url.origin !== self.location.origin) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      return cache.addAll(STATIC_ASSETS).catch(() => {
+        // Ignore individual asset failures during install
+      });
     })
   );
   self.skipWaiting();
@@ -30,6 +48,10 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  if (!isCacheableRequest(event.request)) {
+    return;
+  }
+
   const url = new URL(event.request.url);
 
   // Network-only for API and cron calls
@@ -89,8 +111,13 @@ self.addEventListener("fetch", (event) => {
           if (!response || response.status !== 200 || response.type !== "basic") {
             return response;
           }
+          if (!isCacheableRequest(event.request)) {
+            return response;
+          }
           const toCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, toCache));
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, toCache).catch(() => {});
+          });
           return response;
         });
       })

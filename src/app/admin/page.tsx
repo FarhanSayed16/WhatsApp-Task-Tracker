@@ -43,6 +43,8 @@ import {
   Sparkles,
   Copy,
   FileText,
+  Download,
+  CopyPlus,
 } from "lucide-react";
 
 // Sleek animated SVG circular progress ring for group cards
@@ -130,6 +132,8 @@ export default function AdminDashboardPage() {
   );
   const [showOverdueExpanded, setShowOverdueExpanded] = useState(false);
   const [tickingItemId, setTickingItemId] = useState<string | null>(null);
+  const [duplicatingYesterday, setDuplicatingYesterday] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   // Compute date range query params in admin timezone
   const { fromStr, toStr } = useMemo(() => {
@@ -224,6 +228,72 @@ export default function AdminDashboardPage() {
     toast.success("WhatsApp reminder opened");
   };
 
+  // Monthly backup reminder (1st of month in admin TZ, once per month)
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !session?.timezone) return;
+    const todayInTz = calendarDateInTimeZone(new Date(), session.timezone || adminTz);
+    const dayNum = Number(todayInTz.split("-")[2]);
+    if (dayNum !== 1) return;
+    const key = `wtt_backup_toast_${todayInTz.slice(0, 7)}`;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, "1");
+    toast.info("It's the 1st — download a CSV backup from Settings when you have a minute.");
+  }, [toast, session?.timezone, adminTz]);
+
+  const handleExportCsv = async () => {
+    try {
+      setExportingCsv(true);
+      const qs = new URLSearchParams({ from: fromStr, to: toStr });
+      if (selectedGroupId) qs.set("group_id", selectedGroupId);
+      const res = await fetch(`/api/admin/export?${qs.toString()}`);
+      const contentType = res.headers.get("content-type") || "";
+      if (!res.ok || contentType.includes("application/json")) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error?.message || "Export failed — check you are logged in");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tasks-export-${fromStr}_${toStr}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("CSV export downloaded");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to export CSV");
+    } finally {
+      setExportingCsv(false);
+    }
+  };
+
+  const handleDuplicateYesterday = async () => {
+    try {
+      setDuplicatingYesterday(true);
+      const res = await fetch("/api/admin/task-lists/duplicate-yesterday", {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json?.error?.message || "Failed to duplicate yesterday's lists");
+      }
+      const { created, skipped, from_date } = json.data || {};
+      if (created === 0 && skipped === 0) {
+        toast.info(json.data?.message || `No lists found for ${from_date}`);
+      } else {
+        toast.success(
+          `Duplicated ${created} list(s) from ${from_date}${skipped ? ` (${skipped} already existed)` : ""}`
+        );
+        mutate();
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Duplicate failed");
+    } finally {
+      setDuplicatingYesterday(false);
+    }
+  };
+
   // Delete list handler
   const handleDeleteList = async (id: string) => {
     try {
@@ -268,6 +338,32 @@ export default function AdminDashboardPage() {
             <RefreshCw
               className={cn("w-4 h-4", isValidating && "animate-spin text-emerald-500")}
             />
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={exportingCsv}
+            className="gap-1.5 hidden sm:inline-flex"
+            title="Export CSV for current date range"
+          >
+            <Download className="w-3.5 h-3.5" />
+            {exportingCsv ? "Exporting…" : "Export"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleDuplicateYesterday}
+            disabled={duplicatingYesterday}
+            className="gap-1.5 hidden md:inline-flex"
+            title="Clone yesterday's lists as today's drafts"
+          >
+            <CopyPlus className="w-3.5 h-3.5" />
+            {duplicatingYesterday ? "Duplicating…" : "Duplicate Yesterday"}
           </Button>
 
           <Link href="/admin/tasks/new">
@@ -671,6 +767,12 @@ export default function AdminDashboardPage() {
                     status={list.status || "active"}
                     totalItems={list.total_items}
                     completedItems={list.completed_items}
+                    recurrence={
+                      list.recurrence as {
+                        freq?: string;
+                        auto_generated?: boolean;
+                      } | null
+                    }
                     onDelete={handleDeleteList}
                   />
               ))}
