@@ -838,48 +838,48 @@ vercel.json                             # Cron config
 
 ## 7.1 — Task Lists API
 
-- [ ] `GET /api/admin/task-lists` — List task lists (paginated):
+- [x] `GET /api/admin/task-lists` — List task lists (paginated):
   - Query params: `page`, `limit`, `group_id`, `status`, `from`, `to`
   - Filter: `WHERE deleted_at IS NULL AND org_id = ?`
   - Order by: `list_date DESC, created_at DESC`
   - Include: group name, item count, completion stats
-- [ ] `POST /api/admin/task-lists` — Create task list:
+- [x] `POST /api/admin/task-lists` — Create task list:
   - Validate: title (max 100), group_id, list_date, due_at (optional), items[] (max 50)
   - Generate unique token via `nanoid`
   - Set status = `draft`
   - Create task_items in batch with position numbers
   - Return created task list with items
-- [ ] `GET /api/admin/task-lists/[id]` — Get task list detail:
+- [x] `GET /api/admin/task-lists/[id]` — Get task list detail:
   - Include: all items (ordered by position), completions, share log, opens
   - Include: group info, member list
-- [ ] `PATCH /api/admin/task-lists/[id]` — Update task list:
+- [x] `PATCH /api/admin/task-lists/[id]` — Update task list:
   - Updateable: title, list_date, due_at, status
   - Set `updated_at = now()`
-- [ ] `DELETE /api/admin/task-lists/[id]` — Soft delete:
+- [x] `DELETE /api/admin/task-lists/[id]` — Soft delete:
   - Set `deleted_at = now()`, status = `archived`
 
 ---
 
 ## 7.2 — Task Items API
 
-- [ ] `POST /api/admin/items` — Add item to existing list:
+- [x] `POST /api/admin/items` — Add item to existing list:
   - Validate: task_list_id, text (max 500), position, priority, assigned_member_id, due_at
-- [ ] `PATCH /api/admin/items/[id]` — Update item:
+- [x] `PATCH /api/admin/items/[id]` — Update item:
   - Updateable: text, position, priority, assigned_member_id, due_at
-- [ ] `DELETE /api/admin/items/[id]` — Delete item:
+- [x] `DELETE /api/admin/items/[id]` — Delete item:
   - Hard delete (items don't need soft delete)
   - Recalculate positions
-- [ ] `POST /api/admin/items/[id]/complete` — Professor marks done directly:
+- [x] `POST /api/admin/items/[id]/complete` — Professor marks done directly:
   - Set `task_items.status = 'verified'`, `completed_at = now()`, `verified_at = now()`
   - Insert into `completions` with `member_id = null`
   - Update parent `task_lists.status` if all items are done
-- [ ] `POST /api/admin/items/[id]/verify` — Professor verifies member's tick:
+- [x] `POST /api/admin/items/[id]/verify` — Professor verifies member's tick:
   - Set `task_items.status = 'verified'`, `verified_at = now()`
   - Update `completions.status = 'verified'`, `verified_at = now()`
-- [ ] `POST /api/admin/items/[id]/undo` — Professor undoes completion:
+- [x] `POST /api/admin/items/[id]/undo` — Professor undoes completion:
   - Reset `task_items.status = 'pending'`, clear completion fields
   - Delete from `completions`
-- [ ] Batch reorder endpoint: `PATCH /api/admin/items/reorder`:
+- [x] Batch reorder endpoint: `PATCH /api/admin/items/reorder`:
   - Accept array of `{ id, position }`
   - Update all positions in one transaction
 
@@ -887,7 +887,7 @@ vercel.json                             # Cron config
 
 ## 7.3 — Task Status Flow (Business Logic)
 
-- [ ] Implement the status state machine (respect group `verify_required` — see Core Business Rules):
+- [x] Implement the status state machine (respect group `verify_required` — see Core Business Rules):
   ```
   Pending ──(member ticks, verify_required=true)──► Done ──(professor verifies)──► Verified
      │                                              │
@@ -895,13 +895,13 @@ vercel.json                             # Cron config
      │
      └──────────(professor ticks directly)───────────────────────────────────────────────────► Verified
   ```
-- [ ] When an item is completed:
+- [x] When an item is completed:
   - Update `task_items` (denormalized status)
   - Insert/replace into `completions` (audit log) in the **same transaction**
   - For professor ticks: delete any existing `completions` row with `member_id IS NULL` for that item, then insert
-- [ ] When all items in a list are `done` or `verified` (if `verify_required`, require all `verified` to mark list completed — or treat `done`+`verified` as complete for list status; **lock:** list completes when **no item remains `pending`**):
+- [x] When all items in a list are `done` or `verified` (if `verify_required`, require all `verified` to mark list completed — or treat `done`+`verified` as complete for list status; **lock:** list completes when **no item remains `pending`**):
   - Auto-update `task_lists.status = 'completed'`
-- [ ] Overdue detection:
+- [x] Overdue detection:
   - `status = 'pending' AND (due_at IS NOT NULL AND due_at < now())`
   - Calculated dynamically, not stored
 
@@ -909,53 +909,53 @@ vercel.json                             # Cron config
 
 ## 7.4 — Create/Edit Task List Page (`src/app/admin/tasks/new/page.tsx`)
 
-- [ ] Form fields:
+- [x] Form fields:
   - Title (required, max 100)
   - Group (dropdown — default: last-used group)
   - Date (date picker — default: today)
   - Due time (optional time picker)
-- [ ] Checklist items section:
+- [x] Checklist items section:
   - Add items one by one (text input + "Add" button, Enter key submits)
   - Drag-to-reorder items
   - Delete individual items (X button)
   - Priority dropdown per item (low/normal/high/urgent)
   - Assign to member dropdown per item (optional)
   - Individual due time per item (optional)
-- [ ] Template picker button: select from saved templates to pre-fill items (full template CRUD is Phase 12 — for Phase 7, allow empty picker / skip until templates exist)
-- [ ] **Basic quick-add:** paste multi-line text → split by newline → strip numbering → items (enhanced AI parse is Phase 15; richer paste UI is Phase 12.4 — reuse the same helper)
-- [ ] Item count + warning if exceeding 50 items
-- [ ] Save as Draft / Save & Share buttons
-- [ ] "Save & Share" → saves then opens share sheet (Phase 8)
+- [x] Template picker button: select from saved templates to pre-fill items (full template CRUD is Phase 12 — for Phase 7, allow empty picker / skip until templates exist)
+- [x] **Basic quick-add:** paste multi-line text → split by newline → strip numbering → items (enhanced AI parse is Phase 15; richer paste UI is Phase 12.4 — reuse the same helper)
+- [x] Item count + warning if exceeding 50 items
+- [x] Save as Draft / Save & Share buttons
+- [x] "Save & Share" → saves then opens share sheet (Phase 8)
 
 ---
 
 ## 7.5 — Task List Detail Page (`src/app/admin/tasks/[id]/page.tsx`)
 
-- [ ] Header: title, group badge, date, status badge, due time
-- [ ] Action buttons: Edit, Share, Remind, Delete
-- [ ] Progress section: progress bar + "X of Y done" + overdue count
-- [ ] Items list:
+- [x] Header: title, group badge, date, status badge, due time
+- [x] Action buttons: Edit, Share, Remind, Delete
+- [x] Progress section: progress bar + "X of Y done" + overdue count
+- [x] Items list:
   - Each item shows: text, status badge, assigned member (if any), completed by/at, verified by/at
   - Professor actions per item: Mark Done, Verify, Undo
   - Notes/comments on each item
-- [ ] Activity timeline: share events, completion events, open events (chronological)
-- [ ] "Opened by" section: which members opened the link, when, how many times
-- [ ] Share log: when was this list shared, via which channel
+- [x] Activity timeline: share events, completion events, open events (chronological)
+- [x] "Opened by" section: which members opened the link, when, how many times
+- [x] Share log: when was this list shared, via which channel
 
 ---
 
 ## 7.6 — Task Lists Page (`src/app/admin/tasks/page.tsx`)
 
-- [ ] Page header: "Task Lists" title + "New Task List" button
-- [ ] Filters: date range (today/this week/this month/custom), group, status
-- [ ] List/grid of `TaskListCard` components:
+- [x] Page header: "Task Lists" title + "New Task List" button
+- [x] Filters: date range (today/this week/this month/custom), group, status
+- [x] List/grid of `TaskListCard` components:
   - Title, group badge, date, status badge
   - Progress bar with completion count
   - Quick actions: Share, Edit, Delete
-- [ ] Tabs: "Active" / "Completed" / "Archived" / "All"
-- [ ] Empty state per tab
-- [ ] Loading skeletons
-- [ ] SWR polling
+- [x] Tabs: "Active" / "Completed" / "Archived" / "All"
+- [x] Empty state per tab
+- [x] Loading skeletons
+- [x] SWR polling
 
 **Acceptance Criteria:**
 > ✅ Can create task lists with items, edit/delete items, reorder items, professor can mark done/verify/undo, status flow works correctly, task list auto-completes when all items done, overdue detection works, quick-add paste works.
@@ -1783,7 +1783,7 @@ If a second helper ever needs access, handle it manually later (extra admin row)
 | 4 | Core Libraries & Utilities | 1 day | ✅ Completed | |
 | 5 | Reusable UI Components | 1.5 days | ✅ Completed | |
 | 6 | Groups & Members Management | 1.5 days | ✅ Completed | |
-| 7 | Task Lists & Task Items | 2 days | ⬜ Not Started | |
+| 7 | Task Lists & Task Items | 2 days | ✅ Completed | |
 | 8 | WhatsApp Sharing System | 1 day | ⬜ Not Started | |
 | 9 | Public Member Page | 1.5 days | ⬜ Not Started | |
 | 10 | Admin Dashboard & KPIs | 1.5 days | ⬜ Not Started | |

@@ -4,6 +4,7 @@
 
 export const APP_NAME = "WhatsApp Task Tracker";
 export const DEFAULT_TIMEZONE = "Asia/Kolkata";
+export const APP_URL = process.env.APP_URL || "http://localhost:3000";
 
 // Auth & Session
 export const SESSION_COOKIE_NAME = "wt_session";
