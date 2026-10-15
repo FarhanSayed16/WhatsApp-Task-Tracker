@@ -14,25 +14,37 @@ export async function GET(req: NextRequest) {
     const active = searchParams.get("active");
     const search = searchParams.get("search")?.trim();
 
+    if (!groupId) {
+      return apiError("group_id is required", "VALIDATION_ERROR", 400);
+    }
+
+    // Scope via parent group.org_id (members table has no org_id column)
+    const { data: group, error: groupErr } = await supabase
+      .from("groups")
+      .select("id")
+      .eq("id", groupId)
+      .eq("org_id", admin.orgId)
+      .is("deleted_at", null)
+      .single();
+
+    if (groupErr || !group) {
+      return apiError("Group not found", "NOT_FOUND", 404);
+    }
+
     let query = supabase
       .from("members")
       .select("*")
-      .eq("org_id", admin.orgId)
+      .eq("group_id", groupId)
       .is("deleted_at", null);
 
-    if (groupId) {
-      query = query.eq("group_id", groupId);
-    }
-    if (active !== null && active !== undefined) {
+    if (active !== null && active !== undefined && active !== "") {
       query = query.eq("active", active === "true");
     }
     if (search) {
       query = query.ilike("name", `%${search}%`);
     }
 
-    query = query
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true });
+    query = query.order("name", { ascending: true });
 
     const { data: members, error } = await query;
     if (error) throw error;
@@ -40,8 +52,7 @@ export async function GET(req: NextRequest) {
     const memberList = members || [];
     const memberIds = memberList.map((m) => m.id);
 
-    // Compute completions count per member
-    let completionsCount: Record<string, number> = {};
+    const completionsCount: Record<string, number> = {};
     if (memberIds.length > 0) {
       const { data: completions } = await supabase
         .from("completions")
@@ -51,7 +62,8 @@ export async function GET(req: NextRequest) {
       if (completions) {
         for (const c of completions) {
           if (c.member_id) {
-            completionsCount[c.member_id] = (completionsCount[c.member_id] || 0) + 1;
+            completionsCount[c.member_id] =
+              (completionsCount[c.member_id] || 0) + 1;
           }
         }
       }
@@ -76,7 +88,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = validateBody(createMemberSchema, body);
 
-    // 1. Verify group exists and belongs to admin org
     const { data: group, error: groupErr } = await supabase
       .from("groups")
       .select("id")
@@ -89,15 +100,16 @@ export async function POST(req: NextRequest) {
       return apiError("Group not found", "NOT_FOUND", 404);
     }
 
-    // 2. Check for duplicate name in group
     const { data: existing } = await supabase
       .from("members")
       .select("id, name")
       .eq("group_id", data.group_id)
-      .eq("org_id", admin.orgId)
       .is("deleted_at", null);
 
-    if (existing && existing.some((m) => m.name.toLowerCase() === data.name.toLowerCase())) {
+    if (
+      existing &&
+      existing.some((m) => m.name.toLowerCase() === data.name.toLowerCase())
+    ) {
       return apiError(
         `A member with the name "${data.name}" already exists in this group`,
         "DUPLICATE",
@@ -105,16 +117,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Insert member
     const { data: newMember, error: insertErr } = await supabase
       .from("members")
       .insert({
-        org_id: admin.orgId,
         group_id: data.group_id,
         name: data.name,
         phone: data.phone || null,
         active: true,
-        sort_order: (existing?.length || 0),
       })
       .select()
       .single();

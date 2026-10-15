@@ -35,8 +35,12 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error || !admin) {
-      // In initial dev before DB seed, check if default dev PIN "123456" matches
-      if (process.env.NODE_ENV !== "production" && pin === "123456") {
+      // Explicit opt-in only (never on production)
+      if (
+        process.env.ALLOW_DEV_AUTH === "true" &&
+        process.env.NODE_ENV !== "production" &&
+        pin === "123456"
+      ) {
         const token = await createSessionToken({
           sub: "00000000-0000-0000-0000-000000000001",
           orgId: "00000000-0000-0000-0000-000000000001",

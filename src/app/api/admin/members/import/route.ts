@@ -12,7 +12,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = validateBody(importMembersSchema, body);
 
-    // 1. Verify group exists in org
     const { data: group, error: groupErr } = await supabase
       .from("groups")
       .select("id")
@@ -25,38 +24,35 @@ export async function POST(req: NextRequest) {
       return apiError("Group not found", "NOT_FOUND", 404);
     }
 
-    // 2. Fetch existing members in group to deduplicate
     const { data: existingMembers } = await supabase
       .from("members")
       .select("name")
       .eq("group_id", data.group_id)
-      .eq("org_id", admin.orgId)
       .is("deleted_at", null);
 
     const existingNames = new Set(
       (existingMembers || []).map((m) => m.name.toLowerCase().trim())
     );
 
-    // 3. Parse CSV rows
-    const lines = data.csv.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const lines = data.csv
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
     const validInserts: Array<{
-      org_id: string;
       group_id: string;
       name: string;
       phone: string | null;
       active: boolean;
-      sort_order: number;
     }> = [];
 
     const duplicates: string[] = [];
     const errors: string[] = [];
-
     const seenInBatch = new Set<string>();
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
-      // Skip header if detected
       if (
         i === 0 &&
         (line.toLowerCase().startsWith("name,") || line.toLowerCase() === "name")
@@ -64,8 +60,9 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Split comma separated
-      const parts = line.split(",").map((p) => p.replace(/^["']|["']$/g, "").trim());
+      const parts = line
+        .split(",")
+        .map((p) => p.replace(/^["']|["']$/g, "").trim());
       const rawName = parts[0];
       const rawPhone = parts[1] || "";
 
@@ -81,33 +78,29 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Clean phone number (strip spaces, hyphens, plus)
       let cleanPhone: string | null = null;
       if (rawPhone) {
         const digitsOnly = rawPhone.replace(/\D/g, "");
         if (digitsOnly.length >= 10 && digitsOnly.length <= 15) {
           cleanPhone = digitsOnly;
         } else {
+          // Skip invalid phone rows entirely (P2-15)
           errors.push(
-            `Row ${i + 1} (${rawName}): Phone "${rawPhone}" is invalid (must be 10-15 digits)`
+            `Row ${i + 1} (${rawName}): Phone "${rawPhone}" is invalid (must be 10-15 digits) — skipped`
           );
-          // Keep member anyway, but with null phone
-          cleanPhone = null;
+          continue;
         }
       }
 
       seenInBatch.add(lowerName);
       validInserts.push({
-        org_id: admin.orgId,
         group_id: data.group_id,
         name: rawName,
         phone: cleanPhone,
         active: true,
-        sort_order: (existingMembers?.length || 0) + validInserts.length,
       });
     }
 
-    // 4. Batch insert valid members
     let importedCount = 0;
     if (validInserts.length > 0) {
       const { error: insertErr } = await supabase

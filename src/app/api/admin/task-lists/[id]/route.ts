@@ -58,21 +58,31 @@ export async function GET(
       .select("id, name, phone, active")
       .eq("group_id", list.group_id)
       .is("deleted_at", null)
-      .order("sort_order", { ascending: true });
+      .order("name", { ascending: true });
 
-    // 5. Fetch share logs
-    const { data: shareLogs } = await supabase
+    // 5. Fetch share logs (column is created_at, not shared_at)
+    const { data: shareLogsRaw } = await supabase
       .from("share_log")
       .select("*")
       .eq("task_list_id", id)
-      .order("shared_at", { ascending: false });
+      .order("created_at", { ascending: false });
 
-    // 6. Fetch opens log
-    const { data: opens } = await supabase
+    const shareLogs = (shareLogsRaw || []).map((log) => ({
+      ...log,
+      shared_at: log.created_at,
+    }));
+
+    // 6. Fetch opens log (columns: first_opened_at / last_opened_at)
+    const { data: opensRaw } = await supabase
       .from("opens")
       .select("*, member:members(id, name)")
       .eq("task_list_id", id)
-      .order("opened_at", { ascending: false });
+      .order("last_opened_at", { ascending: false });
+
+    const opens = (opensRaw || []).map((open) => ({
+      ...open,
+      opened_at: open.last_opened_at || open.first_opened_at,
+    }));
 
     const baseUrl = process.env.APP_URL || APP_URL || "http://localhost:3000";
     const memberLink = `${baseUrl}/t/${list.token}`;

@@ -7,7 +7,10 @@ import {
 } from "@/lib/constants";
 
 function getSecretKey(): Uint8Array {
-  const secret = process.env.SESSION_SECRET || "fallback-secret-for-build-purposes-min-32-chars!";
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error("SESSION_SECRET missing or too short");
+  }
   return new TextEncoder().encode(secret);
 }
 
@@ -18,14 +21,21 @@ export async function middleware(req: NextRequest) {
   let isValidSession = false;
   let decodedPayload: JWTPayload | null = null;
   let shouldRefresh = false;
+  let secretOk = true;
 
-  if (sessionCookie) {
+  let secretKey: Uint8Array | null = null;
+  try {
+    secretKey = getSecretKey();
+  } catch {
+    secretOk = false;
+  }
+
+  if (sessionCookie && secretOk && secretKey) {
     try {
-      const { payload } = await jwtVerify(sessionCookie, getSecretKey());
+      const { payload } = await jwtVerify(sessionCookie, secretKey);
       decodedPayload = payload;
       isValidSession = true;
 
-      // 7-day auto refresh check
       if (payload.iat) {
         const ageInSeconds = Math.floor(Date.now() / 1000) - payload.iat;
         if (ageInSeconds > SESSION_REFRESH_THRESHOLD_SECONDS) {
@@ -37,16 +47,30 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Redirect from login to admin if already authenticated
   if (pathname === "/login" && isValidSession) {
     return NextResponse.redirect(new URL("/admin", req.url));
   }
 
-  // Protect admin pages and admin APIs
   const isAdminRoute = pathname.startsWith("/admin");
   const isAdminApi = pathname.startsWith("/api/admin");
 
   if (isAdminRoute || isAdminApi) {
+    if (!secretOk) {
+      if (isAdminApi) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "SERVER_ERROR",
+              message: "Server misconfigured: SESSION_SECRET is required.",
+            },
+          },
+          { status: 500 }
+        );
+      }
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
     if (!isValidSession) {
       if (isAdminApi) {
         return NextResponse.json(
@@ -65,13 +89,42 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // CSRF check on state-changing API requests (Review Fix #13)
+    // CSRF: require Origin (or Sec-Fetch-Site) on state-changing admin APIs
     if (isAdminApi && ["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
       const origin = req.headers.get("origin");
       const host = req.headers.get("host");
+      const secFetchSite = req.headers.get("sec-fetch-site");
+
       if (origin && host) {
-        const originHost = new URL(origin).host;
-        if (originHost !== host) {
+        try {
+          const originHost = new URL(origin).host;
+          if (originHost !== host) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: {
+                  code: "FORBIDDEN",
+                  message: "Cross-site request blocked.",
+                },
+              },
+              { status: 403 }
+            );
+          }
+        } catch {
+          return NextResponse.json(
+            {
+              success: false,
+              error: {
+                code: "FORBIDDEN",
+                message: "Invalid Origin header.",
+              },
+            },
+            { status: 403 }
+          );
+        }
+      } else if (secFetchSite && secFetchSite !== "same-origin" && secFetchSite !== "same-site" && secFetchSite !== "none") {
+        // none = navigations / some same-origin cases; block clear cross-site
+        if (secFetchSite === "cross-site") {
           return NextResponse.json(
             {
               success: false,
@@ -84,19 +137,20 @@ export async function middleware(req: NextRequest) {
           );
         }
       }
+      // Same-origin fetch from browsers usually sends Origin; allow missing Origin for
+      // same-origin server tools that send Sec-Fetch-Site: same-origin or omit both.
     }
   }
 
   const response = NextResponse.next();
 
-  // If session is older than 7 days, refresh with a new 30-day token
-  if (shouldRefresh && decodedPayload) {
+  if (shouldRefresh && decodedPayload && secretKey) {
     try {
       const newToken = await new SignJWT({ ...decodedPayload })
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
         .setExpirationTime(`${SESSION_DURATION_SECONDS}s`)
-        .sign(getSecretKey());
+        .sign(secretKey);
 
       response.cookies.set(SESSION_COOKIE_NAME, newToken, {
         httpOnly: true,
@@ -114,9 +168,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/admin/:path*",
-    "/api/admin/:path*",
-    "/login",
-  ],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/login"],
 };

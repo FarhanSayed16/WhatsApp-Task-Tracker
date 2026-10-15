@@ -13,11 +13,13 @@ import { Badge } from "@/components/ui/Badge";
 import { useSWRFetch } from "@/hooks/useSWRFetch";
 import { useSession } from "@/hooks/useSession";
 import { useToast } from "@/components/ui/Toast";
-import { formatDate, cn, isOverdue } from "@/lib/utils";
+import { formatDate, cn, getDateRange, calendarDateInTimeZone } from "@/lib/utils";
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import { buildReminderMessage, waLink } from "@/lib/whatsapp";
 import type {
   DashboardData,
   DashboardOverdueItem,
+  DashboardPendingVerifyItem,
   DashboardGroupStat,
 } from "@/types";
 import {
@@ -115,41 +117,21 @@ export default function AdminDashboardPage() {
   // Filters State
   const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "custom">("today");
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
-  const [customFrom, setCustomFrom] = useState<string>(() => new Date().toISOString().slice(0, 10));
-  const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const adminTz = session?.timezone || DEFAULT_TIMEZONE;
+  const [customFrom, setCustomFrom] = useState<string>(() =>
+    calendarDateInTimeZone(new Date(), DEFAULT_TIMEZONE)
+  );
+  const [customTo, setCustomTo] = useState<string>(() =>
+    calendarDateInTimeZone(new Date(), DEFAULT_TIMEZONE)
+  );
   const [showOverdueExpanded, setShowOverdueExpanded] = useState(false);
   const [tickingItemId, setTickingItemId] = useState<string | null>(null);
 
-  // Compute date range query params
+  // Compute date range query params in admin timezone
   const { fromStr, toStr } = useMemo(() => {
-    const now = new Date();
-    if (dateFilter === "today") {
-      const today = now.toISOString().slice(0, 10);
-      return { fromStr: today, toStr: today };
-    }
-    if (dateFilter === "week") {
-      const dayOfWeek = now.getDay();
-      const dist = (dayOfWeek + 6) % 7;
-      const monday = new Date(now);
-      monday.setDate(now.getDate() - dist);
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
-      return {
-        fromStr: monday.toISOString().slice(0, 10),
-        toStr: sunday.toISOString().slice(0, 10),
-      };
-    }
-    if (dateFilter === "month") {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      return {
-        fromStr: first.toISOString().slice(0, 10),
-        toStr: last.toISOString().slice(0, 10),
-      };
-    }
-    // Custom
-    return { fromStr: customFrom, toStr: customTo };
-  }, [dateFilter, customFrom, customTo]);
+    const range = getDateRange(dateFilter, customFrom, customTo, adminTz);
+    return { fromStr: range.from, toStr: range.to };
+  }, [dateFilter, customFrom, customTo, adminTz]);
 
   // Fetch groups for filter dropdown
   const { data: groupsResponse } = useSWRFetch<any>("/api/admin/groups?limit=100");
@@ -179,6 +161,7 @@ export default function AdminDashboardPage() {
   const recentLists = dashboardData?.recent_lists || dashboardData?.todayLists || [];
   const groupStats = dashboardData?.groups || [];
   const overdueItems = dashboardData?.overdue_items || [];
+  const pendingVerifyItems = dashboardData?.pending_verify_items || [];
 
   // Quick Action: Professor ticks an item done directly from dashboard
   const handleQuickTick = async (item: DashboardOverdueItem) => {
@@ -193,6 +176,28 @@ export default function AdminDashboardPage() {
       mutate();
     } catch (err: any) {
       toast.error(err.message || "Failed to complete item");
+    } finally {
+      setTickingItemId(null);
+    }
+  };
+
+  // Quick Action: Verify a member-ticked (done) item
+  const handleQuickVerify = async (
+    item: DashboardOverdueItem | DashboardPendingVerifyItem
+  ) => {
+    try {
+      setTickingItemId(item.id);
+      const res = await fetch(`/api/admin/items/${item.id}/verify`, {
+        method: "POST",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.error?.message || "Failed to verify item");
+      }
+      toast.success(`Verified: "${item.text}"`);
+      mutate();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to verify item");
     } finally {
       setTickingItemId(null);
     }
@@ -434,6 +439,59 @@ export default function AdminDashboardPage() {
           </section>
         )}
 
+        {/* Awaiting Verification (quick-verify) */}
+        {pendingVerifyItems.length > 0 && (
+          <section className="rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/20 p-5 shadow-sm space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-blue-900 dark:text-blue-200">
+                    Awaiting Your Verification
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-600 text-white">
+                    {pendingVerifyItems.length}
+                  </span>
+                </div>
+                <p className="text-[11px] text-blue-700/80 dark:text-blue-300/80">
+                  Members marked these done — confirm to verify
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {pendingVerifyItems.slice(0, 6).map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/40 p-3 space-y-2"
+                >
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white line-clamp-2">
+                    {item.text}
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    {item.group_name} · {item.task_list_title}
+                    {item.completed_by_name
+                      ? ` · by ${item.completed_by_name}`
+                      : ""}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    className="w-full text-[11px] py-1"
+                    onClick={() => handleQuickVerify(item)}
+                    disabled={tickingItemId === item.id}
+                  >
+                    <ShieldCheck className="w-3 h-3 mr-1" />
+                    {tickingItemId === item.id ? "Verifying..." : "Verify"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* KPI Cards Row (4 cards) */}
         <section>
           {isLoading && !kpis ? (
@@ -597,15 +655,7 @@ export default function AdminDashboardPage() {
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recentLists.map((list) => {
-                const cardStatus: "active" | "readonly" | "expired" =
-                  list.status === "archived"
-                    ? "expired"
-                    : list.status === "completed"
-                    ? "readonly"
-                    : "active";
-
-                return (
+              {recentLists.map((list) => (
                   <TaskListCard
                     key={list.id}
                     id={list.id}
@@ -614,13 +664,12 @@ export default function AdminDashboardPage() {
                     groupName={list.group_name}
                     listDate={list.list_date}
                     dueAt={list.due_at}
-                    status={cardStatus}
+                    status={list.status || "active"}
                     totalItems={list.total_items}
                     completedItems={list.completed_items}
                     onDelete={handleDeleteList}
                   />
-                );
-              })}
+              ))}
             </div>
           )}
         </section>

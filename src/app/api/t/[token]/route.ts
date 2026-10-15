@@ -1,30 +1,22 @@
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { apiError, apiSuccess } from "@/lib/errors";
-import { checkPublicTokenRateLimit } from "@/lib/rateLimit";
+import { computeLinkStatus } from "@/lib/utils";
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
   if (!token) return apiError("Invalid token", "INVALID_TOKEN", 400);
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "127.0.0.1";
-  const rateLimit = await checkPublicTokenRateLimit(ip, token);
-  if (!rateLimit.allowed) {
-    return apiError(
-      "Too many requests. Please wait before refreshing again.",
-      "RATE_LIMITED",
-      429
-    );
-  }
-
   try {
-    // 1. Fetch task list with group information
+    // Include soft-deleted so we can return status: expired
     const { data: taskList, error: listError } = await supabaseAdmin
       .from("task_lists")
-      .select(`
+      .select(
+        `
         id,
         org_id,
         group_id,
@@ -39,41 +31,57 @@ export async function GET(
           name,
           verify_required
         )
-      `)
+      `
+      )
       .eq("token", token)
-      .is("deleted_at", null)
-      .single();
+      .maybeSingle();
 
-    if (listError || !taskList) {
+    if (listError) {
+      return apiError("Failed to load task list", "DB_ERROR", 500);
+    }
+
+    if (!taskList) {
       return apiError("Task list not found or link has expired", "NOT_FOUND", 404);
     }
 
-    const groupInfo = Array.isArray(taskList.group) ? taskList.group[0] : taskList.group;
+    const groupInfo = Array.isArray(taskList.group)
+      ? taskList.group[0]
+      : taskList.group;
 
-    // 2. Compute expiry & status using Core Business Rules
-    let expiresAt: string;
-    if (taskList.due_at) {
-      expiresAt = taskList.due_at;
-    } else {
-      const listDateObj = new Date(taskList.list_date + "T23:59:59.999Z");
-      expiresAt = new Date(listDateObj.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    // Resolve admin timezone for list_date EOD (org's first admin)
+    let timeZone = DEFAULT_TIMEZONE;
+    const { data: adminRow } = await supabaseAdmin
+      .from("admin")
+      .select("timezone")
+      .eq("org_id", taskList.org_id)
+      .limit(1)
+      .maybeSingle();
+    if (adminRow?.timezone) timeZone = adminRow.timezone;
+
+    const { status: computedStatus, expiresAt } = computeLinkStatus(
+      taskList.deleted_at,
+      taskList.list_date,
+      taskList.due_at,
+      { listStatus: taskList.status, timeZone }
+    );
+
+    if (computedStatus === "expired") {
+      return apiSuccess({
+        status: "expired",
+        expires_at: expiresAt.toISOString(),
+        verify_required: Boolean(groupInfo?.verify_required),
+        task_list: null,
+        items: [],
+        members: [],
+        completions: [],
+      });
     }
 
-    const isPastExpiry = new Date(expiresAt).getTime() < Date.now();
-    let computedStatus: "active" | "readonly" | "expired" = "active";
-
-    if (isPastExpiry || taskList.status === "archived") {
-      computedStatus = "readonly";
-    } else if (taskList.status === "completed") {
-      computedStatus = "readonly";
-    } else {
-      computedStatus = "active";
-    }
-
-    // 3. Fetch items in order
     const { data: items, error: itemsError } = await supabaseAdmin
       .from("task_items")
-      .select("id, text, position, priority, assigned_member_id, due_at, status, completed_by, completed_at, verified_at")
+      .select(
+        "id, text, position, priority, assigned_member_id, due_at, status, completed_by, completed_at, verified_at"
+      )
       .eq("task_list_id", taskList.id)
       .order("position", { ascending: true });
 
@@ -81,7 +89,6 @@ export async function GET(
       return apiError("Failed to fetch task items", "DB_ERROR", 500);
     }
 
-    // 4. Fetch active members for this group
     const { data: members, error: membersError } = await supabaseAdmin
       .from("members")
       .select("id, name, phone, active")
@@ -94,20 +101,21 @@ export async function GET(
       return apiError("Failed to fetch group members", "DB_ERROR", 500);
     }
 
-    // 5. Fetch completions for items
     const itemIds = (items || []).map((i) => i.id);
-    let completions: any[] = [];
+    let completions: unknown[] = [];
     if (itemIds.length > 0) {
       const { data: compData } = await supabaseAdmin
         .from("completions")
-        .select("id, task_item_id, member_id, status, note, completed_at, verified_at")
+        .select(
+          "id, task_item_id, member_id, status, note, completed_at, verified_at"
+        )
         .in("task_item_id", itemIds);
       completions = compData || [];
     }
 
     return apiSuccess({
       status: computedStatus,
-      expires_at: expiresAt,
+      expires_at: expiresAt.toISOString(),
       verify_required: Boolean(groupInfo?.verify_required),
       task_list: {
         id: taskList.id,
@@ -120,9 +128,11 @@ export async function GET(
       },
       items: items || [],
       members: members || [],
-      completions: completions,
+      completions,
     });
-  } catch (err: any) {
-    return apiError(err.message || "Failed to load public task list", "SERVER_ERROR", 500);
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "Failed to load public task list";
+    return apiError(message, "SERVER_ERROR", 500);
   }
 }

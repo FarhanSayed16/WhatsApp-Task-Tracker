@@ -183,7 +183,7 @@ export default function AdminSettingsPage() {
                   System Status
                 </span>
                 <Badge
-                  variant={healthData?.db === "connected" ? "verified" : "urgent"}
+                  variant={healthData?.db === "connected" ? "verified" : "overdue"}
                   className="text-[10px] uppercase font-bold"
                 >
                   {healthData?.db === "connected" ? "Operational" : "Degraded"}
