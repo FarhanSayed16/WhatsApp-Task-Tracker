@@ -1041,7 +1041,7 @@ vercel.json                             # Cron config
 
 ## 9.1 — Member Page API (Public)
 
-- [ ] `GET /api/t/[token]` — Get task list data:
+- [x] `GET /api/t/[token]` — Get task list data:
   - Look up `task_lists` by token (join group for name + `verify_required`)
   - Compute status using **Core Business Rules** (expiry = due_at or list_date + 7 days):
     - If not found OR `deleted_at IS NOT NULL` → `{ status: 'expired' }`
@@ -1061,11 +1061,11 @@ vercel.json                             # Cron config
       "completions": [{ "task_item_id": "...", "member_id": "...", "status": "done", "note": null, "completed_at": "..." }]
     }
     ```
-- [ ] `POST /api/t/[token]/open` — Track page open:
+- [x] `POST /api/t/[token]/open` — Track page open:
   - Accept: `{ member_id }`
   - Apply public write rate limit
   - Upsert into `opens`: `ON CONFLICT (task_list_id, member_id) DO UPDATE SET last_opened_at = now(), open_count = open_count + 1`
-- [ ] `POST /api/t/[token]/items/[id]/complete` — Member ticks item:
+- [x] `POST /api/t/[token]/items/[id]/complete` — Member ticks item:
   - Accept: `{ member_id, note? }`
   - Apply public write rate limit
   - Validate: member belongs to this group and `active = true`
@@ -1075,7 +1075,7 @@ vercel.json                             # Cron config
   - Insert into `completions` (`ON CONFLICT DO NOTHING` — prevents duplicate ticks)
   - If all items non-pending → auto-update list status to `completed`
   - Return updated item
-- [ ] `POST /api/t/[token]/items/[id]/undo` — Member undoes tick:
+- [x] `POST /api/t/[token]/items/[id]/undo` — Member undoes tick:
   - Accept: `{ member_id }`
   - Apply public write rate limit
   - Validate: the completion belongs to this member
@@ -1088,18 +1088,18 @@ vercel.json                             # Cron config
 
 ## 9.2 — Member Page UI (`src/app/t/[token]/page.tsx`)
 
-- [ ] **First visit flow:**
+- [x] **First visit flow:**
   - Show task list title, group name, date at top
   - "Who are you?" prompt with `NamePicker` component
   - List of group members as selectable buttons
   - On selection: save to `localStorage`, call `/open` API, show checklist
-- [ ] **Returning visit flow:**
+- [x] **Returning visit flow:**
   - Read saved member from `localStorage`
   - Validate member still exists in group (API check)
   - If valid → show checklist directly
   - If invalid → show name picker again
   - "Not you? Switch" link to re-pick name
-- [ ] **Checklist view:**
+- [x] **Checklist view:**
   - Task list header: title, group, date, due time
   - Progress bar: "X of Y done" with animated fill
   - List of items:
@@ -1110,18 +1110,18 @@ vercel.json                             # Cron config
     - Status indicators: pending (empty), done (green check), verified (blue double-check)
     - Items completed by other members shown with "✓ Done by [Name]" label
   - Confetti/celebration animation when all items are done 🎉
-- [ ] **Read-only state:**
+- [x] **Read-only state:**
   - Show all items but checkboxes are disabled
   - Banner: "This list is read-only (expired or completed)"
-- [ ] **Expired state:**
+- [x] **Expired state:**
   - Show message: "This task list has expired"
   - No items shown
-- [ ] **Responsive design:**
+- [x] **Responsive design:**
   - Full-width on mobile
   - Centered card on desktop
   - Large touch targets for checkboxes
   - Smooth transitions
-- [ ] **Optimistic updates:**
+- [x] **Optimistic updates:**
   - Tick immediately on tap (don't wait for API)
   - Revert if API fails with error toast
   - SWR revalidation on focus to sync with other members' changes
@@ -1130,11 +1130,11 @@ vercel.json                             # Cron config
 
 ## 9.3 — Concurrency & Edge Cases
 
-- [ ] Multiple members ticking simultaneously: DB unique constraint prevents duplicates
-- [ ] Member ticks item then another member tries: second member sees "Done by [Name]"
-- [ ] Network failure during tick: optimistic update reverts, retry button shown
-- [ ] Token not found: 404 page with friendly message
-- [ ] localStorage cleared: name picker shown again
+- [x] Multiple members ticking simultaneously: DB unique constraint prevents duplicates
+- [x] Member ticks item then another member tries: second member sees "Done by [Name]"
+- [x] Network failure during tick: optimistic update reverts, retry button shown
+- [x] Token not found: 404 page with friendly message
+- [x] localStorage cleared: name picker shown again
 
 **Acceptance Criteria:**
 > ✅ Member taps WhatsApp link → page loads → picks name (remembered) → sees checklist → ticks items → progress bar updates → professor's dashboard sees the change within 15s. Works on all phones, no login needed, handles expired/readonly states.
@@ -1785,7 +1785,7 @@ If a second helper ever needs access, handle it manually later (extra admin row)
 | 6 | Groups & Members Management | 1.5 days | ✅ Completed | |
 | 7 | Task Lists & Task Items | 2 days | ✅ Completed | |
 | 8 | WhatsApp Sharing System | 1 day | ✅ Completed | |
-| 9 | Public Member Page | 1.5 days | ⬜ Not Started | |
+| 9 | Public Member Page | 1.5 days | ✅ Completed | |
 | 10 | Admin Dashboard & KPIs | 1.5 days | ⬜ Not Started | |
 | 11 | Export, Backup, Maintenance & Settings | 1 day | ⬜ Not Started | **🟢 MVP SHIP GATE** — professor can use daily |
 | 12 | Templates & Recurring Tasks | 1.5 days | ⬜ Not Started | Comfort |

@@ -34,3 +34,5 @@ export const supabase = new Proxy({} as SupabaseClient, {
     return value;
   },
 });
+
+export const supabaseAdmin = supabase;
