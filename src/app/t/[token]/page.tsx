@@ -382,6 +382,11 @@ export default function PublicMemberPage({
             currentMemberId={selectedMember?.id || null}
             readOnly={isReadOnly}
             onToggleItem={handleToggleItem}
+            onAddNote={(item) => {
+              setNoteModalItem(item);
+              const comp = completions.find((c) => c.task_item_id === item.id);
+              setItemNoteText(comp?.note || "");
+            }}
           />
         </Card>
 

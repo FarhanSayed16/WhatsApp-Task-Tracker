@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { TaskItem, Completion, Member } from "@/types";
-import { Check, ShieldCheck, Clock, User, AlertCircle } from "lucide-react";
+import { Check, ShieldCheck, Clock, User, AlertCircle, MessageSquare } from "lucide-react";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
 export interface TaskChecklistProps {
@@ -12,6 +12,7 @@ export interface TaskChecklistProps {
   currentMemberId: string | null;
   readOnly?: boolean;
   onToggleItem: (item: TaskItem, isCurrentlyDone: boolean) => Promise<void> | void;
+  onAddNote?: (item: TaskItem) => void;
 }
 
 export function TaskChecklist({
@@ -21,6 +22,7 @@ export function TaskChecklist({
   currentMemberId,
   readOnly = false,
   onToggleItem,
+  onAddNote,
 }: TaskChecklistProps) {
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -141,7 +143,29 @@ export function TaskChecklist({
                     </span>
                   )}
                 </div>
+
+                {/* Optional note display */}
+                {completion?.note && (
+                  <div className="mt-2 text-xs text-slate-600 dark:text-slate-400 italic bg-slate-100/70 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 px-2.5 py-1.5 rounded-lg">
+                    “{completion.note}”
+                  </div>
+                )}
               </div>
+
+              {/* Note action button */}
+              {onAddNote && !readOnly && currentMemberId && !isDone && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddNote(item);
+                  }}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+                  title="Add completion note"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         );
