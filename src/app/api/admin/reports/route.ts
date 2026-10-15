@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     // 3. Fetch task lists in date range
     let listsQuery = supabase
       .from("task_lists")
-      .select("id, title, list_date, group_id, created_at, status")
+      .select("id, title, list_date, group_id, created_at, shared_at, status")
       .eq("org_id", admin.orgId)
       .gte("list_date", from)
       .lte("list_date", to)
@@ -93,6 +93,7 @@ export async function GET(req: NextRequest) {
       verified_at: string | null;
       assigned_member_id: string | null;
       created_at: string;
+      shared_at?: string | null;
     }> = [];
 
     if (listIds.length > 0) {
@@ -185,10 +186,10 @@ export async function GET(req: NextRequest) {
       }
 
       // Calculate response time from list creation to completion
-      if (isDone && item.completed_at && parentList?.created_at) {
+      if (isDone && item.completed_at && (parentList?.shared_at || parentList?.created_at)) {
         const diffMs =
           new Date(item.completed_at).getTime() -
-          new Date(parentList.created_at).getTime();
+          new Date((parentList.shared_at || parentList.created_at)).getTime();
         if (diffMs > 0) {
           responseTimesMinutes.push(Math.round(diffMs / (1000 * 60)));
         }
@@ -336,10 +337,10 @@ export async function GET(req: NextRequest) {
         stats.overdue++;
       }
 
-      if (isDone && item.completed_at && parentList.created_at) {
+      if (isDone && item.completed_at && (parentList.shared_at || parentList.created_at)) {
         const diffMs =
           new Date(item.completed_at).getTime() -
-          new Date(parentList.created_at).getTime();
+          new Date((parentList.shared_at || parentList.created_at)).getTime();
         if (diffMs > 0) {
           stats.responseTimes.push(Math.round(diffMs / (1000 * 60)));
         }
@@ -424,10 +425,10 @@ export async function GET(req: NextRequest) {
           }
         }
 
-        if (parentList?.created_at) {
+        if ((parentList?.shared_at || parentList?.created_at)) {
           const diffMs =
             new Date(comp.completed_at).getTime() -
-            new Date(parentList.created_at).getTime();
+            new Date((parentList.shared_at || parentList.created_at)).getTime();
           if (diffMs > 0) {
             mStats.responseTimes.push(Math.round(diffMs / (1000 * 60)));
           }

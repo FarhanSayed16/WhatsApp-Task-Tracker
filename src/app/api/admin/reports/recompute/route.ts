@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     // Fetch all task lists in this date range
     const { data: lists, error: listsErr } = await supabase
       .from("task_lists")
-      .select("id, group_id, list_date, created_at")
+      .select("id, group_id, list_date, created_at, shared_at")
       .eq("org_id", admin.orgId)
       .gte("list_date", from)
       .lte("list_date", to)
@@ -113,10 +113,10 @@ export async function POST(req: NextRequest) {
               overdueCount++;
             }
 
-            if (isDone && it.completed_at && dl.created_at) {
+            if (isDone && it.completed_at && (dl.shared_at || dl.created_at)) {
               const diffMs =
                 new Date(it.completed_at).getTime() -
-                new Date(dl.created_at).getTime();
+                new Date((dl.shared_at || dl.created_at)).getTime();
               if (diffMs > 0) {
                 responseTimes.push(Math.round(diffMs / (1000 * 60)));
               }
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
               tasks_overdue: overdueCount,
               avg_response_minutes: avgMins,
             },
-            { onConflict: "org_id, group_id, stat_date" }
+            { onConflict: "org_id,group_id,stat_date" }
           );
 
         if (!upsertErr) {

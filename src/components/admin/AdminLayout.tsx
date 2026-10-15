@@ -19,7 +19,7 @@ export function AdminLayout({
   actions,
 }: AdminLayoutProps) {
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 antialiased selection:bg-emerald-500 selection:text-white">
+    <div className="flex min-h-screen bg-[var(--background)] text-[var(--foreground)] antialiased selection:bg-emerald-500 selection:text-white">
       {/* Desktop Sidebar */}
       <Sidebar />
 

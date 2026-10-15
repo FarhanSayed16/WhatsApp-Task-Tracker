@@ -33,7 +33,8 @@ export async function GET(_req: NextRequest) {
 
     const { count: memberCount } = await supabase
       .from("members")
-      .select("id", { count: "exact", head: true })
+      .select("id, groups!inner(org_id)", { count: "exact", head: true })
+      .eq("groups.org_id", admin.orgId)
       .is("deleted_at", null);
 
     const orgObj = Array.isArray(dbAdmin.organization)
@@ -61,6 +62,7 @@ export async function GET(_req: NextRequest) {
         recipients: [],
         day_of_week: 1,
       },
+      default_wa_phone: orgSettings.default_wa_phone || null,
       stats: {
         total_groups: groupCount || 0,
         total_lists: listCount || 0,
@@ -78,7 +80,7 @@ export async function PATCH(req: NextRequest) {
     if (!admin) return apiError("Unauthorized", "UNAUTHORIZED", 401);
 
     const body = await req.json();
-    const { name, timezone, report_digest } = body;
+    const { name, timezone, report_digest, default_wa_phone } = body;
 
     const updates: Record<string, any> = {
       updated_at: new Date().toISOString(),
@@ -103,8 +105,11 @@ export async function PATCH(req: NextRequest) {
       return apiError("Failed to update profile", "DB_ERROR", 500);
     }
 
-    // If report_digest preferences provided, update organization settings
-    if (report_digest && typeof report_digest === "object") {
+    // Organization settings (digest + default WhatsApp number for wa.me share)
+    if (
+      (report_digest && typeof report_digest === "object") ||
+      default_wa_phone !== undefined
+    ) {
       const { data: currentOrg } = await supabase
         .from("organizations")
         .select("settings")
@@ -112,17 +117,23 @@ export async function PATCH(req: NextRequest) {
         .single();
 
       const existingSettings = (currentOrg?.settings as Record<string, any>) || {};
+      const nextSettings: Record<string, any> = { ...existingSettings };
+
+      if (report_digest && typeof report_digest === "object") {
+        nextSettings.report_digest = {
+          ...(existingSettings.report_digest || {}),
+          ...report_digest,
+        };
+      }
+
+      if (default_wa_phone !== undefined) {
+        const cleaned = String(default_wa_phone || "").replace(/[^0-9]/g, "");
+        nextSettings.default_wa_phone = cleaned || null;
+      }
+
       await supabase
         .from("organizations")
-        .update({
-          settings: {
-            ...existingSettings,
-            report_digest: {
-              ...(existingSettings.report_digest || {}),
-              ...report_digest,
-            },
-          },
-        })
+        .update({ settings: nextSettings })
         .eq("id", admin.orgId);
     }
 

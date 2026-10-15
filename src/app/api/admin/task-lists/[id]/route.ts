@@ -148,6 +148,7 @@ export async function PATCH(
     if (data.list_date !== undefined) updatePayload.list_date = data.list_date;
     if (data.due_at !== undefined) updatePayload.due_at = data.due_at;
     if (data.status !== undefined) updatePayload.status = data.status;
+    if (data.recurrence !== undefined) updatePayload.recurrence = data.recurrence;
 
     const { data: updated, error } = await supabase
       .from("task_lists")

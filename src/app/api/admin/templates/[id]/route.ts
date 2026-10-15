@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { apiError, apiSuccess, handleApiError } from "@/lib/errors";
 import { supabase } from "@/lib/supabase";
+import { updateTemplateSchema, validateBody } from "@/lib/validation";
 
 export async function GET(
   _req: NextRequest,
@@ -38,19 +39,15 @@ export async function PATCH(
     if (!admin) return apiError("Unauthorized", "UNAUTHORIZED", 401);
 
     const { id } = await params;
-    const body = await req.json();
+    const raw = await req.json();
+    const data = validateBody(updateTemplateSchema, raw);
 
     const updates: Record<string, any> = {
       updated_at: new Date().toISOString(),
     };
 
-    if (typeof body.name === "string" && body.name.trim()) {
-      updates.name = body.name.trim();
-    }
-
-    if (body.body && typeof body.body === "object") {
-      updates.body = body.body;
-    }
+    if (data.name) updates.name = data.name;
+    if (data.body) updates.body = data.body;
 
     const { data: updated, error } = await supabase
       .from("templates")

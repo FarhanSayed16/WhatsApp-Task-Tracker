@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     // Fetch lists
     let listsQuery = supabase
       .from("task_lists")
-      .select("id, title, list_date, group_id, created_at, status")
+      .select("id, title, list_date, group_id, created_at, shared_at, status")
       .eq("org_id", admin.orgId)
       .gte("list_date", from)
       .lte("list_date", to)
@@ -126,10 +126,10 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      if (isDone && item.completed_at && parent?.created_at) {
+      if (isDone && item.completed_at && (parent?.shared_at || parent?.created_at)) {
         const diffMs =
           new Date(item.completed_at).getTime() -
-          new Date(parent.created_at).getTime();
+          new Date((parent.shared_at || parent.created_at)).getTime();
         if (diffMs > 0) {
           responseTimes.push(Math.round(diffMs / (1000 * 60)));
         }
@@ -171,10 +171,10 @@ export async function GET(req: NextRequest) {
       s.total++;
       const isDone = item.status === "done" || item.status === "verified";
       if (isDone) s.done++;
-      if (isDone && item.completed_at && parent.created_at) {
+      if (isDone && item.completed_at && (parent.shared_at || parent.created_at)) {
         const diffMs =
           new Date(item.completed_at).getTime() -
-          new Date(parent.created_at).getTime();
+          new Date((parent.shared_at || parent.created_at)).getTime();
         if (diffMs > 0) s.responseTimes.push(Math.round(diffMs / (1000 * 60)));
       }
     }
