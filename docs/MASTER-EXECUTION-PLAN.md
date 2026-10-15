@@ -1239,26 +1239,26 @@ vercel.json                             # Cron config
 
 ## 11.1 — CSV Export
 
-- [ ] `GET /api/admin/export` — Export data as CSV:
+- [x] `GET /api/admin/export` — Export data as CSV:
   - Query params: `format=csv`, `from`, `to`, `group_id`
   - Generates CSV with columns: Date, Group, Task List, Item, Status, Completed By, Completed At, Verified At, Notes
   - Sets headers: `Content-Type: text/csv`, `Content-Disposition: attachment; filename=tasks-export-{date}.csv`
   - Streams data for large exports
-- [ ] Export button on Reports page and Dashboard
-- [ ] Monthly backup reminder: show toast on 1st of each month "Download your monthly backup →"
+- [x] Export button on Reports page and Dashboard
+- [x] Monthly backup reminder: show toast on 1st of each month "Download your monthly backup →"
 
 ---
 
 ## 11.2 — Keep-Alive Cron
 
-- [ ] `GET /api/cron/keepalive` (`src/app/api/cron/keepalive/route.ts`):
+- [x] `GET /api/cron/keepalive` (`src/app/api/cron/keepalive/route.ts`):
   - Verify `Authorization: Bearer ${CRON_SECRET}` header
   - Ping Supabase: `SELECT 1 FROM groups LIMIT 1`
   - Clean up old `login_attempts` rows (older than 24 hours)
   - Update `daily_stats` table (aggregate previous day's data)
   - Auto-archive task lists older than 90 days (set status = `archived`)
   - Return: `{ ok: true, cleaned: N, archived: M }`
-- [ ] Configure in `vercel.json`:
+- [x] Configure in `vercel.json`:
   ```json
   { "crons": [{ "path": "/api/cron/keepalive", "schedule": "0 3 * * *" }] }
   ```
@@ -1268,7 +1268,7 @@ vercel.json                             # Cron config
 
 ## 11.3 — Health Endpoint
 
-- [ ] `GET /api/health`:
+- [x] `GET /api/health`:
   - Check Supabase connectivity (quick SELECT)
   - Return: `{ status: "ok" | "degraded", db: "connected" | "error", timestamp, version }`
   - No auth required (for monitoring)
@@ -1277,43 +1277,43 @@ vercel.json                             # Cron config
 
 ## 11.4 — PWA Setup
 
-- [ ] Create `public/manifest.json`:
+- [x] Create `public/manifest.json`:
   - Name, short_name, description
   - Icons (192x192, 512x512)
   - Theme color, background color
   - Display: `standalone`
   - Start URL: `/admin`
-- [ ] Create service worker (`public/sw.js`):
+- [x] Create service worker (`public/sw.js`):
   - Cache static assets (CSS, JS, fonts)
   - Cache-first for static, network-first for API
   - Offline fallback page: "You're offline. Your data is safe."
-- [ ] Add manifest link and meta tags to `layout.tsx`
-- [ ] Add Apple-specific meta tags for iOS PWA
-- [ ] Generate icons in multiple sizes
-- [ ] "Install App" button in settings page with install prompt
+- [x] Add manifest link and meta tags to `layout.tsx`
+- [x] Add Apple-specific meta tags for iOS PWA
+- [x] Generate icons in multiple sizes
+- [x] "Install App" button in settings page with install prompt
 
 ---
 
 ## 11.5 — Settings Page (`src/app/admin/settings/page.tsx`)
 
-- [ ] **Change PIN section:**
+- [x] **Change PIN section:**
   - Current PIN input (6 digits)
   - New PIN input (6 digits)
   - Confirm New PIN input
   - Submit → API call → success toast → re-login
-- [ ] **Profile section:**
+- [x] **Profile section:**
   - Admin name (editable)
   - Timezone selector (default: Asia/Kolkata)
   - Language preference (English for now)
-- [ ] **App section:**
+- [x] **App section:**
   - Default message format preview
   - Install PWA button
   - App version display
-- [ ] **Data section:**
+- [x] **Data section:**
   - "Export All Data (CSV)" button
   - "Download Backup" button
   - Data storage usage indicator
-- [ ] **Danger zone:**
+- [x] **Danger zone:**
   - "Delete Account" — omit (single-professor install; wipe via Supabase if ever needed)
 
 **Acceptance Criteria:**
