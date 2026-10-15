@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 
+import { ShareSheet } from "./ShareSheet";
+
 export interface TaskListCardProps {
   id: string;
   token: string;
@@ -49,6 +51,7 @@ export function TaskListCard({
 }: TaskListCardProps) {
   const { toast } = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
 
   const percentage =
     totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
@@ -78,15 +81,12 @@ export function TaskListCard({
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (shareUrl) {
-      window.open(shareUrl, "_blank");
-    } else {
-      copyLink(e);
-    }
+    setShowShareSheet(true);
   };
 
   return (
-    <Card className="p-5 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+    <>
+      <Card className="p-5 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-all">
       <div>
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex flex-wrap items-center gap-1.5 mb-1">
@@ -196,5 +196,21 @@ export function TaskListCard({
         </div>
       </div>
     </Card>
+
+    <ShareSheet
+      isOpen={showShareSheet}
+      onClose={() => setShowShareSheet(false)}
+      taskList={{
+        id,
+        token,
+        title,
+        group_name: groupName,
+        list_date: listDate,
+        due_at: dueAt,
+        total_items: totalItems,
+        completed_items: completedItems,
+      }}
+    />
+    </>
   );
 }

@@ -972,7 +972,7 @@ vercel.json                             # Cron config
 
 ## 8.1 — Share API
 
-- [ ] `POST /api/admin/task-lists/[id]/share` — Log a share event:
+- [x] `POST /api/admin/task-lists/[id]/share` — Log a share event:
   - Accept: `{ channel: 'whatsapp_group' | 'whatsapp_individual' | 'copy' | 'native_share' }`
   - Insert into `share_log`
   - Update `task_lists.shared_at = now()` (first share only)
@@ -983,25 +983,25 @@ vercel.json                             # Cron config
 
 ## 8.2 — Share Sheet Component (`src/components/admin/ShareSheet.tsx`)
 
-- [ ] Modal or slide-up panel triggered from task list card/detail
-- [ ] Message preview:
+- [x] Modal or slide-up panel triggered from task list card/detail
+- [x] Message preview:
   - Shows the formatted WhatsApp message with emojis
   - Editable text area — admin can modify before sending
   - Character count showing **encoded URL length** (not just text length)
   - Warning badge when approaching 2048 URL character limit
-- [ ] Action buttons:
+- [x] Action buttons:
   - **"Open WhatsApp"** (primary) → opens `wa.me/?text=...` in new tab
   - **"Copy Message"** → copies to clipboard with success toast
   - **"Share via..."** (mobile only) → uses `navigator.share()` API
   - **"Send to Individual"** → shows member list with phone numbers, opens `wa.me/<number>?text=...`
-- [ ] "Mark as Sent ✔" button:
+- [x] "Mark as Sent ✔" button:
   - Shown after WhatsApp opens (or always visible)
   - Logs the share event via API
   - Shows timestamp of last share
-- [ ] Member link display:
+- [x] Member link display:
   - Shows the public member link (`APP_URL/t/<token>`)
   - Copy button for the link itself
-- [ ] Previous shares section:
+- [x] Previous shares section:
   - When was this list last shared
   - Via which channel
 
@@ -1009,19 +1009,19 @@ vercel.json                             # Cron config
 
 ## 8.3 — Share from Task List Card
 
-- [ ] Quick "Share" button on `TaskListCard` → opens share sheet
-- [ ] Quick "Share" button on task list detail page
-- [ ] "Share & Create Another" flow after creating a new task list
+- [x] Quick "Share" button on `TaskListCard` → opens share sheet
+- [x] Quick "Share" button on task list detail page
+- [x] "Share & Create Another" flow after creating a new task list
 
 ---
 
 ## 8.4 — Reminder Flow
 
-- [ ] `POST /api/admin/task-lists/[id]/remind` — Log a reminder:
+- [x] `POST /api/admin/task-lists/[id]/remind` — Log a reminder:
   - Accept: `{ member_id?: uuid, channel: string }`
   - If `member_id` is null → group reminder; else → individual reminder
   - Insert into `share_log` with `kind = 'reminder'`
-- [ ] "Remind" button on task list detail:
+- [x] "Remind" button on task list detail:
   - "Remind All" → generates group reminder message → opens wa.me
   - "Remind Pending" → shows list of members who haven't completed all items → individual wa.me links
   - "Remind Overdue" → generates overdue message template
@@ -1784,7 +1784,7 @@ If a second helper ever needs access, handle it manually later (extra admin row)
 | 5 | Reusable UI Components | 1.5 days | ✅ Completed | |
 | 6 | Groups & Members Management | 1.5 days | ✅ Completed | |
 | 7 | Task Lists & Task Items | 2 days | ✅ Completed | |
-| 8 | WhatsApp Sharing System | 1 day | ⬜ Not Started | |
+| 8 | WhatsApp Sharing System | 1 day | ✅ Completed | |
 | 9 | Public Member Page | 1.5 days | ⬜ Not Started | |
 | 10 | Admin Dashboard & KPIs | 1.5 days | ⬜ Not Started | |
 | 11 | Export, Backup, Maintenance & Settings | 1 day | ⬜ Not Started | **🟢 MVP SHIP GATE** — professor can use daily |

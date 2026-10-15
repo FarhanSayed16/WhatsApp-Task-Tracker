@@ -33,7 +33,9 @@ import {
   Check,
   RotateCcw,
   User,
+  Bell,
 } from "lucide-react";
+import { ShareSheet } from "@/components/admin/ShareSheet";
 
 interface TaskDetailResponse {
   task_list: {
@@ -124,6 +126,7 @@ export default function TaskListDetailPage({
   const [savingItem, setSavingItem] = useState(false);
 
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [shareSheetMode, setShareSheetMode] = useState<"share" | "reminder" | null>(null);
 
   const handleOpenEditList = () => {
     if (!data?.task_list) return;
@@ -341,10 +344,18 @@ export default function TaskListDetailPage({
           </Button>
           <Button
             size="sm"
-            onClick={handleShareWa}
+            onClick={() => setShareSheetMode("share")}
             className="bg-[#25D366] hover:bg-[#20ba5a] text-white"
           >
             <Share2 className="w-3.5 h-3.5 mr-1" /> Share WA
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShareSheetMode("reminder")}
+            className="border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+          >
+            <Bell className="w-3.5 h-3.5 mr-1" /> Remind
           </Button>
           <Button variant="outline" size="sm" onClick={handleOpenEditList}>
             <Edit className="w-3.5 h-3.5" />
@@ -764,6 +775,34 @@ export default function TaskListDetailPage({
           </div>
         </form>
       </Modal>
+
+      {/* Share & Reminder Sheet */}
+      {shareSheetMode && (
+        <ShareSheet
+          isOpen={true}
+          onClose={() => setShareSheetMode(null)}
+          taskList={{
+            id: task_list.id,
+            token: task_list.token,
+            title: task_list.title,
+            group_name: task_list.group_name,
+            list_date: task_list.list_date,
+            due_at: task_list.due_at,
+            member_link: task_list.member_link,
+            total_items: task_list.total_items,
+            completed_items: task_list.completed_items,
+          }}
+          items={items.map((it) => ({
+            id: it.id,
+            text: it.text,
+            status: it.status,
+            assigned_member_id: it.assigned_member_id,
+          }))}
+          members={members}
+          initialMode={shareSheetMode}
+          onShareLogged={() => mutate()}
+        />
+      )}
     </AdminLayout>
   );
 }
