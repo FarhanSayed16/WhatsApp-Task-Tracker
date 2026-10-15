@@ -126,12 +126,23 @@ export const importMembersSchema = z.object({
 // Task List Schemas
 // ═════════════════════════════════════════════════════════════
 
+export const taskItemInputSchema = z.union([
+  z.string().trim().min(1),
+  z.object({
+    text: z.string().trim().min(1, "Task text is required").max(500),
+    priority: z.enum(["low", "normal", "high", "urgent"]).optional().default("normal"),
+    assigned_member_id: z.string().uuid().optional().nullable(),
+    due_at: z.string().optional().nullable(),
+  }),
+]);
+
 export const createTaskListSchema = z.object({
   group_id: z.string().uuid("Invalid group ID"),
   title: z.string().trim().min(1, "Title is required").max(200),
   list_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
-  due_at: z.string().datetime().optional().nullable(),
-  items: z.array(z.string().trim().min(1)).min(1, "At least one task item is required"),
+  due_at: z.string().optional().nullable(),
+  status: z.enum(["draft", "active", "completed", "archived"]).optional().default("draft"),
+  items: z.array(taskItemInputSchema).min(1, "At least one task item is required"),
 });
 
 export const updateTaskListSchema = z.object({
