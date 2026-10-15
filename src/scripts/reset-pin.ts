@@ -19,7 +19,7 @@ async function main() {
   const supabase = createClient(url, key);
 
   console.log(`Hashing new PIN: ${newPin}...`);
-  const pinHash = await bcrypt.hash(newPin, 10);
+  const pinHash = await bcrypt.hash(newPin, 12);
 
   // Check if admin exists
   const { data: admin, error: fetchError } = await supabase

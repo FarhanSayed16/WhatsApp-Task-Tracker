@@ -63,6 +63,7 @@ export function TaskListCard({
   status,
   totalItems,
   completedItems,
+  recurrence,
   onDelete,
 }: TaskListCardProps) {
   const { toast } = useToast();

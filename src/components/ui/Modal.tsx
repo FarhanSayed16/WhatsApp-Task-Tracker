@@ -26,24 +26,62 @@ export function Modal({
   showCloseButton = true,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
+    if (!isOpen) return;
+
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+
+    const node = modalRef.current;
+    const focusableSelector =
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    const focusFirst = () => {
+      const first = node?.querySelector<HTMLElement>(focusableSelector);
+      first?.focus();
+    };
+    // Defer so content is mounted
+    requestAnimationFrame(focusFirst);
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
+      if (e.key === "Escape") {
         onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !node) return;
+
+      const focusable = Array.from(
+        node.querySelectorAll<HTMLElement>(focusableSelector)
+      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+
+      if (focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey) {
+        if (active === first || !node.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
 
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", handleKeyDown);
-    } else {
-      document.body.style.overflow = "unset";
-    }
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.body.style.overflow = "unset";
       window.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused.current?.focus?.();
     };
   }, [isOpen, onClose]);
 
@@ -62,14 +100,12 @@ export function Modal({
       role="dialog"
       aria-modal="true"
     >
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal Dialog Content */}
       <div
         ref={modalRef}
         className={cn(
@@ -78,15 +114,15 @@ export function Modal({
         )}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
-            <div>
+          <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="min-w-0 space-y-1">
               {title && (
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
                   {title}
-                </h3>
+                </h2>
               )}
               {description && (
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   {description}
                 </p>
               )}
@@ -95,23 +131,19 @@ export function Modal({
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close modal"
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close dialog"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
         )}
 
-        {/* Content body */}
-        <div className="px-6 py-5 text-sm text-slate-700 dark:text-slate-300">
-          {children}
-        </div>
+        <div className="px-5 py-4">{children}</div>
 
-        {/* Footer actions */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
+          <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40">
             {footer}
           </div>
         )}

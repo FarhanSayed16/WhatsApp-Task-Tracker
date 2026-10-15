@@ -12,7 +12,7 @@ export const SESSION_MAX_AGE_DAYS = 30;
 export const SESSION_DURATION_SECONDS = SESSION_MAX_AGE_DAYS * 24 * 60 * 60; // 30 days
 export const SESSION_REFRESH_AFTER_DAYS = 7;
 export const SESSION_REFRESH_THRESHOLD_SECONDS = SESSION_REFRESH_AFTER_DAYS * 24 * 60 * 60; // 7 days
-export const BCRYPT_SALT_ROUNDS = 10;
+export const BCRYPT_SALT_ROUNDS = 12;
 
 // Rate Limiting
 export const MAX_PIN_ATTEMPTS = 5;

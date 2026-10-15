@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { KpiCard } from "@/components/admin/KpiCard";
 import { TaskListCard } from "@/components/admin/TaskListCard";
@@ -40,6 +41,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Sparkles,
+  Copy,
+  FileText,
 } from "lucide-react";
 
 // Sleek animated SVG circular progress ring for group cards
@@ -111,6 +114,7 @@ function getGreeting(name?: string) {
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const { session } = useSession({ requireAuth: true });
   const { toast } = useToast();
 

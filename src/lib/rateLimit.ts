@@ -86,17 +86,7 @@ export async function recordLoginAttempt(
   success: boolean,
   orgId?: string | null
 ): Promise<void> {
-  try {
-    await supabase.from("login_attempts").insert({
-      ip,
-      success,
-      org_id: orgId || null,
-    });
-  } catch (err) {
-    console.warn("Could not insert login_attempt to DB:", err);
-  }
-
-  // Update in-memory record
+  // Always update in-memory record first (works even if DB insert fails)
   const now = Date.now();
   const resetAt = now + LOGIN_RATE_LIMIT.WINDOW_MINUTES * 60 * 1000;
   if (!success) {
@@ -108,6 +98,16 @@ export async function recordLoginAttempt(
     }
   } else {
     memoryAttempts.delete(ip);
+  }
+
+  const { error } = await supabase.from("login_attempts").insert({
+    ip,
+    success,
+    org_id: orgId || null,
+  });
+
+  if (error) {
+    console.error("Failed to persist login_attempt — rate limit may be weaker:", error);
   }
 }
 

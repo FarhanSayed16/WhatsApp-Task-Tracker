@@ -33,16 +33,21 @@ export const loginSchema = z.object({
     .regex(/^\d{6}$/, "PIN must contain only numbers"),
 });
 
-export const changePinSchema = z.object({
-  old_pin: z
-    .string()
-    .length(6, "PIN must be exactly 6 digits")
-    .regex(/^\d{6}$/, "PIN must contain only numbers"),
-  new_pin: z
-    .string()
-    .length(6, "PIN must be exactly 6 digits")
-    .regex(/^\d{6}$/, "PIN must contain only numbers"),
-});
+export const changePinSchema = z
+  .object({
+    old_pin: z
+      .string()
+      .length(6, "PIN must be exactly 6 digits")
+      .regex(/^\d{6}$/, "PIN must contain only numbers"),
+    new_pin: z
+      .string()
+      .length(6, "PIN must be exactly 6 digits")
+      .regex(/^\d{6}$/, "PIN must contain only numbers"),
+  })
+  .refine((data) => data.new_pin !== data.old_pin, {
+    message: "New PIN must be different from the current PIN",
+    path: ["new_pin"],
+  });
 
 // ═════════════════════════════════════════════════════════════
 // Pagination & Filtering Schemas
@@ -138,15 +143,19 @@ export const taskItemInputSchema = z.union([
 
 export const createTaskListSchema = z.object({
   group_id: z.string().uuid("Invalid group ID"),
-  title: z.string().trim().min(1, "Title is required").max(200),
+  title: z.string().trim().min(1, "Title is required").max(100),
   list_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
   due_at: z.string().optional().nullable(),
   status: z.enum(["draft", "active", "completed", "archived"]).optional().default("draft"),
-  items: z.array(taskItemInputSchema).min(1, "At least one task item is required"),
+  recurrence: z.any().optional().nullable(),
+  items: z
+    .array(taskItemInputSchema)
+    .min(1, "At least one task item is required")
+    .max(50, "Maximum 50 task items per list"),
 });
 
 export const updateTaskListSchema = z.object({
-  title: z.string().trim().min(1).max(200).optional(),
+  title: z.string().trim().min(1).max(100).optional(),
   list_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   due_at: z.string().datetime().optional().nullable(),
   status: z.enum(["draft", "active", "completed", "archived"]).optional(),

@@ -1331,41 +1331,41 @@ vercel.json                             # Cron config
 
 ## 12.1 — Templates API
 
-- [ ] `GET /api/admin/templates` — List templates:
+- [x] `GET /api/admin/templates` — List templates:
   - Filter by `type`: `checklist` or `message`
   - Org-scoped
-- [ ] `POST /api/admin/templates` — Create template:
+- [x] `POST /api/admin/templates` — Create template:
   - Validate: name, type, body (JSONB — schema-checked)
   - Checklist body: `{ items: string[], default_due_offset_hours?: number }`
   - Message body: `{ text: string, placeholders: string[] }`
-- [ ] `PATCH /api/admin/templates/[id]` — Update template
-- [ ] `DELETE /api/admin/templates/[id]` — Delete template
+- [x] `PATCH /api/admin/templates/[id]` — Update template
+- [x] `DELETE /api/admin/templates/[id]` — Delete template
 
 ---
 
 ## 12.2 — Templates Page (`src/app/admin/templates/page.tsx`)
 
-- [ ] Two tabs: "Checklist Templates" / "Message Templates"
-- [ ] Grid of template cards: name, type badge, item count (checklist) or preview (message)
-- [ ] Create template form:
+- [x] Two tabs: "Checklist Templates" / "Message Templates"
+- [x] Grid of template cards: name, type badge, item count (checklist) or preview (message)
+- [x] Create template form:
   - Name
   - Type selector
   - Checklist: add items (same UI as task creation)
   - Message: text editor with placeholder buttons ({title}, {group}, etc.)
-- [ ] Edit / Delete actions
-- [ ] "Use Template" quick action → navigates to new task list with template pre-filled
+- [x] Edit / Delete actions
+- [x] "Use Template" quick action → navigates to new task list with template pre-filled
 
 ---
 
 ## 12.3 — Duplicate / Clone Task Lists
 
-- [ ] "Duplicate" button on task list card/detail:
+- [x] "Duplicate" button on task list card/detail:
   - Creates a new task list with same items, for today
   - Opens in edit mode so admin can tweak
-- [ ] "Duplicate Yesterday" shortcut on dashboard:
+- [x] "Duplicate Yesterday" shortcut on dashboard:
   - Shows yesterday's task lists
   - One-tap duplicate for today
-- [ ] Clone from any previous list:
+- [x] Clone from any previous list:
   - On task list detail: "Clone as New" button
   - Copies title, items, group — changes date to today
 
@@ -1375,36 +1375,36 @@ vercel.json                             # Cron config
 
 > Phase 7 already ships a basic newline splitter. This sub-phase upgrades UX only — reuse `parsePastedTasks()` from `lib/utils.ts` (or equivalent). Do not duplicate parser logic.
 
-- [ ] On task creation page: dedicated "Paste Tasks" button + modal
-- [ ] Opens a textarea: paste multi-line text
-- [ ] Parser (shared helper):
+- [x] On task creation page: dedicated "Paste Tasks" button + modal
+- [x] Opens a textarea: paste multi-line text
+- [x] Parser (shared helper):
   - Split by newlines
   - Remove numbering (1., 2., -, •, etc.)
   - Trim whitespace
   - Remove empty lines
   - Each line becomes a task item
-- [ ] Preview: show parsed items with edit/delete before adding
-- [ ] "Add All" button → adds to checklist
+- [x] Preview: show parsed items with edit/delete before adding
+- [x] "Add All" button → adds to checklist
 
 ---
 
 ## 12.5 — Recurring Lists
 
-- [ ] On task list creation: "Repeat" toggle
-- [ ] Recurrence options:
+- [x] On task list creation: "Repeat" toggle
+- [x] Recurrence options:
   - Daily (every day)
   - Weekly (select days: Mon, Tue, etc.)
   - Custom (every N days)
-- [ ] Store recurrence rule in `task_lists.recurrence` JSONB:
+- [x] Store recurrence rule in `task_lists.recurrence` JSONB:
   ```json
   { "freq": "weekly", "days": [1, 3, 5], "end_date": "2026-12-31" }
   ```
-- [ ] Generation logic (in keep-alive cron or separate endpoint):
+- [x] Generation logic (in keep-alive cron or separate endpoint):
   - Check all active recurrence rules
   - If today matches a rule, auto-create the task list (status = draft)
   - Admin still needs to review and share manually
-- [ ] Dashboard shows auto-generated lists with "Auto-generated" badge
-- [ ] Manage recurrences in settings or templates page
+- [x] Dashboard shows auto-generated lists with "Auto-generated" badge
+- [x] Manage recurrences in settings or templates page
 
 **Acceptance Criteria:**
 > ✅ Can save/use/edit/delete checklist and message templates, duplicate any list for today, paste multi-line text → items, set up recurring schedules, auto-generated lists appear on dashboard.

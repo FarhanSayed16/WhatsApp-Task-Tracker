@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import {
+  BCRYPT_SALT_ROUNDS,
   SESSION_COOKIE_NAME,
   SESSION_DURATION_SECONDS,
   SESSION_REFRESH_THRESHOLD_SECONDS,
@@ -19,15 +20,20 @@ export interface AdminContext {
 }
 
 function getSecretKey(): Uint8Array {
-  const secret = process.env.SESSION_SECRET || "fallback-secret-for-build-purposes-min-32-chars!";
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      "SESSION_SECRET must be set to a random string of at least 32 characters. Refusing to sign/verify sessions with a fallback."
+    );
+  }
   return new TextEncoder().encode(secret);
 }
 
 /**
- * Hashes a 6-digit PIN with bcrypt (salt rounds: 10)
+ * Hashes a 6-digit PIN with bcrypt
  */
 export async function hashPin(pin: string): Promise<string> {
-  const salt = await bcrypt.genSalt(10);
+  const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);
   return bcrypt.hash(pin, salt);
 }
 
@@ -120,8 +126,12 @@ export async function requireAdmin(): Promise<AdminContext | null> {
       .single();
 
     if (error || !admin) {
-      // In dev fallback before database is connected
-      if (process.env.NODE_ENV !== "production" && session.sub === "00000000-0000-0000-0000-000000000001") {
+      // Explicit opt-in only — never auto-bypass in production or plain NODE_ENV=development
+      if (
+        process.env.ALLOW_DEV_AUTH === "true" &&
+        process.env.NODE_ENV !== "production" &&
+        session.sub === "00000000-0000-0000-0000-000000000001"
+      ) {
         return {
           adminId: session.sub,
           orgId: session.orgId,
@@ -151,17 +161,6 @@ export async function requireAdmin(): Promise<AdminContext | null> {
     };
   } catch (err) {
     console.error("requireAdmin lookup error:", err);
-    // Dev fallback if DB query failed
-    if (process.env.NODE_ENV !== "production") {
-      return {
-        adminId: session.sub,
-        orgId: session.orgId,
-        name: session.name,
-        role: session.role,
-        timezone: session.timezone,
-        sessionVersion: session.sessionVersion,
-      };
-    }
     return null;
   }
 }

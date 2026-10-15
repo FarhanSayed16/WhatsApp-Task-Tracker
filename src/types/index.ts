@@ -266,6 +266,7 @@ export interface DashboardOverdueItem {
   text: string;
   priority: TaskPriority;
   due_at: string;
+  status?: TaskItemStatus;
   task_list_id: string;
   task_list_title: string;
   task_list_token: string;
@@ -274,12 +275,26 @@ export interface DashboardOverdueItem {
   time_overdue_label: string;
 }
 
+export interface DashboardPendingVerifyItem {
+  id: string;
+  text: string;
+  priority: TaskPriority;
+  completed_at?: string | null;
+  task_list_id: string;
+  task_list_title: string;
+  task_list_token: string;
+  group_id: string;
+  group_name: string;
+  completed_by_name?: string | null;
+}
+
 export interface DashboardData {
   kpis: DashboardKPIs;
   trends: DashboardKPITrends;
   groups: DashboardGroupStat[];
   recent_lists: DashboardRecentList[];
   overdue_items: DashboardOverdueItem[];
+  pending_verify_items?: DashboardPendingVerifyItem[];
   todayLists?: DashboardRecentList[];
 }
 
