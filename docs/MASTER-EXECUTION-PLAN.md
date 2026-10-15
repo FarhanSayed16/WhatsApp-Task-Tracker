@@ -1151,7 +1151,7 @@ vercel.json                             # Cron config
 
 ## 10.1 — Dashboard API
 
-- [ ] `GET /api/admin/dashboard` — Aggregated dashboard data:
+- [x] `GET /api/admin/dashboard` — Aggregated dashboard data:
   - Query params: `from`, `to`, `group_id`
   - Default range: today
   - Returns:
@@ -1187,42 +1187,42 @@ vercel.json                             # Cron config
 
 ## 10.2 — Dashboard Page (`src/app/admin/page.tsx`)
 
-- [ ] **Top bar:** "Good morning, [Name]" + date + logout
-- [ ] **Date filter:** Today / This Week / This Month / Custom range (date picker)
-- [ ] **Group filter:** All Groups / specific group dropdown
-- [ ] **KPI Cards row (4 cards):**
+- [x] **Top bar:** "Good morning, [Name]" + date + logout
+- [x] **Date filter:** Today / This Week / This Month / Custom range (date picker)
+- [x] **Group filter:** All Groups / specific group dropdown
+- [x] **KPI Cards row (4 cards):**
   - Total Created (📋 blue)
   - Completed (✅ green)
   - Pending (⏳ yellow)
   - Overdue (⚠️ red, pulses if > 0)
   - Each card shows number + percentage change from previous period
-- [ ] **Today's Task Lists section:**
+- [x] **Today's Task Lists section:**
   - List of today's task lists as `TaskListCard` components
   - Quick actions: Share, View, Edit
   - Status badges: Draft, Active, Completed
   - "New Task List" button if empty
-- [ ] **Overdue Alerts section:**
+- [x] **Overdue Alerts section:**
   - Red-highlighted list of overdue items
   - Each shows: item text, task list name, group, how long overdue
   - Quick action: "Remind" button per item
   - Collapsible if many items
-- [ ] **Per-Group Progress section:**
+- [x] **Per-Group Progress section:**
   - Grid of cards, one per group
   - Each shows: group name, circular progress ring (0-100%), member count, today's tasks
   - Click → navigate to group detail
-- [ ] **SWR polling:** auto-refresh every 15 seconds, refresh on tab focus
-- [ ] **Loading state:** skeleton placeholders for all sections
-- [ ] **Empty state:** "No tasks for today. Create your first task list →"
-- [ ] **Mobile layout:** cards stack vertically, touch-friendly
+- [x] **SWR polling:** auto-refresh every 15 seconds, refresh on tab focus
+- [x] **Loading state:** skeleton placeholders for all sections
+- [x] **Empty state:** "No tasks for today. Create your first task list →"
+- [x] **Mobile layout:** cards stack vertically, touch-friendly
 
 ---
 
 ## 10.3 — Professor Actions from Dashboard
 
-- [ ] Quick-tick: professor can mark items done directly from the dashboard overdue list
-- [ ] Quick-verify: tap to verify pending items from the dashboard
-- [ ] Quick-share: share button on each task list card
-- [ ] Quick-remind: remind button on overdue items → opens WhatsApp with reminder message
+- [x] Quick-tick: professor can mark items done directly from the dashboard overdue list
+- [x] Quick-verify: tap to verify pending items from the dashboard
+- [x] Quick-share: share button on each task list card
+- [x] Quick-remind: remind button on overdue items → opens WhatsApp with reminder message
 
 **Acceptance Criteria:**
 > ✅ Dashboard loads fast, shows correct numbers, auto-refreshes, filters work (date + group), overdue items are highlighted, professor can take actions directly from dashboard, works on mobile.

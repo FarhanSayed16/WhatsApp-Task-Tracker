@@ -213,28 +213,74 @@ export interface PaginatedResponse<T = unknown> {
 // ═════════════════════════════════════════════════════════════
 
 export interface DashboardKPIs {
-  totalCreated: number;
-  totalDone: number;
-  totalVerified: number;
-  totalPending: number;
-  totalOverdue: number;
-  completionRate: number;
+  total_created: number;
+  total_done: number;
+  total_verified: number;
+  total_pending: number;
+  total_overdue: number;
+  completion_rate: number;
+  totalCreated?: number;
+  totalDone?: number;
+  totalVerified?: number;
+  totalPending?: number;
+  totalOverdue?: number;
+  completionRate?: number;
 }
 
-export interface GroupSummaryCard {
+export interface DashboardKPITrends {
+  created_change: number; // percentage change (e.g. +12 or -5)
+  done_change: number;
+  pending_change: number;
+  overdue_change: number;
+}
+
+export interface DashboardGroupStat {
   id: string;
   name: string;
-  memberCount: number;
-  activeListsCount: number;
-  totalTasks: number;
-  completedTasks: number;
-  completionRate: number;
+  description?: string | null;
+  created: number;
+  done: number;
+  pending: number;
+  overdue: number;
+  completion_rate: number;
+  members_opened: number;
+  members_total: number;
+}
+
+export interface DashboardRecentList {
+  id: string;
+  token: string;
+  title: string;
+  group_id: string;
+  group_name: string;
+  list_date: string;
+  due_at?: string | null;
+  status: TaskListStatus;
+  progress: number;
+  total_items: number;
+  completed_items: number;
+}
+
+export interface DashboardOverdueItem {
+  id: string;
+  text: string;
+  priority: TaskPriority;
+  due_at: string;
+  task_list_id: string;
+  task_list_title: string;
+  task_list_token: string;
+  group_id: string;
+  group_name: string;
+  time_overdue_label: string;
 }
 
 export interface DashboardData {
   kpis: DashboardKPIs;
-  todayLists: TaskList[];
-  groups: GroupSummaryCard[];
+  trends: DashboardKPITrends;
+  groups: DashboardGroupStat[];
+  recent_lists: DashboardRecentList[];
+  overdue_items: DashboardOverdueItem[];
+  todayLists?: DashboardRecentList[];
 }
 
 // ═════════════════════════════════════════════════════════════
