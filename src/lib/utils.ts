@@ -306,3 +306,22 @@ export function getDateRange(
   const last = `${y}-${String(m).padStart(2, "0")}-${String(lastDayNum).padStart(2, "0")}`;
   return { from: first, to: last };
 }
+
+/**
+ * Splits pasted multi-line text into clean discrete tasks:
+ * - Splits by newlines
+ * - Strips numbers (e.g. "1.", "1)", "(1)"), bullets ("-", "*", "•", "▫️"), and whitespace
+ * - Removes empty lines
+ */
+export function parsePastedTasks(rawText: string): string[] {
+  if (!rawText) return [];
+  return rawText
+    .split(/\r?\n/)
+    .map((line) => {
+      return line
+        .replace(/^(\(?\d+[\.\)]|[-*•▫️■►])\s*/, "")
+        .trim();
+    })
+    .filter((line) => line.length > 0);
+}
+

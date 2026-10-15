@@ -24,6 +24,8 @@ import {
   Phone,
   User,
   Smartphone,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 
 export interface ShareSheetProps {
@@ -72,6 +74,9 @@ export function ShareSheet({
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
   const [markedSent, setMarkedSent] = useState(false);
   const [loggingShare, setLoggingShare] = useState(false);
+  const [isDraftingAi, setIsDraftingAi] = useState(false);
+  const [aiLang, setAiLang] = useState<"en" | "hi" | "mr">("en");
+  const [aiTone, setAiTone] = useState<"polite" | "urgent" | "firm">("polite");
 
   const publicLink =
     taskList.member_link ||
@@ -160,6 +165,34 @@ export function ShareSheet({
       // Background logging shouldn't block the user
     } finally {
       setLoggingShare(false);
+    }
+  };
+
+  const handleAiDraftReminder = async () => {
+    try {
+      setIsDraftingAi(true);
+      const res = await fetch("/api/admin/ai/draft-reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          task_list_id: taskList.id,
+          language: aiLang,
+          tone: aiTone,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to draft reminder with AI");
+
+      if (json.data?.message) {
+        setMessageText(json.data.message);
+        toast.success(
+          `AI drafted reminder in ${aiLang === "hi" ? "Hindi" : aiLang === "mr" ? "Marathi" : "English"}!`
+        );
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to generate reminder");
+    } finally {
+      setIsDraftingAi(false);
     }
   };
 
@@ -308,6 +341,89 @@ export function ShareSheet({
                 Open WhatsApp for selected member →
               </button>
             )}
+          </div>
+        )}
+
+        {/* Gemini AI Reminder Assistant (Phase 15.4) */}
+        {activeTab === "reminder" && (
+          <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-900/60 space-y-2.5 animate-slide-up">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-purple-900 dark:text-purple-300">
+                <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>Gemini AI Reminder Assistant</span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleAiDraftReminder}
+                disabled={isDraftingAi}
+                className="bg-purple-600 hover:bg-purple-500 text-white text-xs h-7 px-2.5 shadow-sm"
+              >
+                {isDraftingAi ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    Drafting...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    Draft with AI
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+              <div className="flex items-center gap-1">
+                <span className="text-slate-500 font-medium">Language:</span>
+                <button
+                  type="button"
+                  onClick={() => setAiLang("en")}
+                  className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
+                    aiLang === "en"
+                      ? "bg-purple-600 text-white shadow-sm"
+                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-purple-200/60 dark:border-purple-900/40"
+                  }`}
+                >
+                  English
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiLang("hi")}
+                  className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
+                    aiLang === "hi"
+                      ? "bg-purple-600 text-white shadow-sm"
+                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-purple-200/60 dark:border-purple-900/40"
+                  }`}
+                >
+                  हिंदी
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiLang("mr")}
+                  className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
+                    aiLang === "mr"
+                      ? "bg-purple-600 text-white shadow-sm"
+                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-purple-200/60 dark:border-purple-900/40"
+                  }`}
+                >
+                  मराठी
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <span className="text-slate-500 font-medium">Tone:</span>
+                <select
+                  value={aiTone}
+                  onChange={(e) => setAiTone(e.target.value as any)}
+                  className="px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-[11px] font-medium focus:outline-none"
+                >
+                  <option value="polite">Polite &amp; Encouraging</option>
+                  <option value="urgent">Urgent (Overdue)</option>
+                  <option value="firm">Firm &amp; Direct</option>
+                </select>
+              </div>
+            </div>
           </div>
         )}
 

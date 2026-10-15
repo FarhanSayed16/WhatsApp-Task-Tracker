@@ -1530,8 +1530,8 @@ If a second helper ever needs access, handle it manually later (extra admin row)
 
 ## 15.1 — AI Integration Setup
 
-- [ ] Install Google AI SDK: `npm install @google/generative-ai`
-- [ ] Create `src/lib/ai.ts`:
+- [x] Install Google AI SDK: `npm install @google/generative-ai`
+- [x] Create `src/lib/ai.ts`:
   - Initialize Gemini client with API key
   - Helper: `parseTextToTasks(text: string): Promise<TaskItem[]>`
   - Helper: `draftReminder(context: ReminderContext): Promise<string>`
@@ -1543,11 +1543,11 @@ If a second helper ever needs access, handle it manually later (extra admin row)
 
 ## 15.2 — Smart Paste-to-Checklist
 
-- [ ] `POST /api/admin/ai/parse-text`:
+- [x] `POST /api/admin/ai/parse-text`:
   - Accept: `{ text: string }`
   - Send to Gemini: "Extract action items from this text as a JSON array"
   - Return: `{ items: [{ text, suggested_priority, suggested_due }] }`
-- [ ] UI: on task creation page, "AI Parse" button next to paste area
+- [x] UI: on task creation page, "AI Parse" button next to paste area
   - Paste messy text → click "AI Parse" → items appear in checklist
   - Admin can edit/remove before saving
 
@@ -1555,24 +1555,24 @@ If a second helper ever needs access, handle it manually later (extra admin row)
 
 ## 15.3 — Voice-to-Tasks
 
-- [ ] Use browser `Web Speech API` (free, no server needed):
+- [x] Use browser `Web Speech API` (free, no server needed):
   - "Speak Tasks" button → starts recording
   - Real-time transcription display
   - On stop → send transcript to AI parse endpoint
   - Results appear as task items
-- [ ] Fallback: show "Voice input not supported in this browser"
+- [x] Fallback: show "Voice input not supported in this browser"
 
 ---
 
 ## 15.4 — AI-Drafted Reminders
 
-- [ ] `POST /api/admin/ai/draft-reminder`:
+- [x] `POST /api/admin/ai/draft-reminder`:
   - Accept: `{ task_list_id }`
   - Fetch: pending items, who hasn't completed, how long overdue
   - Send context to Gemini: "Draft a polite WhatsApp reminder..."
   - Return: `{ message: string }`
-- [ ] UI: on remind flow, "AI Draft" button → generates contextual message → editable → share
-- [ ] Multilingual: "Draft in Hindi/Marathi" toggle
+- [x] UI: on remind flow, "AI Draft" button → generates contextual message → editable → share
+- [x] Multilingual: "Draft in Hindi/Marathi" toggle
 
 **Acceptance Criteria:**
 > ✅ Admin can paste text and AI structures it into tasks. Voice input works on supported browsers. AI drafts contextual reminders. All AI features degrade gracefully if API is unavailable.

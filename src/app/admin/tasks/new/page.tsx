@@ -23,14 +23,18 @@ import {
   Send,
   Repeat,
   CheckCircle2,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ShareSheet } from "@/components/admin/ShareSheet";
-import { zonedDateTimeToUtcIso, cn } from "@/lib/utils";
+import { zonedDateTimeToUtcIso, cn, parsePastedTasks } from "@/lib/utils";
 import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import { useSession } from "@/hooks/useSession";
+import { VoiceTaskInput } from "@/components/admin/VoiceTaskInput";
+import type { ParsedAITaskItem } from "@/lib/ai";
 
 interface ItemDraft {
   id: string;
@@ -84,6 +88,7 @@ function NewTaskForm() {
   const [recurrenceFreq, setRecurrenceFreq] = useState<"daily" | "weekly">("daily");
   const [recurrenceDays, setRecurrenceDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
+  const [isAiParsing, setIsAiParsing] = useState(false);
 
   const [createdList, setCreatedList] = useState<{
     id: string;
@@ -199,13 +204,7 @@ function NewTaskForm() {
   const handleProcessMultiPaste = () => {
     if (!multiPasteText.trim()) return;
 
-    const lines = multiPasteText
-      .split(/\r?\n/)
-      .map((line) => {
-        // Strip common bullet points and numbering: e.g. "1. ", "1) ", "- ", "* ", "• "
-        return line.replace(/^(\d+[\.\)]|[-*•])\s*/, "").trim();
-      })
-      .filter(Boolean);
+    const lines = parsePastedTasks(multiPasteText);
 
     const availableSlots = 50 - items.length;
     const linesToAdd = lines.slice(0, availableSlots);
@@ -221,6 +220,57 @@ function NewTaskForm() {
     setMultiPasteText("");
     setShowMultiPaste(false);
     toast.success(`Added ${newDrafts.length} items`);
+  };
+
+  const handleAiParseText = async () => {
+    if (!multiPasteText.trim()) return;
+    try {
+      setIsAiParsing(true);
+      const res = await fetch("/api/admin/ai/parse-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: multiPasteText }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "AI parse failed");
+
+      const aiItems: ParsedAITaskItem[] = json.data?.items || [];
+      if (aiItems.length === 0) {
+        toast.info("No actionable tasks identified in text.");
+        return;
+      }
+
+      const availableSlots = 50 - items.length;
+      const itemsToAdd = aiItems.slice(0, availableSlots);
+      const newDrafts: ItemDraft[] = itemsToAdd.map((it) => ({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        text: it.text,
+        priority: it.suggested_priority || "normal",
+        assigned_member_id: null,
+      }));
+
+      setItems([...items, ...newDrafts]);
+      setMultiPasteText("");
+      setShowMultiPaste(false);
+      toast.success(`Gemini AI extracted and added ${newDrafts.length} tasks!`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to parse with AI");
+    } finally {
+      setIsAiParsing(false);
+    }
+  };
+
+  const handleVoiceTasksExtracted = (voiceItems: ParsedAITaskItem[]) => {
+    const availableSlots = 50 - items.length;
+    const itemsToAdd = voiceItems.slice(0, availableSlots);
+    const newDrafts: ItemDraft[] = itemsToAdd.map((it) => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      text: it.text,
+      priority: it.suggested_priority || "normal",
+      assigned_member_id: null,
+    }));
+    setItems((prev) => [...prev, ...newDrafts]);
+    toast.success(`Added ${newDrafts.length} task(s) from voice dictation!`);
   };
 
   const handleSave = async (isShare: boolean) => {
@@ -544,6 +594,12 @@ function NewTaskForm() {
             </Button>
           </div>
 
+          {/* Voice-to-Tasks Dictation Component (Phase 15.3) */}
+          <VoiceTaskInput
+            onTasksExtracted={handleVoiceTasksExtracted}
+            className="pb-3 border-b border-slate-100 dark:border-slate-800"
+          />
+
           {errors.items && (
             <p className="text-xs text-rose-500 font-semibold">{errors.items}</p>
           )}
@@ -552,7 +608,7 @@ function NewTaskForm() {
           {showMultiPaste ? (
             <div className="space-y-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 animate-slide-up">
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Paste task list (one task per line, numbers &amp; bullets automatically cleaned):
+                Paste task list (one task per line or unstructured notes):
               </label>
               <textarea
                 rows={5}
@@ -581,7 +637,7 @@ function NewTaskForm() {
                 </div>
               )}
 
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <Button
                   type="button"
                   variant="ghost"
@@ -590,14 +646,38 @@ function NewTaskForm() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleProcessMultiPaste}
-                  disabled={!multiPasteText.trim()}
-                >
-                  <ListPlus className="w-4 h-4 mr-1" /> Parse &amp; Add Items
-                </Button>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleProcessMultiPaste}
+                    disabled={!multiPasteText.trim() || isAiParsing}
+                  >
+                    <ListPlus className="w-4 h-4 mr-1" /> Plain Lines
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAiParseText}
+                    disabled={!multiPasteText.trim() || isAiParsing}
+                    className="bg-purple-600 hover:bg-purple-500 text-white"
+                  >
+                    {isAiParsing ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                        AI Parsing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 mr-1" />
+                        AI Smart Parse
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (
