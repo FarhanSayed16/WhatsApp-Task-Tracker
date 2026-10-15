@@ -117,6 +117,11 @@ export const updateMemberSchema = z.object({
   active: z.boolean().optional(),
 });
 
+export const importMembersSchema = z.object({
+  group_id: z.string().uuid("Invalid group ID"),
+  csv: z.string().min(1, "CSV data is required"),
+});
+
 // ═════════════════════════════════════════════════════════════
 // Task List Schemas
 // ═════════════════════════════════════════════════════════════

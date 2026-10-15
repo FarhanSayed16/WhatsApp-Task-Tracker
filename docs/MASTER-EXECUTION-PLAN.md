@@ -736,22 +736,22 @@ vercel.json                             # Cron config
 
 ## 6.1 — Groups API
 
-- [ ] `GET /api/admin/groups` — List all groups (paginated, org-scoped):
+- [x] `GET /api/admin/groups` — List all groups (paginated, org-scoped):
   - Query params: `page`, `limit`, `search`
   - Filter: `WHERE deleted_at IS NULL AND org_id = ?`
   - Order by: `sort_order ASC, name ASC`
   - Include: member count, active task list count, last activity date
   - Return: `PaginatedResponse<Group>`
-- [ ] `POST /api/admin/groups` — Create group:
+- [x] `POST /api/admin/groups` — Create group:
   - Validate with Zod: name (required, max 100), description (optional, max 500)
   - Set `org_id` and `created_by` from session
   - Return created group
-- [ ] `GET /api/admin/groups/[id]` — Get group detail:
+- [x] `GET /api/admin/groups/[id]` — Get group detail:
   - Include: all members (active and inactive), recent task lists, completion stats
-- [ ] `PATCH /api/admin/groups/[id]` — Update group:
+- [x] `PATCH /api/admin/groups/[id]` — Update group:
   - Updateable: name, description, verify_required, sort_order
   - Set `updated_at = now()`
-- [ ] `DELETE /api/admin/groups/[id]` — Soft delete:
+- [x] `DELETE /api/admin/groups/[id]` — Soft delete:
   - Set `deleted_at = now()` (NOT hard delete)
   - Confirmation required on frontend (ConfirmDialog)
   - Also soft-delete associated task_lists
@@ -760,18 +760,18 @@ vercel.json                             # Cron config
 
 ## 6.2 — Members API
 
-- [ ] `GET /api/admin/members?group_id=` — List members of a group:
+- [x] `GET /api/admin/members?group_id=` — List members of a group:
   - Filter: `WHERE deleted_at IS NULL AND group_id = ?`
   - Include: completion stats for each member
-- [ ] `POST /api/admin/members` — Add member:
+- [x] `POST /api/admin/members` — Add member:
   - Validate: name (required, max 100), phone (optional, regex), group_id (required)
   - Check member doesn't already exist in group (by name)
-- [ ] `PATCH /api/admin/members/[id]` — Update member:
+- [x] `PATCH /api/admin/members/[id]` — Update member:
   - Updateable: name, phone, active
-- [ ] `DELETE /api/admin/members/[id]` — Soft delete:
+- [x] `DELETE /api/admin/members/[id]` — Soft delete:
   - Set `deleted_at = now()`
   - Set `active = false`
-- [ ] `POST /api/admin/members/import` — CSV import:
+- [x] `POST /api/admin/members/import` — CSV import:
   - Accept CSV: `name,phone` per line
   - Parse and validate each row
   - Insert in batch
@@ -781,47 +781,47 @@ vercel.json                             # Cron config
 
 ## 6.3 — Groups List Page (`src/app/admin/groups/page.tsx`)
 
-- [ ] Page header: "Groups" title + "New Group" button
-- [ ] Search box to filter groups by name
-- [ ] Grid/list of `GroupCard` components:
+- [x] Page header: "Groups" title + "New Group" button
+- [x] Search box to filter groups by name
+- [x] Grid/list of `GroupCard` components:
   - Group name, description preview
   - Member count badge
   - Completion percentage ring
   - Last active date
   - Click → navigate to group detail
-- [ ] Empty state: "No groups yet. Create your first group →"
-- [ ] Loading state: skeleton cards
-- [ ] SWR polling for live updates
+- [x] Empty state: "No groups yet. Create your first group →"
+- [x] Loading state: skeleton cards
+- [x] SWR polling for live updates
 
 ---
 
 ## 6.4 — Create Group Page (`src/app/admin/groups/new/page.tsx`)
 
-- [ ] Form: group name (required), description (optional)
-- [ ] "Add Members" section:
+- [x] Form: group name (required), description (optional)
+- [x] "Add Members" section:
   - Add one by one: name + phone fields with "Add" button
   - CSV paste/upload: textarea or file upload
   - Preview list of members to be added
   - Remove individual members before saving
-- [ ] verify_required toggle: "Require professor verification after member marks done?"
-- [ ] Save button → creates group + members in one API call
-- [ ] Success: redirect to group detail page with toast
+- [x] verify_required toggle: "Require professor verification after member marks done?"
+- [x] Save button → creates group + members in one API call
+- [x] Success: redirect to group detail page with toast
 
 ---
 
 ## 6.5 — Group Detail Page (`src/app/admin/groups/[id]/page.tsx`)
 
-- [ ] Group header: name, description, edit button, delete button
-- [ ] Members section:
+- [x] Group header: name, description, edit button, delete button
+- [x] Members section:
   - List of members with name, phone (partially masked), active/inactive badge
   - "Add Member" button
   - Edit/deactivate/delete actions per member
   - CSV import button
-- [ ] Task History section:
+- [x] Task History section:
   - Recent task lists for this group
   - Completion stats
   - Filter by date range
-- [ ] Overall stats: total tasks assigned, completion rate, average response time
+- [x] Overall stats: total tasks assigned, completion rate, average response time
 
 **Acceptance Criteria:**
 > ✅ Can create/edit/delete groups, add/edit/delete/import members, soft delete works (data recoverable), pagination works, search works, empty states shown correctly.
@@ -1782,7 +1782,7 @@ If a second helper ever needs access, handle it manually later (extra admin row)
 | 3 | Authentication System | 1.5 days | ✅ Completed | |
 | 4 | Core Libraries & Utilities | 1 day | ✅ Completed | |
 | 5 | Reusable UI Components | 1.5 days | ✅ Completed | |
-| 6 | Groups & Members Management | 1.5 days | ⬜ Not Started | |
+| 6 | Groups & Members Management | 1.5 days | ✅ Completed | |
 | 7 | Task Lists & Task Items | 2 days | ⬜ Not Started | |
 | 8 | WhatsApp Sharing System | 1 day | ⬜ Not Started | |
 | 9 | Public Member Page | 1.5 days | ⬜ Not Started | |

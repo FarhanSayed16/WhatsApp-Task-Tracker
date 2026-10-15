@@ -184,6 +184,8 @@ export interface ApiSuccess<T = unknown> {
     page?: number;
     limit?: number;
     total?: number;
+    totalPages?: number;
+    [key: string]: unknown;
   };
 }
 
