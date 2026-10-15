@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { completeItemSchema } from "@/lib/validation";
 import { apiError, apiSuccess } from "@/lib/errors";
 import { checkPublicTokenRateLimit } from "@/lib/rateLimit";
+import { canMemberMutateList, computeLinkStatus } from "@/lib/utils";
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
 
 export async function POST(
   req: NextRequest,
@@ -11,7 +13,8 @@ export async function POST(
   const { token, id } = await params;
   if (!token || !id) return apiError("Invalid parameters", "INVALID_PARAMS", 400);
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "127.0.0.1";
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "127.0.0.1";
   const rateLimit = await checkPublicTokenRateLimit(ip, token);
   if (!rateLimit.allowed) {
     return apiError(
@@ -29,14 +32,19 @@ export async function POST(
     }
     const { member_id, note } = result.data;
     if (!member_id) {
-      return apiError("Member ID is required to complete task", "VALIDATION_ERROR", 400);
+      return apiError(
+        "Member ID is required to complete task",
+        "VALIDATION_ERROR",
+        400
+      );
     }
 
-    // 1. Fetch task list with group settings
     const { data: taskList, error: listError } = await supabaseAdmin
       .from("task_lists")
-      .select(`
+      .select(
+        `
         id,
+        org_id,
         group_id,
         list_date,
         due_at,
@@ -46,29 +54,39 @@ export async function POST(
           id,
           verify_required
         )
-      `)
+      `
+      )
       .eq("token", token)
-      .is("deleted_at", null)
-      .single();
+      .maybeSingle();
 
     if (listError || !taskList) {
       return apiError("Task list not found or link has expired", "NOT_FOUND", 404);
     }
 
-    // Check expiry
-    let expiresAt: string;
-    if (taskList.due_at) {
-      expiresAt = taskList.due_at;
-    } else {
-      const listDateObj = new Date(taskList.list_date + "T23:59:59.999Z");
-      expiresAt = new Date(listDateObj.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    let timeZone = DEFAULT_TIMEZONE;
+    const { data: adminRow } = await supabaseAdmin
+      .from("admin")
+      .select("timezone")
+      .eq("org_id", taskList.org_id)
+      .limit(1)
+      .maybeSingle();
+    if (adminRow?.timezone) timeZone = adminRow.timezone;
+
+    const { status: linkStatus } = computeLinkStatus(
+      taskList.deleted_at,
+      taskList.list_date,
+      taskList.due_at,
+      { listStatus: taskList.status, timeZone }
+    );
+
+    if (!canMemberMutateList(linkStatus)) {
+      return apiError(
+        "Task list is expired or read-only",
+        "FORBIDDEN",
+        403
+      );
     }
 
-    if (new Date(expiresAt).getTime() < Date.now() || taskList.status === "archived") {
-      return apiError("Task list is expired or read-only", "FORBIDDEN", 403);
-    }
-
-    // 2. Verify member belongs to group & is active
     const { data: member, error: memberError } = await supabaseAdmin
       .from("members")
       .select("id, name, active, deleted_at")
@@ -79,10 +97,13 @@ export async function POST(
       .maybeSingle();
 
     if (memberError || !member) {
-      return apiError("Member not found in this group or inactive", "FORBIDDEN", 403);
+      return apiError(
+        "Member not found in this group or inactive",
+        "FORBIDDEN",
+        403
+      );
     }
 
-    // 3. Verify item belongs to this list
     const { data: item, error: itemError } = await supabaseAdmin
       .from("task_items")
       .select("id, task_list_id, status, text")
@@ -94,44 +115,54 @@ export async function POST(
       return apiError("Task item not found in this list", "NOT_FOUND", 404);
     }
 
-    // 4. Check existing completions
-    const { data: existingComp } = await supabaseAdmin
-      .from("completions")
-      .select("id, member_id, status")
-      .eq("task_item_id", id)
-      .maybeSingle();
-
-    if (existingComp) {
-      if (existingComp.member_id === member_id) {
-        return apiSuccess({ item, message: "Item already marked done by you" });
-      }
+    if (item.status !== "pending") {
       return apiError(
-        "This item was already completed by another member",
+        "This item was already completed",
         "CONFLICT",
         409
       );
     }
 
-    const groupInfo = Array.isArray(taskList.group) ? taskList.group[0] : taskList.group;
+    const groupInfo = Array.isArray(taskList.group)
+      ? taskList.group[0]
+      : taskList.group;
     const verifyRequired = Boolean(groupInfo?.verify_required);
     const targetStatus = verifyRequired ? "done" : "verified";
     const now = new Date().toISOString();
 
-    // 5. Insert completion record
-    const { error: compInsertError } = await supabaseAdmin.from("completions").insert({
-      task_item_id: id,
-      member_id,
-      status: targetStatus,
-      note: note || null,
-      completed_at: now,
-      verified_at: targetStatus === "verified" ? now : null,
-    });
+    // ON CONFLICT DO NOTHING via unique (task_item_id, member_id)
+    const { data: insertedComp, error: compInsertError } = await supabaseAdmin
+      .from("completions")
+      .insert({
+        task_item_id: id,
+        member_id,
+        status: targetStatus,
+        note: note || null,
+        completed_at: now,
+        verified_at: targetStatus === "verified" ? now : null,
+      })
+      .select("id")
+      .maybeSingle();
 
     if (compInsertError) {
+      // Unique violation → already completed
+      if (
+        compInsertError.code === "23505" ||
+        /duplicate|unique/i.test(compInsertError.message)
+      ) {
+        return apiError(
+          "This item was already completed",
+          "CONFLICT",
+          409
+        );
+      }
       return apiError("Failed to record completion", "DB_ERROR", 500);
     }
 
-    // 6. Update task item
+    if (!insertedComp) {
+      return apiSuccess({ item, message: "Item already marked done" });
+    }
+
     const { data: updatedItem, error: updateItemError } = await supabaseAdmin
       .from("task_items")
       .update({
@@ -149,7 +180,6 @@ export async function POST(
       return apiError("Failed to update item status", "DB_ERROR", 500);
     }
 
-    // 7. Check if all items in this task list are now completed
     const { data: allItems } = await supabaseAdmin
       .from("task_items")
       .select("id, status")
@@ -171,7 +201,9 @@ export async function POST(
       item: updatedItem,
       all_completed: Boolean(allFinished),
     });
-  } catch (err: any) {
-    return apiError(err.message || "Failed to complete item", "SERVER_ERROR", 500);
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "Failed to complete item";
+    return apiError(message, "SERVER_ERROR", 500);
   }
 }

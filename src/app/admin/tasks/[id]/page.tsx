@@ -357,6 +357,11 @@ export default function TaskListDetailPage({
           >
             <Bell className="w-3.5 h-3.5 mr-1" /> Remind
           </Button>
+          <Link href={`/admin/tasks/new?clone_from=${task_list.id}`}>
+            <Button variant="outline" size="sm" title="Duplicate as new checklist">
+              <Copy className="w-3.5 h-3.5 mr-1" /> Duplicate
+            </Button>
+          </Link>
           <Button variant="outline" size="sm" onClick={handleOpenEditList}>
             <Edit className="w-3.5 h-3.5" />
           </Button>

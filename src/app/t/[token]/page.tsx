@@ -211,7 +211,9 @@ export default function PublicMemberPage({
         // Revert optimistic update
         setLocalItems(previousItems);
         setLocalCompletions(previousCompletions);
-        toast.error(err.message || "Failed to complete task");
+        toast.error(
+          `${err.message || "Failed to complete task"} — tap the checkbox again to retry.`
+        );
       }
     }
   };

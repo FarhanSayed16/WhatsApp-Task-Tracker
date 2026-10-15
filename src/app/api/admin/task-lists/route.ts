@@ -152,6 +152,7 @@ export async function POST(req: NextRequest) {
         list_date: data.list_date,
         due_at: data.due_at || null,
         status: data.status || "draft",
+        recurrence: data.recurrence || null,
       })
       .select()
       .single();

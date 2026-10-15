@@ -11,7 +11,8 @@ export async function POST(
   const { token } = await params;
   if (!token) return apiError("Invalid token", "INVALID_TOKEN", 400);
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "127.0.0.1";
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "127.0.0.1";
   const rateLimit = await checkPublicTokenRateLimit(ip, token);
   if (!rateLimit.allowed) {
     return apiError(
@@ -29,7 +30,6 @@ export async function POST(
     }
     const { member_id } = result.data;
 
-    // 1. Fetch task list
     const { data: taskList, error: listError } = await supabaseAdmin
       .from("task_lists")
       .select("id, group_id, deleted_at")
@@ -41,7 +41,6 @@ export async function POST(
       return apiError("Task list not found or link has expired", "NOT_FOUND", 404);
     }
 
-    // 2. Verify member belongs to this group
     const { data: member, error: memberError } = await supabaseAdmin
       .from("members")
       .select("id, active, deleted_at")
@@ -55,34 +54,42 @@ export async function POST(
       return apiError("Member not found in this group", "NOT_FOUND", 400);
     }
 
-    // 3. Upsert open record
-    const { data: existingOpen } = await supabaseAdmin
-      .from("opens")
-      .select("id, open_count")
-      .eq("task_list_id", taskList.id)
-      .eq("member_id", member_id)
-      .maybeSingle();
-
     const now = new Date().toISOString();
 
-    if (existingOpen) {
-      await supabaseAdmin
+    // Insert first; on unique conflict, increment (handles concurrent opens)
+    const { error: insertError } = await supabaseAdmin.from("opens").insert({
+      task_list_id: taskList.id,
+      member_id,
+      first_opened_at: now,
+      last_opened_at: now,
+      open_count: 1,
+    });
+
+    if (insertError) {
+      const isConflict =
+        insertError.code === "23505" ||
+        /duplicate|unique/i.test(insertError.message || "");
+
+      if (!isConflict) {
+        return apiError("Failed to record open", "DB_ERROR", 500);
+      }
+
+      const { data: existingOpen } = await supabaseAdmin
         .from("opens")
-        .update({
-          last_opened_at: now,
-          open_count: (existingOpen.open_count || 1) + 1,
-        })
-        .eq("id", existingOpen.id);
-    } else {
-      await supabaseAdmin
-        .from("opens")
-        .insert({
-          task_list_id: taskList.id,
-          member_id: member_id,
-          first_opened_at: now,
-          last_opened_at: now,
-          open_count: 1,
-        });
+        .select("id, open_count")
+        .eq("task_list_id", taskList.id)
+        .eq("member_id", member_id)
+        .maybeSingle();
+
+      if (existingOpen) {
+        await supabaseAdmin
+          .from("opens")
+          .update({
+            last_opened_at: now,
+            open_count: (existingOpen.open_count || 1) + 1,
+          })
+          .eq("id", existingOpen.id);
+      }
     }
 
     return apiSuccess({
@@ -90,7 +97,9 @@ export async function POST(
       member_id,
       task_list_id: taskList.id,
     });
-  } catch (err: any) {
-    return apiError(err.message || "Failed to record open", "SERVER_ERROR", 500);
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "Failed to record open";
+    return apiError(message, "SERVER_ERROR", 500);
   }
 }

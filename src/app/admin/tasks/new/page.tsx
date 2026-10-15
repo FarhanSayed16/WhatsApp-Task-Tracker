@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -21,12 +21,14 @@ import {
   User,
   ListPlus,
   Send,
+  Repeat,
+  CheckCircle2,
 } from "lucide-react";
 
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ShareSheet } from "@/components/admin/ShareSheet";
-import { zonedDateTimeToUtcIso } from "@/lib/utils";
+import { zonedDateTimeToUtcIso, cn } from "@/lib/utils";
 import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import { useSession } from "@/hooks/useSession";
 
@@ -58,6 +60,8 @@ function NewTaskForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedGroupId = searchParams.get("group_id") || "";
+  const cloneFromId = searchParams.get("clone_from");
+  const templateId = searchParams.get("template_id");
   const { toast } = useToast();
   const { session } = useSession();
 
@@ -74,6 +78,13 @@ function NewTaskForm() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
+
+  // Recurrence Schedule State (Phase 12.5)
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceFreq, setRecurrenceFreq] = useState<"daily" | "weekly">("daily");
+  const [recurrenceDays, setRecurrenceDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
+
   const [createdList, setCreatedList] = useState<{
     id: string;
     token: string;
@@ -101,6 +112,56 @@ function NewTaskForm() {
     const match = last && groups.find((g: { id: string }) => g.id === last);
     setGroupId(match ? match.id : groups[0].id);
   }, [groupId, groups]);
+
+  // Load template if template_id in URL (Phase 12.2)
+  useEffect(() => {
+    if (!templateId) return;
+    fetch(`/api/admin/templates/${templateId}`)
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.success && res.data) {
+          const t = res.data;
+          setTitle((prev) => prev || t.name);
+          if (t.body?.items && t.body.items.length > 0) {
+            const drafts: ItemDraft[] = t.body.items.map((itemText: string, idx: number) => ({
+              id: `${Date.now()}-${idx}`,
+              text: itemText,
+              priority: "normal",
+              assigned_member_id: null,
+            }));
+            setItems(drafts);
+            toast.success(`Loaded ${drafts.length} items from template "${t.name}"`);
+          }
+        }
+      })
+      .catch((err) => console.error("Error loading template:", err));
+  }, [templateId]);
+
+  // Clone from existing task list if clone_from in URL (Phase 12.3)
+  useEffect(() => {
+    if (!cloneFromId) return;
+    fetch(`/api/admin/task-lists/${cloneFromId}`)
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.success && res.data) {
+          const list = res.data.task_list;
+          const taskItems = res.data.items || [];
+          setTitle((prev) => prev || `${list.title} (Copy)`);
+          if (list.group_id) setGroupId(list.group_id);
+          if (taskItems.length > 0) {
+            const drafts: ItemDraft[] = taskItems.map((item: any, idx: number) => ({
+              id: `${Date.now()}-${idx}`,
+              text: item.text,
+              priority: item.priority || "normal",
+              assigned_member_id: item.assigned_member_id || null,
+            }));
+            setItems(drafts);
+            toast.success(`Cloned ${drafts.length} items from "${list.title}"`);
+          }
+        }
+      })
+      .catch((err) => console.error("Error cloning task list:", err));
+  }, [cloneFromId]);
 
   // Fetch members for currently selected group
   const { data: membersData } = useSWRFetch<any>(
@@ -194,22 +255,31 @@ function NewTaskForm() {
         localStorage.setItem("wtt_last_group_id", groupId);
       }
 
-      const res = await fetch("/api/admin/task-lists", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          group_id: groupId,
-          title: title.trim(),
-          list_date: listDate,
-          due_at: dueAt,
-          status: isShare ? "active" : "draft",
-          items: items.map((i) => ({
-            text: i.text,
-            priority: i.priority,
-            assigned_member_id: i.assigned_member_id || null,
-          })),
-        }),
-      });
+        const recurrencePayload = isRecurring
+          ? {
+              freq: recurrenceFreq,
+              days: recurrenceFreq === "weekly" ? recurrenceDays : undefined,
+              end_date: recurrenceEndDate || undefined,
+            }
+          : null;
+
+        const res = await fetch("/api/admin/task-lists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            group_id: groupId,
+            title: title.trim(),
+            list_date: listDate,
+            due_at: dueAt,
+            status: isShare ? "active" : "draft",
+            recurrence: recurrencePayload,
+            items: items.map((i) => ({
+              text: i.text,
+              priority: i.priority,
+              assigned_member_id: i.assigned_member_id || null,
+            })),
+          }),
+        });
 
       const json = await res.json();
       if (!res.ok || json.success === false) {

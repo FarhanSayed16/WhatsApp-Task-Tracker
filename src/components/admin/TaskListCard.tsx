@@ -17,10 +17,16 @@ import {
   MoreVertical,
   Trash2,
   Edit,
+  Repeat,
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
-
 import { ShareSheet } from "./ShareSheet";
+
+export type TaskListCardStatus =
+  | "draft"
+  | "active"
+  | "completed"
+  | "archived";
 
 export interface TaskListCardProps {
   id: string;
@@ -29,12 +35,23 @@ export interface TaskListCardProps {
   groupName: string;
   listDate: string;
   dueAt?: string | null;
-  status: "active" | "readonly" | "expired";
+  status: TaskListCardStatus | string;
   totalItems: number;
   completedItems: number;
   shareUrl?: string;
+  recurrence?: { freq: string; days?: number[]; end_date?: string } | null;
   onDelete?: (id: string) => void;
 }
+
+const STATUS_BADGE: Record<
+  string,
+  { variant: "draft" | "done" | "verified" | "neutral" | "pending"; label: string }
+> = {
+  draft: { variant: "draft", label: "draft" },
+  active: { variant: "done", label: "active" },
+  completed: { variant: "verified", label: "completed" },
+  archived: { variant: "neutral", label: "archived" },
+};
 
 export function TaskListCard({
   id,
@@ -46,21 +63,29 @@ export function TaskListCard({
   status,
   totalItems,
   completedItems,
-  shareUrl,
   onDelete,
 }: TaskListCardProps) {
   const { toast } = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareItems, setShareItems] = useState<
+    Array<{ id: string; text: string; status: string; assigned_member_id?: string | null }>
+  >([]);
+  const [shareMembers, setShareMembers] = useState<
+    Array<{ id: string; name: string; phone?: string | null; active: boolean }>
+  >([]);
+  const [shareMeta, setShareMeta] = useState<{
+    member_link?: string;
+  }>({});
 
   const percentage =
     totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
-  const statusVariant = {
-    active: "done",
-    readonly: "pending",
-    expired: "neutral",
-  }[status] as "done" | "pending" | "neutral";
+  const badge = STATUS_BADGE[status] || {
+    variant: "neutral" as const,
+    label: String(status),
+  };
 
   const publicUrl =
     typeof window !== "undefined"
@@ -78,139 +103,177 @@ export function TaskListCard({
     }
   };
 
-  const handleShare = (e: React.MouseEvent) => {
+  const handleShare = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setShowShareSheet(true);
+    setShareLoading(true);
+    try {
+      const res = await fetch(`/api/admin/task-lists/${id}`);
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json?.error?.message || "Failed to load task list");
+      }
+      const data = json.data;
+      setShareItems(data.items || []);
+      setShareMembers(data.members || []);
+      setShareMeta({
+        member_link: data.task_list?.member_link || publicUrl,
+      });
+      setShowShareSheet(true);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to open share sheet";
+      toast.error(message);
+    } finally {
+      setShareLoading(false);
+    }
   };
 
   return (
     <>
       <Card className="p-5 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-all">
-      <div>
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex flex-wrap items-center gap-1.5 mb-1">
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-              {groupName}
-            </span>
-            <Badge variant={statusVariant} className="text-[10px] uppercase">
-              {status}
-            </Badge>
-          </div>
+        <div>
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                {groupName}
+              </span>
+              <Badge variant={badge.variant} className="text-[10px] uppercase">
+                {badge.label}
+              </Badge>
+              {recurrence && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/50 dark:border-purple-800/50 flex items-center gap-1">
+                  <Repeat className="w-2.5 h-2.5" />
+                  {recurrence.freq}
+                </span>
+              )}
+            </div>
 
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded"
-              aria-label="Options"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-            {menuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-20"
-                  onClick={() => setMenuOpen(false)}
-                />
-                <div className="absolute right-0 mt-1 w-36 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-30 py-1 text-xs">
-                  <Link
-                    href={`/admin/tasks/${id}`}
-                    className="flex items-center gap-2 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded"
+                aria-label="Options"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+              {menuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-20"
                     onClick={() => setMenuOpen(false)}
-                  >
-                    <Edit className="w-3.5 h-3.5" /> Edit List
-                  </Link>
-                  <a
-                    href={publicUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" /> View Public
-                  </a>
-                  {onDelete && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        onDelete(id);
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-left"
+                  />
+                  <div className="absolute right-0 mt-1 w-36 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-30 py-1 text-xs">
+                    <Link
+                      href={`/admin/tasks/${id}`}
+                      className="flex items-center gap-2 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => setMenuOpen(false)}
                     >
-                      <Trash2 className="w-3.5 h-3.5" /> Delete
-                    </button>
-                  )}
-                </div>
-              </>
+                      <Edit className="w-3.5 h-3.5" /> Edit List
+                    </Link>
+                    <Link
+                      href={`/admin/tasks/new?clone_from=${id}`}
+                      className="flex items-center gap-2 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <Copy className="w-3.5 h-3.5" /> Duplicate
+                    </Link>
+                    <a
+                      href={publicUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> View Public
+                    </a>
+                    {onDelete && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onDelete(id);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-left"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Delete
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <Link href={`/admin/tasks/${id}`}>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors line-clamp-1 mb-2">
+              {title}
+            </h3>
+          </Link>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mb-4">
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5" />
+              {formatDate(listDate)}
+            </span>
+            {dueAt && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" />
+                Due: {formatDate(dueAt)}
+              </span>
             )}
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              {completedItems}/{totalItems} items
+            </span>
           </div>
         </div>
 
-        <Link href={`/admin/tasks/${id}`}>
-          <h3 className="text-base font-bold text-slate-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors line-clamp-1 mb-2">
-            {title}
-          </h3>
-        </Link>
+        <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <ProgressBar value={percentage} showLabel={true} size="sm" />
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mb-4">
-          <span className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5" />
-            {formatDate(listDate)}
-          </span>
-          {dueAt && (
-            <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
-              Due: {formatDate(dueAt)}
-            </span>
-          )}
-          <span className="flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            {completedItems}/{totalItems} items
-          </span>
+          <div className="flex items-center gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 text-xs py-1.5"
+              onClick={copyLink}
+            >
+              <Copy className="w-3.5 h-3.5" /> Copy Link
+            </Button>
+
+            <Button
+              size="sm"
+              variant="primary"
+              className="flex-1 text-xs py-1.5 bg-[#25D366] hover:bg-[#20ba5a] text-white"
+              onClick={handleShare}
+              disabled={shareLoading}
+            >
+              <Share2 className="w-3.5 h-3.5" />{" "}
+              {shareLoading ? "Loading…" : "Share WA"}
+            </Button>
+          </div>
         </div>
-      </div>
+      </Card>
 
-      <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-        <ProgressBar value={percentage} showLabel={true} size="sm" />
-
-        <div className="flex items-center gap-2 pt-1">
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 text-xs py-1.5"
-            onClick={copyLink}
-          >
-            <Copy className="w-3.5 h-3.5" /> Copy Link
-          </Button>
-
-          <Button
-            size="sm"
-            variant="primary"
-            className="flex-1 text-xs py-1.5 bg-[#25D366] hover:bg-[#20ba5a] text-white"
-            onClick={handleShare}
-          >
-            <Share2 className="w-3.5 h-3.5" /> Share WA
-          </Button>
-        </div>
-      </div>
-    </Card>
-
-    <ShareSheet
-      isOpen={showShareSheet}
-      onClose={() => setShowShareSheet(false)}
-      taskList={{
-        id,
-        token,
-        title,
-        group_name: groupName,
-        list_date: listDate,
-        due_at: dueAt,
-        total_items: totalItems,
-        completed_items: completedItems,
-      }}
-    />
+      <ShareSheet
+        isOpen={showShareSheet}
+        onClose={() => setShowShareSheet(false)}
+        taskList={{
+          id,
+          token,
+          title,
+          group_name: groupName,
+          list_date: listDate,
+          due_at: dueAt,
+          total_items: totalItems,
+          completed_items: completedItems,
+          member_link: shareMeta.member_link || publicUrl,
+        }}
+        items={shareItems}
+        members={shareMembers}
+      />
     </>
   );
 }

@@ -260,11 +260,15 @@ export function ShareSheet({
           )}
         </div>
 
-        {/* Individual member selector if in individual reminder mode */}
-        {activeTab === "reminder" && reminderType === "individual" && members.length > 0 && (
-          <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+        {/* Individual / pending member roster */}
+        {activeTab === "reminder" &&
+          (reminderType === "individual" || reminderType === "overdue") &&
+          members.length > 0 && (
+          <div className="space-y-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Select Member to Remind:
+              {reminderType === "overdue"
+                ? "Remind a member (pending items):"
+                : "Select Member to Remind:"}
             </label>
             <select
               value={selectedMemberId}
@@ -272,12 +276,38 @@ export function ShareSheet({
               className="w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs p-2 text-slate-900 dark:text-slate-100"
             >
               <option value="">Choose a member...</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} {m.phone ? `(${m.phone})` : ""}
-                </option>
-              ))}
+              {members
+                .filter((m) => m.active !== false)
+                .map((m) => {
+                  const pendingForMember = items.filter(
+                    (i) =>
+                      i.status === "pending" &&
+                      (!i.assigned_member_id || i.assigned_member_id === m.id)
+                  ).length;
+                  return (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                      {m.phone ? ` (${m.phone})` : ""}
+                      {pendingForMember > 0
+                        ? ` — ${pendingForMember} pending`
+                        : ""}
+                    </option>
+                  );
+                })}
             </select>
+            {selectedMemberId && (
+              <button
+                type="button"
+                className="text-[11px] font-semibold text-emerald-600 hover:underline"
+                onClick={() => {
+                  const m = members.find((x) => x.id === selectedMemberId);
+                  if (m?.phone) handleOpenWhatsApp(m.phone, m.id);
+                  else handleOpenWhatsApp(undefined, selectedMemberId);
+                }}
+              >
+                Open WhatsApp for selected member →
+              </button>
+            )}
           </div>
         )}
 
