@@ -39,7 +39,13 @@ export interface TaskListCardProps {
   totalItems: number;
   completedItems: number;
   shareUrl?: string;
-  recurrence?: { freq: string; days?: number[]; end_date?: string } | null;
+  recurrence?: {
+    freq?: string;
+    days?: number[];
+    end_date?: string;
+    auto_generated?: boolean;
+    source?: string;
+  } | null;
   onDelete?: (id: string) => void;
 }
 
@@ -142,7 +148,12 @@ export function TaskListCard({
               <Badge variant={badge.variant} className="text-[10px] uppercase">
                 {badge.label}
               </Badge>
-              {recurrence && (
+              {recurrence?.auto_generated && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200/50 dark:border-sky-800/50">
+                  Auto
+                </span>
+              )}
+              {recurrence?.freq && (
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/50 dark:border-purple-800/50 flex items-center gap-1">
                   <Repeat className="w-2.5 h-2.5" />
                   {recurrence.freq}

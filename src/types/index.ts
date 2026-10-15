@@ -259,6 +259,7 @@ export interface DashboardRecentList {
   progress: number;
   total_items: number;
   completed_items: number;
+  recurrence?: Record<string, unknown> | null;
 }
 
 export interface DashboardOverdueItem {

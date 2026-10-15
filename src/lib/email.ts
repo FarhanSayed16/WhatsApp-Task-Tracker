@@ -11,12 +11,46 @@ export interface DigestEmailData {
   periodLabel: string;
   summary: ReportSummary;
   topPerformers: ReportMemberStat[];
+  bottomPerformers?: ReportMemberStat[];
   overdueItems: Array<{ text: string; group_name: string; due_at: string }>;
   appUrl: string;
 }
 
+/** Map lightweight performer rows into ReportMemberStat for email templates */
+export function toReportMemberStat(
+  p: {
+    name: string;
+    completed: number;
+    onTimeRate: number;
+    avgResponseMinutes: number;
+  },
+  idx: number
+): ReportMemberStat {
+  return {
+    member_id: `digest-${idx}`,
+    name: p.name,
+    group_id: "",
+    group_name: "—",
+    assigned_count: p.completed,
+    completed_count: p.completed,
+    verified_count: p.completed,
+    on_time_count: Math.round((p.onTimeRate / 100) * p.completed),
+    on_time_rate: p.onTimeRate,
+    avg_response_mins: p.avgResponseMinutes,
+    score: Math.round(p.onTimeRate * 0.7 + Math.min(p.completed, 20) * 1.5),
+  };
+}
+
 export function generateDigestHtml(data: DigestEmailData): string {
-  const { orgName, periodLabel, summary, topPerformers, overdueItems, appUrl } = data;
+  const {
+    orgName,
+    periodLabel,
+    summary,
+    topPerformers,
+    bottomPerformers = [],
+    overdueItems,
+    appUrl,
+  } = data;
 
   const topRows = topPerformers.slice(0, 5).map((m, idx) => `
     <tr style="border-bottom: 1px solid #e2e8f0;">
@@ -29,6 +63,14 @@ export function generateDigestHtml(data: DigestEmailData): string {
           ${m.score} pts
         </span>
       </td>
+    </tr>
+  `).join("");
+
+  const bottomRows = bottomPerformers.slice(0, 3).map((m) => `
+    <tr style="border-bottom: 1px solid #e2e8f0;">
+      <td style="padding: 10px 12px; font-weight: 600; color: #1e293b;">${m.name}</td>
+      <td style="padding: 10px 12px; text-align: center; color: #64748b;">${m.completed_count}</td>
+      <td style="padding: 10px 12px; text-align: center; color: #b45309;">${m.on_time_rate}%</td>
     </tr>
   `).join("");
 
@@ -112,6 +154,25 @@ export function generateDigestHtml(data: DigestEmailData): string {
                 <tbody>
                   ${topRows}
                 </tbody>
+              </table>
+            </td>
+          </tr>` : ""}
+
+          ${bottomPerformers.length > 0 ? `
+          <tr>
+            <td style="padding: 0 28px 20px 28px;">
+              <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 12px 0;">
+                Needs attention
+              </h3>
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size: 13px; text-align: left; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
+                <thead>
+                  <tr style="background: #fff7ed; color: #9a3412; font-weight: 700; font-size: 11px; text-transform: uppercase;">
+                    <th style="padding: 8px 12px;">Member</th>
+                    <th style="padding: 8px 12px; text-align: center;">Done</th>
+                    <th style="padding: 8px 12px; text-align: center;">On-Time</th>
+                  </tr>
+                </thead>
+                <tbody>${bottomRows}</tbody>
               </table>
             </td>
           </tr>` : ""}

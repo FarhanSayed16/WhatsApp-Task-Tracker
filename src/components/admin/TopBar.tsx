@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useRouter } from "next/navigation";
+import { useTheme } from "@/components/ThemeProvider";
 
 export interface TopBarProps {
   title: string;
@@ -14,6 +15,7 @@ export interface TopBarProps {
 
 export function TopBar({ title, subtitle, actions }: TopBarProps) {
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -49,6 +51,22 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
           {actions && <div className="flex items-center gap-2">{actions}</div>}
 
           <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={toggleTheme}
+            className="text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 p-2"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label="Toggle light/dark theme"
+          >
+            {theme === "dark" ? (
+              <Sun className="w-4 h-4" />
+            ) : (
+              <Moon className="w-4 h-4" />
+            )}
+          </Button>
 
           {/* User profile / Logout */}
           <div className="flex items-center gap-2">

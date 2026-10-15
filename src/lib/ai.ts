@@ -26,6 +26,24 @@ export interface ParsedAITaskItem {
   text: string;
   suggested_priority: TaskPriority;
   suggested_due?: string | null;
+  suggested_category?: string | null;
+}
+
+const CATEGORY_KEYWORDS: Array<{ category: string; keywords: string[] }> = [
+  { category: "lab", keywords: ["lab", "experiment", "sensor", "sample", "calibrat"] },
+  { category: "report", keywords: ["report", "write", "document", "submit", "draft"] },
+  { category: "meeting", keywords: ["meet", "discuss", "standup", "call", "sync"] },
+  { category: "research", keywords: ["research", "read", "paper", "survey", "review"] },
+  { category: "code", keywords: ["code", "implement", "debug", "fix", "deploy", "api"] },
+];
+
+/** Lightweight rule-based categorizer (no Gemini call). */
+export function categorizeTask(text: string): string {
+  const lower = (text || "").toLowerCase();
+  for (const row of CATEGORY_KEYWORDS) {
+    if (row.keywords.some((k) => lower.includes(k))) return row.category;
+  }
+  return "general";
 }
 
 export interface ReminderContext {
@@ -40,17 +58,23 @@ export interface ReminderContext {
   tone?: "polite" | "urgent" | "firm";
 }
 
+export type ParseTextResult = {
+  items: ParsedAITaskItem[];
+  source: "ai" | "fallback";
+};
+
 /**
  * Parses unstructured messy text (meeting notes, messages, voice transcripts)
  * into a clean list of actionable checklist task items with suggested priorities.
  */
-export async function parseTextToTasks(text: string): Promise<ParsedAITaskItem[]> {
-  if (!text || !text.trim()) return [];
+export async function parseTextToTasks(rawText: string): Promise<ParseTextResult> {
+  if (!rawText || !rawText.trim()) return { items: [], source: "fallback" };
+  let text = rawText;
 
   // Fallback helper if Gemini is unconfigured or rate limited
-  const fallbackParse = (): ParsedAITaskItem[] => {
+  const fallbackParse = (): ParseTextResult => {
     const lines = parsePastedTasks(text);
-    return lines.map((line) => {
+    const items = lines.map((line) => {
       let priority: TaskPriority = "normal";
       const lower = line.toLowerCase();
       if (lower.includes("urgent") || lower.includes("asap") || lower.includes("important") || lower.includes("critical")) {
@@ -61,13 +85,21 @@ export async function parseTextToTasks(text: string): Promise<ParsedAITaskItem[]
       return {
         text: line,
         suggested_priority: priority,
+        suggested_category: categorizeTask(line),
       };
     });
+    return { items, source: "fallback" };
   };
 
   if (!genAI || !checkRateLimit()) {
     console.warn("Gemini AI unavailable or rate-limited. Falling back to rule-based line parser.");
     return fallbackParse();
+  }
+
+  // Soft cap for serverless / free-tier prompt size
+  if (text.length > 8000) {
+    console.warn("parseTextToTasks: input truncated to 8000 chars");
+    text = text.slice(0, 8000);
   }
 
   try {
@@ -86,13 +118,15 @@ Rules:
 1. Break down complex or compound sentences into single concise actionable items.
 2. Clean up punctuation, remove filler words like "um", "ah", "and then", and remove numbering/bullets.
 3. Suggest a priority: "high" (if urgent/deadline-critical), "low" (if optional or trivial), otherwise "normal".
-4. If a specific time or deadline is mentioned in the text (e.g. "by 5pm", "before Friday"), capture it in suggested_due, otherwise null.
-5. Return a JSON array of objects with the exact schema:
+4. If a specific time or deadline is mentioned in the text (e.g. "by 5pm", "before Friday"), capture it in suggested_due (prefer HH:MM 24h if a clock time), otherwise null.
+5. Suggest a short category tag: lab | report | meeting | research | code | general.
+6. Return a JSON array of objects with the exact schema:
 [
   {
     "text": "Task description here",
     "suggested_priority": "high" | "normal" | "low",
-    "suggested_due": "string or null"
+    "suggested_due": "string or null",
+    "suggested_category": "lab" | "report" | "meeting" | "research" | "code" | "general"
   }
 ]
 
@@ -106,15 +140,21 @@ ${text}
     const parsed = JSON.parse(responseText);
 
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed.map((item: any) => ({
-        text: String(item.text || "").trim(),
-        suggested_priority:
-          item.suggested_priority === "high" ||
-          item.suggested_priority === "low"
-            ? item.suggested_priority
-            : "normal",
-        suggested_due: item.suggested_due || null,
-      })).filter((item: ParsedAITaskItem) => item.text.length > 0);
+      const items = parsed.map((item: any) => {
+        const textVal = String(item.text || "").trim();
+        return {
+          text: textVal,
+          suggested_priority:
+            item.suggested_priority === "high" ||
+            item.suggested_priority === "low"
+              ? item.suggested_priority
+              : "normal",
+          suggested_due: item.suggested_due || null,
+          suggested_category:
+            item.suggested_category || categorizeTask(textVal),
+        };
+      }).filter((item: ParsedAITaskItem) => item.text.length > 0);
+      return { items, source: "ai" };
     }
 
     return fallbackParse();

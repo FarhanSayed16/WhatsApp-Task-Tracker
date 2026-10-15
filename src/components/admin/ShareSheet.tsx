@@ -77,6 +77,10 @@ export function ShareSheet({
   const [isDraftingAi, setIsDraftingAi] = useState(false);
   const [aiLang, setAiLang] = useState<"en" | "hi" | "mr">("en");
   const [aiTone, setAiTone] = useState<"polite" | "urgent" | "firm">("polite");
+  const [messageTemplates, setMessageTemplates] = useState<
+    Array<{ id: string; name: string; body: { text?: string } }>
+  >([]);
+  const [defaultWaPhone, setDefaultWaPhone] = useState<string | null>(null);
 
   const publicLink =
     taskList.member_link ||
@@ -87,6 +91,33 @@ export function ShareSheet({
   const pendingItems = items.filter(
     (i) => i.status === "pending" || i.status === "done"
   );
+
+  // Load message templates + default WhatsApp number when sheet opens
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [tplRes, settingsRes] = await Promise.all([
+          fetch("/api/admin/templates?type=message"),
+          fetch("/api/admin/settings"),
+        ]);
+        const tplJson = await tplRes.json();
+        const settingsJson = await settingsRes.json();
+        if (!cancelled && tplRes.ok) {
+          setMessageTemplates(Array.isArray(tplJson.data) ? tplJson.data : []);
+        }
+        if (!cancelled && settingsRes.ok) {
+          setDefaultWaPhone(settingsJson.data?.default_wa_phone || null);
+        }
+      } catch {
+        /* optional enrichment */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   // Generate initial message according to active tab and reminder type
   useEffect(() => {
@@ -429,6 +460,33 @@ export function ShareSheet({
 
         {/* Message Preview Textarea */}
         <div className="space-y-1.5">
+          {messageTemplates.length > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-medium text-slate-500 shrink-0">Use template:</span>
+              <select
+                className="flex-1 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs"
+                defaultValue=""
+                onChange={(e) => {
+                  const tpl = messageTemplates.find((t) => t.id === e.target.value);
+                  if (tpl?.body?.text) {
+                    const filled = tpl.body.text
+                      .replace(/\{\{title\}\}/gi, taskList.title)
+                      .replace(/\{\{group\}\}/gi, taskList.group_name)
+                      .replace(/\{\{link\}\}/gi, publicLink);
+                    setMessageText(filled);
+                  }
+                  e.target.value = "";
+                }}
+              >
+                <option value="">Select a message template…</option>
+                {messageTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-slate-700 dark:text-slate-300">
               Message Preview (Editable):
@@ -486,12 +544,20 @@ export function ShareSheet({
             type="button"
             variant="primary"
             size="lg"
-            onClick={() => handleOpenWhatsApp()}
+            onClick={() => handleOpenWhatsApp(defaultWaPhone)}
             className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white shadow-md shadow-emerald-600/20 text-sm font-bold py-3"
           >
             <Send className="w-4 h-4 mr-2" />
-            Open in WhatsApp
+            {defaultWaPhone
+              ? `Open WhatsApp (+${defaultWaPhone})`
+              : "Open in WhatsApp"}
           </Button>
+          {defaultWaPhone && (
+            <p className="text-[11px] text-center text-slate-500">
+              Opens a chat with your saved test number and the checklist + member link pre-filled.
+              Change this under Settings.
+            </p>
+          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <Button

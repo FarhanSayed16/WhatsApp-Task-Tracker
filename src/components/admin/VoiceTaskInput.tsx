@@ -19,6 +19,7 @@ export function VoiceTaskInput({ onTasksExtracted, className }: VoiceTaskInputPr
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
+  const finalTranscriptRef = useRef("");
 
   useEffect(() => {
     const SpeechRecognition =
@@ -37,11 +38,21 @@ export function VoiceTaskInput({ onTasksExtracted, className }: VoiceTaskInputPr
       recognition.lang = "en-US"; // Accepts multi-language if spoken clearly
 
       recognition.onresult = (event: any) => {
-        let currentTranscript = "";
+        let interim = "";
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          currentTranscript += event.results[i][0].transcript;
+          const piece = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscriptRef.current +=
+              (finalTranscriptRef.current ? " " : "") + piece.trim();
+          } else {
+            interim += piece;
+          }
         }
-        setTranscript(currentTranscript);
+        const combined = [finalTranscriptRef.current, interim]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        setTranscript(combined);
       };
 
       recognition.onerror = (event: any) => {
@@ -72,10 +83,12 @@ export function VoiceTaskInput({ onTasksExtracted, className }: VoiceTaskInputPr
     if (isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
-      if (transcript.trim()) {
-        parseSpokenText(transcript);
+      const full = (finalTranscriptRef.current || transcript).trim();
+      if (full) {
+        parseSpokenText(full);
       }
     } else {
+      finalTranscriptRef.current = "";
       setTranscript("");
       try {
         recognitionRef.current.start();
@@ -132,7 +145,7 @@ export function VoiceTaskInput({ onTasksExtracted, className }: VoiceTaskInputPr
             "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm",
             isListening
               ? "bg-rose-600 hover:bg-rose-500 text-white animate-pulse"
-              : "bg-purple-600 hover:bg-purple-500 text-white"
+              : "bg-emerald-700 hover:bg-emerald-600 text-white"
           )}
         >
           {isListening ? (
@@ -143,7 +156,7 @@ export function VoiceTaskInput({ onTasksExtracted, className }: VoiceTaskInputPr
           ) : (
             <>
               <Mic className="w-3.5 h-3.5" />
-              <span>Speak Tasks (Voice Dictation)</span>
+              <span>Speak Tasks</span>
             </>
           )}
         </button>
@@ -156,9 +169,9 @@ export function VoiceTaskInput({ onTasksExtracted, className }: VoiceTaskInputPr
         )}
 
         {isParsing && (
-          <span className="inline-flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 font-semibold">
+          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            Extracting tasks with Gemini AI...
+            Extracting tasks…
           </span>
         )}
       </div>
@@ -172,8 +185,8 @@ export function VoiceTaskInput({ onTasksExtracted, className }: VoiceTaskInputPr
 
       {/* Live Transcript Display */}
       {transcript && (
-        <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-900/40 space-y-2 animate-slide-up">
-          <div className="flex items-center justify-between text-[11px] text-purple-800 dark:text-purple-300 font-bold">
+        <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/40 space-y-2 animate-slide-up">
+          <div className="flex items-center justify-between text-[11px] text-emerald-900 dark:text-emerald-300 font-bold">
             <span className="flex items-center gap-1">
               <Sparkles className="w-3 h-3" /> Live Transcript:
             </span>
@@ -181,7 +194,7 @@ export function VoiceTaskInput({ onTasksExtracted, className }: VoiceTaskInputPr
               <button
                 type="button"
                 onClick={() => parseSpokenText(transcript)}
-                className="text-purple-600 hover:text-purple-800 underline font-semibold"
+                className="text-emerald-700 hover:text-emerald-900 underline font-semibold"
               >
                 Parse Again
               </button>

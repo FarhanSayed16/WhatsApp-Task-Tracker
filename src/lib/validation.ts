@@ -159,6 +159,7 @@ export const updateTaskListSchema = z.object({
   list_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   due_at: z.string().datetime().optional().nullable(),
   status: z.enum(["draft", "active", "completed", "archived"]).optional(),
+  recurrence: z.any().optional().nullable(),
 });
 
 // ═════════════════════════════════════════════════════════════
@@ -207,6 +208,22 @@ export const createTemplateSchema = z.object({
     placeholders: z.array(z.string()).optional(),
   }),
 });
+
+export const updateTemplateSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional(),
+    body: z
+      .object({
+        items: z.array(z.string()).optional(),
+        default_due_offset_hours: z.number().int().min(1).max(168).optional(),
+        text: z.string().optional(),
+        placeholders: z.array(z.string()).optional(),
+      })
+      .optional(),
+  })
+  .refine((d) => d.name !== undefined || d.body !== undefined, {
+    message: "Provide name and/or body to update",
+  });
 
 // ═════════════════════════════════════════════════════════════
 // Public Interaction Schemas
