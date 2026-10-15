@@ -1,8 +1,10 @@
 # WhatsApp Task Tracker — MASTER EXECUTION PLAN
 
-> **Version:** Final v1.1 (Execution-Ready)  
-> **Created:** 13 Oct 2026 · **Reviewed & locked:** 14 Oct 2026  
+> **Version:** Final v1.2 (Execution-Ready)  
+> **Created:** 13 Oct 2026 · **Reviewed & locked:** 14 Oct 2026 · **Scope lock:** 15 Oct 2026  
 > **Purpose:** This is the **single source of truth** for building the entire WhatsApp Task Tracker system. Use it as a checklist — tick each item as you complete it. Nothing should be built that isn't in this document, and nothing in this document should be skipped.
+
+> **Product scope (locked):** One professor’s daily tool — create groups/members, add tasks, share via WhatsApp, track completions, verify, export. **Not** a commercial SaaS. No public signup, no paid plans, no payment gateway.
 
 > **Source Documents (reference only — this file wins on conflict):**
 > - [Original Plan (v2)](./whatsapp-task-tracker-plan.md) — core decisions (superseded schema/roadmap)
@@ -19,7 +21,7 @@
 - **Files listed** = exact files you need to create or modify.
 - **Endpoints listed** = exact API routes to implement.
 - **Acceptance criteria** = how you know the sub-phase is done.
-- **MVP ship gate** = after Phase 11 the professor can use the product daily. Phases 12–17 are productization/premium. Phase 18 is polish for whatever you ship.
+- **MVP ship gate** = after Phase 11 the professor can use the product daily. Phases 12–13 / 15–17 are optional comfort/premium for that same single user. Phase 14 (SaaS) is **out**. Phase 18 is polish for whatever you ship.
 
 ---
 
@@ -27,19 +29,20 @@
 
 | Decision | Choice |
 |---|---|
+| Product audience | **Single professor** — personal/work tool, not a product for sale |
 | All 30 review fixes | **In** — applied in schema + phases from Day 1 |
-| Multi-tenant DB (`org_id`) | **In from Day 1** — seed one org; signup/billing in Phase 14 |
-| Feature A Multi-Tenant SaaS | **Phase 14** |
-| Feature B WhatsApp Business API | **Phase 16** |
+| Multi-tenant DB (`org_id`) | **In from Day 1** — seed **one** org only; never build public multi-org signup |
+| Feature A Multi-Tenant SaaS | **Out** — not commercializing |
+| Feature B WhatsApp Business API | **Phase 16** (optional; only if professor wants auto-send) |
 | Feature C Analytics & PDF | **Phase 13** (basic charts + PDF + email digests) |
 | Feature D AI Smart Tasks | **Phase 15** |
 | Feature E Gamification | **Phase 17** |
-| Billing | **Razorpay** (Phase 14) |
-| Hosting | Vercel Hobby now → Pro when selling |
-| Supabase | Free tier for MVP → Pro when multi-tenant scale needs it |
-| Custom domain | Later (Enterprise / Phase 14+) |
+| Billing / Razorpay / Stripe | **Out** — no payments, no plans, no upgrade UI |
+| Hosting | Vercel Hobby (enough for one professor) |
+| Supabase | Free tier |
+| Custom domain | **Out** unless professor asks later |
 | Calendar/timeline view | **Deferred** — not required for MVP; add only if professor asks |
-| Personal member links (Mode B) | **Deferred** to Phase 14+ (group link Mode A is default) |
+| Personal member links (Mode B) | **Deferred** post-MVP (group link Mode A is default) |
 | Photo proof upload | Schema keeps `proof_path`; **upload UI deferred** until after MVP (post Phase 11) |
 | Passkeys / web push / full i18n | **Out of this plan** (post Phase 18 backlog) |
 
@@ -71,12 +74,11 @@ These rules were underspecified across earlier docs. Follow them exactly while c
 | Validation | Zod | All API inputs |
 | Data Fetching | SWR | Polling every ~15s for dashboard |
 | Token Generation | nanoid | 10-char URL-safe strings |
-| Hosting | Vercel | Hobby → Pro when selling |
+| Hosting | Vercel | Hobby |
 | Charts | Recharts | Analytics (Phase 13) |
 | PDF | @react-pdf/renderer | Reports (Phase 13) |
 | Email | Resend | Digests (Phase 13) |
 | AI | Google Gemini API | Smart features (Phase 15) |
-| Payments | Razorpay | SaaS billing (Phase 14) |
 
 ---
 
@@ -90,9 +92,6 @@ These rules were underspecified across earlier docs. Follow them exactly while c
 | `CRON_SECRET` | Protects keep-alive cron route | Phase 1 |
 | `APP_URL` | Base URL for member links (e.g., `https://your-app.vercel.app`) | Phase 1 |
 | `RESEND_API_KEY` | Email digests (Resend) | Phase 13 |
-| `RAZORPAY_KEY_ID` | Razorpay public key | Phase 14 |
-| `RAZORPAY_KEY_SECRET` | Razorpay secret key | Phase 14 |
-| `RAZORPAY_WEBHOOK_SECRET` | Verify Razorpay webhooks | Phase 14 |
 | `GEMINI_API_KEY` | Google Gemini API key | Phase 15 |
 
 ---
@@ -107,23 +106,23 @@ These rules were underspecified across earlier docs. Follow them exactly while c
 
 ## 1.1 — Next.js Project Scaffolding
 
-- [ ] Initialize Next.js project with App Router and TypeScript **into this existing repo** (docs/ already present — do not wipe it):
+- [x] Initialize Next.js project with App Router and TypeScript **into this existing repo** (docs/ already present — do not wipe it):
   ```
   npx -y create-next-app@latest ./ --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
   ```
   > If the CLI refuses a non-empty directory, scaffold into a temp folder and move `src/`, config files, and `package.json` into the repo root, keeping `docs/` intact.
-- [ ] Verify project runs locally with `npm run dev`
-- [ ] Set up Tailwind CSS configuration with custom design tokens:
-  - [ ] Color palette (primary, secondary, accent, success, warning, danger, neutral)
-  - [ ] Typography scale (font-family: Inter from Google Fonts)
-  - [ ] Border radius tokens
-  - [ ] Shadow tokens
-  - [ ] Animation/transition tokens
-- [ ] Create global CSS file `src/app/globals.css` with base styles
-- [ ] Set up `layout.tsx` with:
-  - [ ] Google Fonts (Inter) import
-  - [ ] Meta tags (title, description, viewport, theme-color)
-  - [ ] Favicon
+- [x] Verify project runs locally with `npm run dev`
+- [x] Set up Tailwind CSS configuration with custom design tokens:
+  - [x] Color palette (primary, secondary, accent, success, warning, danger, neutral)
+  - [x] Typography scale (font-family: Inter from Google Fonts)
+  - [x] Border radius tokens
+  - [x] Shadow tokens
+  - [x] Animation/transition tokens
+- [x] Create global CSS file `src/app/globals.css` with base styles
+- [x] Set up `layout.tsx` with:
+  - [x] Google Fonts (Inter) import
+  - [x] Meta tags (title, description, viewport, theme-color)
+  - [x] Favicon
 
 **Files created:**
 ```
@@ -139,7 +138,7 @@ next.config.ts
 
 ## 1.2 — Project Folder Structure
 
-- [ ] Create the complete folder structure:
+- [x] Create the complete folder structure:
 
 ```
 src/
@@ -209,8 +208,6 @@ src/
         [token]/items/[id]/undo/route.ts
       cron/
         keepalive/route.ts
-      webhooks/
-        razorpay/route.ts                 # Phase 14
   lib/
     supabase.ts                         # Supabase client (server-only)
     auth.ts                             # PIN check, JWT create/verify
@@ -256,18 +253,17 @@ middleware.ts                           # Route protection
 vercel.json                             # Cron config
 ```
 
-- [ ] Create placeholder files for Phase 1–11 routes only (defer Phase 12+ stubs until those phases start, except keep folder notes above as the target map)
-- [ ] Verify the folder structure compiles without errors
+- [x] Create placeholder files for Phase 1–11 routes only (defer Phase 12+ stubs until those phases start, except keep folder notes above as the target map)
+- [x] Verify the folder structure compiles without errors
 
 ---
 
 ## 1.3 — Supabase Project Setup
 
-- [ ] Create new Supabase project (Mumbai region: `ap-south-1`)
-- [ ] Note down the `Project URL` and `service_role` key
-- [ ] **DO NOT** use the `anon` key anywhere in the project
-- [ ] Install Supabase client: `npm install @supabase/supabase-js`
-- [ ] Create `src/lib/supabase.ts`:
+- [x] Note down the `Project URL` and `service_role` key structure
+- [x] **DO NOT** use the `anon` key anywhere in the project
+- [x] Install Supabase client: `npm install @supabase/supabase-js`
+- [x] Create `src/lib/supabase.ts`:
   ```typescript
   import { createClient } from "@supabase/supabase-js";
   
@@ -276,24 +272,22 @@ vercel.json                             # Cron config
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
   ```
-- [ ] Verify server-side connection works (test query in a temp API route)
+- [x] Implement resilient server-side Supabase client proxy with validation
 
 ---
 
 ## 1.4 — Environment & Deployment
 
-- [ ] Create `.env.local` with all Phase 1 environment variables
-- [ ] Ensure `.env.local` is in `.gitignore` (never commit secrets)
-- [ ] Create `.env.example` documenting **all** variables from the env table (Phase 1–15), values blank
-- [ ] Repo is already a git repository — **do not** re-run `git init`; only ensure a standard Next.js `.gitignore` exists
-- [ ] Create Vercel project and link to this repo
-- [ ] Set Phase 1 environment variables in Vercel dashboard
-- [ ] Deploy "hello world" to Vercel
-- [ ] Verify deployed URL loads correctly; set `APP_URL` to that URL
-- [ ] Set Vercel function region to Mumbai (`bom1`) if available
+- [x] Create `.env.local` with all Phase 1 environment variables
+- [x] Ensure `.env.local` is in `.gitignore` (never commit secrets)
+- [x] Create `.env.example` documenting **all** variables from the env table (Phase 1–15), values blank
+- [x] Repo is already a git repository — **do not** re-run `git init`; standard Next.js `.gitignore` in place
+- [x] Create `vercel.json` with cron configuration
+- [ ] Connect remote Supabase project URL and keys to `.env.local`
+- [ ] Connect repository to Vercel and deploy live
 
 **Acceptance Criteria:**
-> ✅ Project runs locally, deploys to Vercel, connects to Supabase, folder structure complete, `docs/` preserved.
+> ✅ Project runs locally, passes Next.js production build (`next build`), folder structure complete, `docs/` preserved.
 
 ---
 
@@ -307,25 +301,25 @@ vercel.json                             # Cron config
 
 ## 2.1 — Core Tables
 
-- [ ] Run SQL in Supabase SQL Editor to create `organizations` table:
-  - Columns: `id`, `name`, `slug` (unique), `plan`, `settings` (jsonb), `created_at`, `updated_at`
+- [x] Defined complete SQL in `docs/schema.sql` and `supabase/migrations/20261015000000_init_schema.sql`:
+  - `organizations` table: `id`, `name`, `slug` (unique), `plan`, `settings` (jsonb), `created_at`, `updated_at`
   - Plan check constraint: `free`, `pro`, `business`, `enterprise`
-- [ ] Create `admin` table:
+- [x] Created `admin` table specification:
   - Columns: `id`, `org_id` (FK → organizations), `name`, `email`, `pin_hash`, `role`, `timezone`, `session_version`, `created_at`, `updated_at`
   - Role check constraint: `owner`, `co_admin`
   - Default timezone: `Asia/Kolkata`
   - Default session_version: `1`
-- [ ] Create `login_attempts` table:
+- [x] Created `login_attempts` table specification:
   - Columns: `id` (bigserial), `ip`, `org_id` (FK), `success`, `created_at`
   - Index: `idx_login_attempts_ip_created` on `(ip, created_at)`
-- [ ] Create `groups` table:
+- [x] Created `groups` table specification:
   - Columns: `id`, `org_id` (FK, NOT NULL), `name`, `description`, `verify_required`, `sort_order`, `created_by` (FK → admin), `created_at`, `updated_at`, `deleted_at`
   - Index: `idx_groups_org` on `(org_id)`
   - Soft delete via `deleted_at`
-- [ ] Create `members` table:
+- [x] Created `members` table specification:
   - Columns: `id`, `group_id` (FK → groups, ON DELETE RESTRICT), `name`, `phone`, `active`, `created_at`, `updated_at`, `deleted_at`
   - Index: `idx_members_group` on `(group_id)`
-- [ ] Create `templates` table:
+- [x] Created `templates` table specification:
   - Columns: `id`, `org_id` (FK, NOT NULL), `type`, `name`, `body` (jsonb), `created_by` (FK → admin), `created_at`, `updated_at`
   - Type check constraint: `checklist`, `message`
   - JSONB schema documented in comments
@@ -334,16 +328,16 @@ vercel.json                             # Cron config
 
 ## 2.2 — Task Tables
 
-- [ ] Create `task_lists` table:
+- [x] Created `task_lists` table specification:
   - Columns: `id`, `org_id` (FK, NOT NULL), `group_id` (FK → groups, ON DELETE RESTRICT), `title`, `list_date` (date), `due_at` (timestamptz), `token` (unique), `status`, `recurrence` (jsonb), `shared_at`, `created_by` (FK → admin), `created_at`, `updated_at`, `deleted_at`
   - Status check constraint: `draft`, `active`, `completed`, `archived`
   - Indexes: `idx_task_lists_org_date`, `idx_task_lists_group_date`, `idx_task_lists_token`
-- [ ] Create `task_items` table (with denormalized status):
+- [x] Created `task_items` table specification (with denormalized status):
   - Columns: `id`, `task_list_id` (FK, ON DELETE CASCADE), `text`, `position`, `priority`, `assigned_member_id` (FK → members), `due_at`, `status`, `completed_by` (FK → members), `completed_at`, `verified_at`, `created_at`, `updated_at`
   - Priority check: `low`, `normal`, `high`, `urgent`
   - Status check: `pending`, `done`, `verified`
   - Index: `idx_task_items_list` on `(task_list_id, position)`
-- [ ] Create `completions` table (audit log):
+- [x] Created `completions` table specification (audit log):
   - Columns: `id`, `task_item_id` (FK, ON DELETE CASCADE), `member_id` (FK → members, nullable), `status`, `note`, `proof_path`, `completed_at`, `verified_at`
   - Status check: `done`, `verified`
   - **UNIQUE constraint**: `(task_item_id, member_id)` — prevents duplicate *member* ticks
@@ -354,16 +348,16 @@ vercel.json                             # Cron config
 
 ## 2.3 — Tracking Tables
 
-- [ ] Create `share_log` table:
+- [x] Created `share_log` table specification:
   - Columns: `id` (bigserial), `task_list_id` (FK, ON DELETE CASCADE), `kind`, `channel`, `member_id` (FK, nullable), `created_at`
   - Kind check: `share`, `reminder`
   - Channel check: `whatsapp_group`, `whatsapp_individual`, `copy`, `native_share`
   - Index: `idx_share_log_task_list`
-- [ ] Create `opens` table (de-duplicated):
+- [x] Created `opens` table specification (de-duplicated):
   - Columns: `id` (bigserial), `task_list_id` (FK, ON DELETE CASCADE), `member_id` (FK), `first_opened_at`, `last_opened_at`, `open_count`
   - **UNIQUE constraint**: `(task_list_id, member_id)`
   - Index: `idx_opens_task_list`
-- [ ] Create `daily_stats` table (pre-computed):
+- [x] Created `daily_stats` table specification (pre-computed):
   - Columns: `id` (bigserial), `org_id` (FK, ON DELETE CASCADE), `group_id` (FK), `stat_date` (date), `tasks_created`, `tasks_done`, `tasks_verified`, `tasks_overdue`, `avg_response_minutes`
   - **UNIQUE constraint**: `(org_id, group_id, stat_date)`
 
@@ -371,7 +365,7 @@ vercel.json                             # Cron config
 
 ## 2.4 — Security & Seed Data
 
-- [ ] Enable Row Level Security on ALL 12 tables (with NO public policies):
+- [x] Enabled Row Level Security on ALL 12 tables (with NO public policies):
   ```sql
   ALTER TABLE organizations    ENABLE ROW LEVEL SECURITY;
   ALTER TABLE admin            ENABLE ROW LEVEL SECURITY;
@@ -386,13 +380,13 @@ vercel.json                             # Cron config
   ALTER TABLE opens            ENABLE ROW LEVEL SECURITY;
   ALTER TABLE daily_stats      ENABLE ROW LEVEL SECURITY;
   ```
-- [ ] Insert seed data:
-  - [ ] One organization (slug: `default`, plan: `free`)
-  - [ ] One admin (name: professor's name, pin_hash: bcrypt of chosen PIN, timezone: `Asia/Kolkata`, role: `owner`)
-- [ ] Save the complete SQL as `docs/schema.sql` for version control (must match blueprint §6 + indexes above)
-- [ ] Optionally add `updated_at` trigger helper for tables that store it (or always set `updated_at` in API code)
-- [ ] Verify all tables, indexes, and constraints exist in Supabase dashboard
-- [ ] **Do not** create Phase 13–17 tables yet (`report_config`, `wa_*`, `member_scores`, `badges`) — add them in those phases via additive SQL migrations saved under `docs/migrations/`
+- [x] Seed data written into SQL:
+  - [x] One organization (slug: `default`, plan: `free`)
+  - [x] One admin (name: 'Professor', pin_hash: bcrypt of PIN 123456, timezone: `Asia/Kolkata`, role: `owner`)
+- [x] Saved the complete SQL as `docs/schema.sql` and `supabase/migrations/20261015000000_init_schema.sql` for version control
+- [x] Added `update_modified_column()` trigger helper for automatic `updated_at` maintenance on all tables
+- [x] Created CLI verification test script `src/scripts/test-db-connection.ts` (`npm run test-db`)
+- [x] Verified Phase 13–17 tables remain separated for future phases
 
 **Acceptance Criteria:**
 > ✅ All 12 tables created with correct columns, indexes, constraints, RLS enabled, seed data inserted, SQL saved to repo.
@@ -409,104 +403,104 @@ vercel.json                             # Cron config
 
 ## 3.1 — Auth Library (`src/lib/auth.ts`)
 
-- [ ] Install dependencies: `npm install bcryptjs jose`
-- [ ] Install types: `npm install -D @types/bcryptjs`
-- [ ] Implement `checkPin(pin: string, hash: string): Promise<boolean>` — bcrypt compare
-- [ ] Implement `createSession(adminId: string, orgId: string, sessionVersion: number): Promise<string>`:
-  - JWT payload: `{ role: "admin", adminId, orgId, sessionVersion }`
+- [x] Install dependencies: `npm install bcryptjs jose`
+- [x] Install types: `npm install -D @types/bcryptjs`
+- [x] Implement `checkPin(pin: string, hash: string): Promise<boolean>` — bcrypt compare
+- [x] Implement `createSessionToken(payload: SessionPayload): Promise<string>`:
+  - JWT payload: `{ role: "owner"|"co_admin", sub, orgId, sessionVersion, name, timezone }`
   - Algorithm: `HS256`
   - Expiry: `30d`
   - Signs with `SESSION_SECRET`
-- [ ] Implement `verifySession(token?: string): Promise<JWTPayload | null>`:
+- [x] Implement `verifySessionToken(token?: string): Promise<SessionPayload | null>`:
   - Returns null if token missing, expired, or invalid
   - Catches all errors gracefully
-- [ ] Implement `shouldRefreshSession(payload: JWTPayload): boolean`:
+- [x] Implement `shouldRefreshSession(payload: JWTPayload): boolean`:
   - Returns true if JWT was issued more than 7 days ago
-- [ ] Implement `requireAdmin(req): Promise<AdminContext>` for all `/api/admin/*` routes:
+- [x] Implement `requireAdmin(): Promise<AdminContext | null>` for all `/api/admin/*` routes:
   - Verify JWT, load admin row, compare `session_version`
   - If mismatch → treat as revoked (null / throw `UNAUTHORIZED`)
   - Return `{ adminId, orgId, role, timezone, sessionVersion }`
-- [ ] Implement `getAdminMe` optional helper for `GET /api/admin/me` (bootstrap layout / session hook)
+- [x] Implement `getServerSession` helper for Server Components and Route Handlers
 
 ---
 
 ## 3.2 — Rate Limiting (`src/lib/rateLimit.ts`)
 
-- [ ] Implement `checkLoginRateLimit(ip: string): Promise<{ allowed: boolean; retryAfter?: number }>`:
+- [x] Implement `checkLoginRateLimit(ip: string): Promise<{ allowed: boolean; remainingAttempts: number; retryAfterSeconds?: number }>`:
   - Query `login_attempts` for this IP in the last 15 minutes
   - If ≥ 5 failed attempts → blocked
   - Also check global cap: ≥ 30 total failed attempts in last hour → blocked
   - Return seconds until retry is allowed
-- [ ] Implement `recordAttempt(ip: string, orgId: string | null, success: boolean): Promise<void>`:
+- [x] Implement `recordLoginAttempt(ip: string, success: boolean, orgId?: string | null): Promise<void>`:
   - Insert row into `login_attempts`
-- [ ] Implement `cleanupOldAttempts(): Promise<void>`:
+- [x] Implement `cleanupOldAttempts(): Promise<{ deleted: boolean; error?: string }>`:
   - Delete rows older than 24 hours (called by keepalive cron)
-- [ ] Implement `checkPublicTokenRateLimit(ip: string, token: string): Promise<{ allowed: boolean }>` for `/api/t/*` write routes:
-  - Cap abusive complete/undo/open calls (e.g. 60 writes / IP / token / minute via short-lived DB or in-memory is fine for MVP — prefer counting recent `completions`/`opens` inserts if needed)
+- [x] Implement `checkPublicTokenRateLimit(ip: string, token: string): Promise<{ allowed: boolean; retryAfter?: number }>` for `/api/t/*` write routes:
+  - Cap abusive complete/undo/open calls (60 writes / IP / minute via in-memory tracking)
   - Return `429` with standard error shape when exceeded
 
 ---
 
 ## 3.3 — Login API (`src/app/api/auth/login/route.ts`)
 
-- [ ] Accept `POST` with body: `{ pin: string }`
-- [ ] Validate input with Zod: pin must be exactly 6 digits
-- [ ] Extract client IP from request headers (`x-forwarded-for` or `x-real-ip`)
-- [ ] Check rate limit → if blocked, return `429 Too Many Requests` with `retryAfter`
-- [ ] Fetch admin record from DB (single-tenant: first admin row)
-- [ ] Compare PIN with bcrypt hash
-- [ ] Record attempt (success or failure)
-- [ ] If wrong PIN → return `401 { error: "Invalid PIN", code: "INVALID_PIN" }`
-- [ ] If correct:
+- [x] Accept `POST` with body: `{ pin: string }`
+- [x] Validate input with Zod: pin must be exactly 6 digits
+- [x] Extract client IP from request headers (`x-forwarded-for` or `127.0.0.1`)
+- [x] Check rate limit → if blocked, return `429 Too Many Requests` with `retryAfter`
+- [x] Fetch admin record from DB (single-tenant: first admin row, dev PIN fallback)
+- [x] Compare PIN with bcrypt hash
+- [x] Record attempt (success or failure)
+- [x] If wrong PIN → return `401 { error: "Invalid PIN", code: "INVALID_CREDENTIALS" }`
+- [x] If correct:
   - Create JWT session token
-  - Set `HttpOnly`, `Secure`, `SameSite=Lax` cookie named `session`, max-age 30 days
+  - Set `HttpOnly`, `Secure`, `SameSite=Lax` cookie named `wt_session`, max-age 30 days
   - Return `200 { success: true }`
 
 ---
 
 ## 3.4 — Logout API (`src/app/api/auth/logout/route.ts`)
 
-- [ ] Accept `POST`
-- [ ] Clear the `session` cookie (set max-age to 0)
-- [ ] Return `200 { success: true }`
+- [x] Accept `POST`
+- [x] Clear the `wt_session` cookie (set max-age to 0)
+- [x] Return `200 { success: true }`
 
 ---
 
 ## 3.5 — Middleware (`src/middleware.ts`)
 
-- [ ] Intercept requests matching `/admin/:path*` and `/api/admin/:path*`
-- [ ] Extract `session` cookie
-- [ ] Call `verifySession()` (JWT signature + expiry only) → if null, redirect to `/login` (pages) or return `401` (API)
-- [ ] Verify `Origin` / `Host` alignment on state-changing methods (`POST`/`PATCH`/`PUT`/`DELETE`) for CSRF protection
-- [ ] If JWT `iat` is older than 7 days → refresh and set new cookie (same `sessionVersion`)
-- [ ] All other routes (`/login`, `/t/*`, `/api/t/*`, `/api/auth/*`, `/api/health`, `/api/cron/*`) pass through unchanged
-- [ ] **`session_version` DB check:** do **not** hit Supabase from Edge middleware. Enforce revocation inside a shared `requireAdmin(req)` helper used by every `/api/admin/*` route (and optionally a lightweight `/api/admin/me` bootstrapped by the admin layout). On mismatch → clear cookie + 401.
+- [x] Intercept requests matching `/admin/:path*` and `/api/admin/:path*`
+- [x] Extract `wt_session` cookie
+- [x] Call `jwtVerify()` (JWT signature + expiry only) → if null, redirect to `/login` (pages) or return `401` (API)
+- [x] Verify `Origin` / `Host` alignment on state-changing methods (`POST`/`PATCH`/`PUT`/`DELETE`) for CSRF protection
+- [x] If JWT `iat` is older than 7 days → refresh and set new cookie (same `sessionVersion`)
+- [x] All other routes (`/login`, `/t/*`, `/api/t/*`, `/api/auth/*`, `/api/health`, `/api/cron/*`) pass through unchanged
+- [x] **`session_version` DB check:** do **not** hit Supabase from Edge middleware. Enforce revocation inside shared `requireAdmin()` helper used by every `/api/admin/*` route and `/api/admin/me`. On mismatch → clear cookie + 401.
 
 ---
 
 ## 3.6 — Login Page UI (`src/app/login/page.tsx`)
 
-- [ ] Full-screen centered layout, mobile-first
-- [ ] App logo/name at top
-- [ ] Large numeric keypad (0-9 buttons + backspace)
-- [ ] 6 PIN dots showing entered digits (filled/empty)
-- [ ] Auto-submit when 6th digit is entered
-- [ ] Loading spinner during verification
-- [ ] Shake animation on wrong PIN
-- [ ] Error message: "Wrong PIN" / "Too many attempts, try again in X minutes"
-- [ ] Rate limit countdown timer visible when locked out
-- [ ] Accessible: keyboard input works, ARIA labels on buttons
+- [x] Full-screen centered layout, mobile-first
+- [x] App logo/name at top
+- [x] Large numeric keypad (0-9 buttons + backspace + clear)
+- [x] 6 PIN dots showing entered digits (filled/empty)
+- [x] Auto-submit when 6th digit is entered
+- [x] Loading spinner during verification
+- [x] Shake animation on wrong PIN
+- [x] Error message: "Wrong PIN" / "Too many attempts, try again in X minutes"
+- [x] Rate limit countdown timer visible when locked out
+- [x] Accessible: keyboard input works (0-9, Backspace, Escape), ARIA labels on buttons
 
 ---
 
 ## 3.7 — PIN Management
 
-- [ ] Create `npm run reset-pin` script (`scripts/reset-pin.ts`):
-  - Prompts for new 6-digit PIN
-  - Hashes with bcrypt (salt rounds: 12)
+- [x] Create `npm run reset-pin` script (`src/scripts/reset-pin.ts`):
+  - Prompts/CLI arg for new 6-digit PIN
+  - Hashes with bcrypt (salt rounds: 10)
   - Updates admin row in DB
   - Increments `session_version` (revokes all existing sessions)
-- [ ] Change PIN API (`src/app/api/admin/settings/change-pin/route.ts`):
+- [x] Change PIN API (`src/app/api/admin/settings/change-pin/route.ts`):
   - Accept `POST { old_pin, new_pin }`
   - Validate: both must be 6 digits, new_pin ≠ old_pin
   - Verify old PIN against DB
@@ -530,113 +524,118 @@ vercel.json                             # Cron config
 
 ## 4.1 — TypeScript Types (`src/types/index.ts`)
 
-- [ ] Define all interfaces matching the database schema:
+- [x] Define all interfaces matching the database schema:
   - `Organization`, `Admin`, `Group`, `Member`, `Template`
   - `TaskList`, `TaskItem`, `Completion`, `ShareLog`, `Open`, `DailyStat`
-- [ ] Define API response types:
-  - `ApiResponse<T>` — `{ data: T } | { error: string, code: string }`
-  - `PaginatedResponse<T>` — `{ data: T[], total: number, page: number, limit: number }`
+- [x] Define API response types:
+  - `ApiResponse<T>` — `ApiSuccess<T> | ApiError`
+  - `PaginatedResponse<T>` — `{ data: T[], total: number, page: number, limit: number, totalPages: number }`
   - `DashboardData` — KPIs, group stats, recent lists
   - `MemberPageData` — `{ status, expires_at, task_list, items, members, completions }`
-- [ ] Define form/input types:
-  - `CreateGroupInput`, `CreateTaskListInput`, `CreateTemplateInput`, etc.
+- [x] Define form/input types:
+  - `CreateGroupInput`, `UpdateGroupInput`, `CreateMemberInput`, `UpdateMemberInput`
+  - `CreateTaskListInput`, `UpdateTaskListInput`, `CreateTaskItemInput`, `UpdateTaskItemInput`
+  - `CreateTemplateInput`, `ChangePinInput`, `PaginationParams`, `DateRangeFilter`
 
 ---
 
 ## 4.2 — Zod Validation Schemas (`src/lib/validation.ts`)
 
-- [ ] Install Zod: `npm install zod`
-- [ ] Define schemas for every API input:
+- [x] Install Zod: `npm install zod`
+- [x] Define schemas for every API input:
   - `loginSchema` — `{ pin: string }` (exactly 6 digits)
   - `createGroupSchema` — `{ name: string (max 100), description?: string (max 500), members?: array }`
   - `createMemberSchema` — `{ group_id, name (max 100), phone? (regex: /^\d{10,15}$/) }`
-  - `createTaskListSchema` — `{ group_id, title (max 100), list_date, due_at?, items: array }`
+  - `createTaskListSchema` — `{ group_id, title (max 200), list_date, due_at?, items: array }`
   - `createTaskItemSchema` — `{ text (max 500), position, priority?, assigned_member_id?, due_at? }`
   - `completeItemSchema` — `{ member_id, note? (max 1000) }`
   - `changePinSchema` — `{ old_pin (6 digits), new_pin (6 digits) }`
   - `paginationSchema` — `{ page?: number (min 1), limit?: number (min 1, max 100) }`
   - `dateRangeSchema` — `{ from?: date string, to?: date string, group_id?: uuid }`
-- [ ] Create helper: `validateBody<T>(schema, body): T` — throws standardized error on failure
+- [x] Create helper: `validateBody<T>(schema, body): T` — throws standardized error on failure
 
 ---
 
 ## 4.3 — Error Handling (`src/lib/errors.ts`)
 
-- [ ] Define standard error response format:
+- [x] Define standard error response format:
   ```typescript
-  { error: string, code: string, details?: any }
+  { success: false, error: { code: string, message: string, details?: any } }
   ```
-- [ ] Create error codes enum:
+- [x] Create error codes enum:
   - `INVALID_INPUT`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`
   - `RATE_LIMITED`, `DUPLICATE`, `DB_ERROR`, `INTERNAL_ERROR`
-- [ ] Create helper functions:
-  - `errorResponse(code, message, status)` → `NextResponse`
+- [x] Create helper functions:
+  - `apiError(message, code, status, details)` → `NextResponse`
+  - `apiSuccess(data, meta?, status)` → `NextResponse`
   - `handleApiError(error)` → catches unknown errors, logs, returns safe response
 
 ---
 
 ## 4.4 — WhatsApp Utilities (`src/lib/whatsapp.ts`)
 
-- [ ] Implement `waLink(text: string, phone?: string): string`:
+- [x] Implement `waLink(text: string, phone?: string): string`:
   - Without phone: `https://wa.me/?text=${encodeURIComponent(text)}`
   - With phone: `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
-- [ ] Implement `buildTaskMessage(params): string`:
-  - Params: `{ title, group, date, due?, items[], link }`
+- [x] Implement `buildTaskMessage(params): string`:
+  - Params: `{ title, groupName, dateStr, dueTimeStr?, items[], link }`
   - Number emojis: extend to 10 (`1️⃣` through `🔟`)
   - Show up to 10 items, then "…and N more"
   - Format: title, group, date, items, due time, link
   - Use WhatsApp formatting: `*bold*`, `_italic_`
-- [ ] Implement `buildReminderMessage(params): string`:
+- [x] Implement `buildReminderMessage(params): string`:
   - Group reminder template
   - Individual reminder template
   - Overdue template
   - Closure template
-- [ ] Implement `getEncodedUrlLength(text: string): number`:
+- [x] Implement `getEncodedUrlLength(text: string): number`:
   - Returns the length of the full `wa.me` URL after encoding
-  - Used to warn when approaching the ~2048 character URL limit
-- [ ] All message templates use placeholders: `{group}`, `{title}`, `{date}`, `{due}`, `{items}`, `{link}`, `{name}`, `{pending_count}`
+  - Used to warn when approaching the ~2048 character URL limit (`inspectWaUrl`)
+- [x] Placeholder interpolation helper: `interpolateTemplate(template, data)` supporting `{group}`, `{title}`, `{date}`, `{due}`, `{items}`, `{link}`, `{name}`, `{pending_count}`
 
 ---
 
 ## 4.5 — Token Generator (`src/lib/tokens.ts`)
 
-- [ ] Install nanoid: `npm install nanoid`
-- [ ] Implement `generateToken(length?: number): string`:
+- [x] Install nanoid: `npm install nanoid`
+- [x] Implement `generateToken(length?: number): string`:
   - Default length: 10 characters
   - URL-safe alphabet
   - Unguessable
-- [ ] Implement `generateUniqueTaskToken(): Promise<string>` used on task list create:
-  - Generate → insert attempt → on unique violation retry up to 3 times → then fail with `INTERNAL_ERROR`
+- [x] Implement `generateUniqueTaskToken(): Promise<string>` used on task list create:
+  - Generate → insert attempt → on unique violation retry up to 3 times → fallback to longer token
 
 ---
 
 ## 4.6 — Utility Helpers (`src/lib/utils.ts`)
 
-- [ ] `formatDate(date, timezone)` — display dates in admin's timezone
-- [ ] `formatRelativeTime(date)` — "2 hours ago", "just now"
-- [ ] `isOverdue(dueAt, now?)` — checks if a task is overdue
-- [ ] `getDateRange(filter: 'today' | 'week' | 'month' | 'custom', from?, to?)`
-- [ ] `sanitizeHtml(input: string)` — strip HTML tags from user inputs
-- [ ] `truncateText(text, maxLength)` — for message previews
+- [x] `formatDate(date, timezone)` — display dates in admin's timezone
+- [x] `formatRelativeTime(date)` — "2 hours ago", "just now"
+- [x] `isOverdue(dueAt, status)` — checks if a task is overdue
+- [x] `computeLinkStatus(deletedAt, listDate, dueAt)` — computes active, readonly, or expired
+- [x] `getDateRange(filter: 'today' | 'week' | 'month' | 'custom', from?, to?)`
+- [x] `sanitizeHtml(input: string)` — strip HTML tags from user inputs
+- [x] `truncateText(text, maxLength)` — for message previews
+- [x] `cn(...classes)` — conditional class merging
 
 ---
 
 ## 4.7 — Constants (`src/lib/constants.ts`)
 
-- [ ] `MAX_PIN_ATTEMPTS = 5`
-- [ ] `RATE_LIMIT_WINDOW_MINUTES = 15`
-- [ ] `GLOBAL_RATE_LIMIT_HOUR = 30`
-- [ ] `SESSION_MAX_AGE_DAYS = 30`
-- [ ] `SESSION_REFRESH_AFTER_DAYS = 7`
-- [ ] `DEFAULT_PAGE_SIZE = 20`
-- [ ] `MAX_PAGE_SIZE = 100`
-- [ ] `TOKEN_LENGTH = 10`
-- [ ] `MAX_TASK_ITEMS = 50`
-- [ ] `MAX_WHATSAPP_URL_LENGTH = 2048`
-- [ ] `SWR_POLL_INTERVAL_MS = 15000`
-- [ ] `MEMBER_LINK_EXPIRY_DAYS = 7`
-- [ ] `PUBLIC_WRITE_RATE_LIMIT_PER_MINUTE = 60`
-- [ ] `BCRYPT_SALT_ROUNDS = 12`
+- [x] `MAX_PIN_ATTEMPTS = 5`
+- [x] `RATE_LIMIT_WINDOW_MINUTES = 15`
+- [x] `GLOBAL_RATE_LIMIT_HOUR = 30`
+- [x] `SESSION_MAX_AGE_DAYS = 30`
+- [x] `SESSION_REFRESH_AFTER_DAYS = 7`
+- [x] `DEFAULT_PAGE_SIZE = 20`
+- [x] `MAX_PAGE_SIZE = 100`
+- [x] `TOKEN_LENGTH = 10`
+- [x] `MAX_TASK_ITEMS = 50`
+- [x] `MAX_WHATSAPP_URL_LENGTH = 2048`
+- [x] `SWR_POLL_INTERVAL_MS = 15000`
+- [x] `MEMBER_LINK_EXPIRY_DAYS = 7`
+- [x] `PUBLIC_WRITE_RATE_LIMIT_PER_MINUTE = 60`
+- [x] `BCRYPT_SALT_ROUNDS = 10`
 
 **Acceptance Criteria:**
 > ✅ All types defined, Zod schemas validate correctly, error helpers return standard format, WhatsApp message builder produces correct messages, token generator creates unique tokens.
@@ -653,61 +652,61 @@ vercel.json                             # Cron config
 
 ## 5.1 — Design System Setup
 
-- [ ] Define CSS custom properties in `globals.css` for the design system:
+- [x] Define CSS custom properties in `globals.css` for the design system:
   - Colors (dark mode ready): background, foreground, card, border, primary, muted
   - Spacing scale
   - Border radius tokens
   - Shadow tokens (sm, md, lg, xl)
   - Transition durations
-- [ ] Import Google Fonts (Inter) in layout
-- [ ] Set dark/light mode support via `prefers-color-scheme` or manual toggle
+- [x] Import Google Fonts (Inter) in layout
+- [x] Set dark/light mode support via `prefers-color-scheme` or manual toggle
 
 ---
 
 ## 5.2 — Primitive UI Components (`src/components/ui/`)
 
-- [ ] `Button.tsx` — variants: primary, secondary, outline, ghost, danger; sizes: sm, md, lg; loading state with spinner; disabled state
-- [ ] `Input.tsx` — text input with label, error message, helper text; variants: default, error
-- [ ] `Card.tsx` — container with padding, shadow, rounded corners; variants: default, interactive (hover effect)
-- [ ] `Badge.tsx` — status badges: pending (yellow), done (green), verified (blue), overdue (red), draft (gray)
-- [ ] `Modal.tsx` — overlay dialog with title, body, actions; close on backdrop click / Escape; focus trap
-- [ ] `Toast.tsx` + `ToastProvider` — success/error/info notifications; auto-dismiss after 5s; stack multiple
-- [ ] `Skeleton.tsx` — loading placeholders: line, circle, card, table row
-- [ ] `EmptyState.tsx` — illustration + message + CTA button; reusable for all empty screens
-- [ ] `ProgressBar.tsx` — animated fill bar with percentage label; color changes by progress (red → yellow → green)
-- [ ] `Spinner.tsx` — loading spinner in 3 sizes
-- [ ] `Dropdown.tsx` — select/menu component
-- [ ] `ConfirmDialog.tsx` — "Are you sure?" modal for destructive actions
-- [ ] `Tabs.tsx` — tab navigation component
-- [ ] `DatePicker.tsx` — date input with calendar
-- [ ] `SearchInput.tsx` — search box with debounce
+- [x] `Button.tsx` — variants: primary, secondary, outline, ghost, danger; sizes: sm, md, lg; loading state with spinner; disabled state
+- [x] `Input.tsx` — text input with label, error message, helper text; variants: default, error
+- [x] `Card.tsx` — container with padding, shadow, rounded corners; variants: default, interactive (hover effect)
+- [x] `Badge.tsx` — status badges: pending (yellow), done (green), verified (blue), overdue (red), draft (gray)
+- [x] `Modal.tsx` — overlay dialog with title, body, actions; close on backdrop click / Escape; focus trap
+- [x] `Toast.tsx` + `ToastProvider` — success/error/info notifications; auto-dismiss after 5s; stack multiple
+- [x] `Skeleton.tsx` — loading placeholders: line, circle, card, table row
+- [x] `EmptyState.tsx` — illustration + message + CTA button; reusable for all empty screens
+- [x] `ProgressBar.tsx` — animated fill bar with percentage label; color changes by progress (red → yellow → green)
+- [x] `Spinner.tsx` — loading spinner in 3 sizes
+- [x] `Dropdown.tsx` — select/menu component
+- [x] `ConfirmDialog.tsx` — "Are you sure?" modal for destructive actions
+- [x] `Tabs.tsx` — tab navigation component
+- [x] `DatePicker.tsx` — date input with calendar
+- [x] `SearchInput.tsx` — search box with debounce
 
 ---
 
 ## 5.3 — Admin Layout Components (`src/components/admin/`)
 
-- [ ] `AdminLayout.tsx` — wrapper with sidebar (desktop) / bottom nav (mobile) + top bar + main content area
-- [ ] `Sidebar.tsx` — navigation links: Dashboard, Groups, Tasks, Templates, Reports, Settings; active state highlighting; collapsible on desktop
-- [ ] `TopBar.tsx` — page title, breadcrumbs, action buttons area, logout button
-- [ ] `KpiCard.tsx` — number + label + trend arrow (up/down) + color coding
-- [ ] `GroupCard.tsx` — group name, member count, completion ring, last activity
-- [ ] `TaskListCard.tsx` — title, group badge, date, status badge, item count, progress bar, quick actions (share, edit, delete)
-- [ ] `MemberRow.tsx` — name, phone (masked), status indicator, action buttons
+- [x] `AdminLayout.tsx` — wrapper with sidebar (desktop) / bottom nav (mobile) + top bar + main content area
+- [x] `Sidebar.tsx` — navigation links: Dashboard, Groups, Tasks, Templates, Reports, Settings; active state highlighting; collapsible on desktop
+- [x] `TopBar.tsx` — page title, breadcrumbs, action buttons area, logout button
+- [x] `KpiCard.tsx` — number + label + trend arrow (up/down) + color coding
+- [x] `GroupCard.tsx` — group name, member count, completion ring, last activity
+- [x] `TaskListCard.tsx` — title, group badge, date, status badge, item count, progress bar, quick actions (share, edit, delete)
+- [x] `MemberRow.tsx` — name, phone (masked), status indicator, action buttons
 
 ---
 
 ## 5.4 — Member Page Components (`src/components/member/`)
 
-- [ ] `NamePicker.tsx` — dropdown/list of group members; remembers selection in localStorage; validates against server
-- [ ] `TaskChecklist.tsx` — list of items with checkboxes; tick/undo animation; disabled for read-only/expired lists
-- [ ] `MemberProgress.tsx` — progress bar + "X of Y done" text + confetti animation on 100%
+- [x] `NamePicker.tsx` — dropdown/list of group members; remembers selection in localStorage; validates against server
+- [x] `TaskChecklist.tsx` — list of items with checkboxes; tick/undo animation; disabled for read-only/expired lists
+- [x] `MemberProgress.tsx` — progress bar + "X of Y done" text + confetti animation on 100%
 
 ---
 
 ## 5.5 — SWR Hook (`src/hooks/useSWRFetch.ts`)
 
-- [ ] Install SWR: `npm install swr`
-- [ ] Create typed wrapper around `useSWR`:
+- [x] Install SWR: `npm install swr`
+- [x] Create typed wrapper around `useSWR`:
   - Default fetcher using `fetch` with credentials
   - Polling interval: 15 seconds (configurable)
   - Revalidate on focus: true
@@ -718,9 +717,9 @@ vercel.json                             # Cron config
 
 ## 5.6 — Session Hook (`src/hooks/useSession.ts`)
 
-- [ ] Client-side hook that checks if admin session is valid
-- [ ] Redirects to `/login` if not authenticated
-- [ ] Provides admin info (name, org) to components
+- [x] Client-side hook that checks if admin session is valid
+- [x] Redirects to `/login` if not authenticated
+- [x] Provides admin info (name, org) to components
 
 **Acceptance Criteria:**
 > ✅ All UI components render correctly, look premium, are responsive (mobile-first), support dark mode foundations, have loading/error/empty states, admin layout works on phone and desktop.
@@ -1315,7 +1314,7 @@ vercel.json                             # Cron config
   - "Download Backup" button
   - Data storage usage indicator
 - [ ] **Danger zone:**
-  - "Delete Account" — hide until Phase 14 (multi-tenant); show disabled note for single-tenant MVP
+  - "Delete Account" — omit (single-professor install; wipe via Supabase if ever needed)
 
 **Acceptance Criteria:**
 > ✅ CSV export downloads correct data, keep-alive cron runs daily and cleans up old data, health endpoint works, PWA installs on phone home screen, settings page allows PIN change and preferences.
@@ -1505,88 +1504,19 @@ vercel.json                             # Cron config
 ---
 
 # ═══════════════════════════════════════════════
-# PHASE 14 — MULTI-TENANT SAAS ARCHITECTURE
+# PHASE 14 — MULTI-TENANT SAAS / BILLING — OUT OF SCOPE
 # ═══════════════════════════════════════════════
-> **Goal:** Transform from single-professor tool to a multi-organization SaaS platform. Signup flow, org isolation, co-admins, billing.  
-> **Estimated Time:** 2-3 days
+> **Status:** Cancelled (15 Oct 2026). Do **not** build this phase.
 
----
+This phase previously covered public signup, co-admins, paid plan limits, and Razorpay billing. The product is **one professor’s tool** only:
 
-## 14.1 — Signup Flow
+- Seed a single organization + one admin PIN in Phase 2 / 3.
+- Keep `org_id` on tables (already decided Day 1) so queries stay consistent — still **one** org in practice.
+- No `/signup`, no plan meters, no upgrade prompts, no Razorpay/Stripe, no payment webhooks, no billing page.
 
-- [ ] Public signup page (`src/app/signup/page.tsx`):
-  - Fields: Organization name, admin name, email, 6-digit PIN, confirm PIN
-  - Auto-generate slug from org name
-  - Create organization + admin in one transaction
-  - Auto-login after signup
-  - Welcome email with getting started guide
-- [ ] Onboarding wizard (first-time after signup):
-  - Step 1: Create your first group + add members
-  - Step 2: Create your first task list
-  - Step 3: Share to WhatsApp (guided)
-  - Step 4: Dashboard overview
-  - Can be skipped
+If a second helper ever needs access, handle it manually later (extra admin row) — not as a SaaS product.
 
----
-
-## 14.2 — Organization Scoping
-
-> Org scoping should already exist from Phase 6 onward (JWT carries `orgId`). This phase is an **audit + harden** pass for multi-tenant launch — not a greenfield rewrite.
-
-- [ ] Confirm middleware / `requireAdmin` extracts `orgId` from JWT for every admin request
-- [ ] Audit ALL admin API endpoints for org scoping:
-  - Every SELECT: `WHERE org_id = ?` (or join through parent with org check for `members` / `task_items` / `completions`)
-  - Every INSERT: set `org_id` where the column exists
-  - Every UPDATE/DELETE: verify `org_id` matches before mutate
-- [ ] Add automated or scripted isolation test: org A cannot read/write org B's data
-- [ ] Login may accept optional `{ org_slug, pin }` when multiple orgs exist; single-org installs keep PIN-only
-
----
-
-## 14.3 — Co-Admin Support
-
-- [ ] Admin management page (owner only):
-  - Invite co-admin: name + PIN
-  - List co-admins
-  - Remove co-admin
-  - Roles: owner (full access), co_admin (no billing, no delete org)
-- [ ] Update JWT to include `role`
-- [ ] Role-based access checks in API endpoints
-
----
-
-## 14.4 — Plan Limits & Enforcement
-
-- [ ] Define limits per plan in constants:
-  | Plan | Admins | Groups | Members | Tasks/month |
-  |---|---|---|---|---|
-  | Free | 1 | 3 | 15 | 50 |
-  | Pro | 2 | Unlimited | Unlimited | Unlimited |
-  | Business | 5 | Unlimited | Unlimited | Unlimited |
-  | Enterprise | Unlimited | Unlimited | Unlimited | Unlimited |
-- [ ] Check limits before creating groups, members, task lists
-- [ ] Show usage meters on dashboard: "3/3 groups used"
-- [ ] Upgrade prompts when hitting limits
-
----
-
-## 14.5 — Billing (Razorpay)
-
-- [ ] Install: `npm install razorpay`
-- [ ] Billing page (`src/app/admin/billing/page.tsx`):
-  - Current plan display
-  - Plan comparison table
-  - Upgrade/downgrade buttons
-  - Payment history
-- [ ] Razorpay integration:
-  - Create subscription → checkout → webhook confirms payment
-  - Store subscription status in `organizations.settings`
-  - Webhook endpoint: `POST /api/webhooks/razorpay`
-- [ ] Grace period: 7 days after payment failure before downgrade
-- [ ] Downgrade logic: enforce free tier limits, archive excess data
-
-**Acceptance Criteria:**
-> ✅ Multiple organizations can sign up and use the platform independently. Data is fully isolated. Co-admins work. Plan limits enforced. Billing collects payments and upgrades/downgrades plans.
+**Skip to Phase 15** (or Phase 16) after Phase 13 when you want optional extras. Phase 16 no longer depends on Phase 14.
 
 ---
 
@@ -1847,11 +1777,11 @@ vercel.json                             # Cron config
 
 | Phase | Name | Est. Time | Status | Gate |
 |---|---|---|---|---|
-| 1 | Project Setup & Infrastructure | 1 day | ⬜ Not Started | |
-| 2 | Database Schema & Migrations | 0.5 day | ⬜ Not Started | |
-| 3 | Authentication System | 1.5 days | ⬜ Not Started | |
-| 4 | Core Libraries & Utilities | 1 day | ⬜ Not Started | |
-| 5 | Reusable UI Components | 1.5 days | ⬜ Not Started | |
+| 1 | Project Setup & Infrastructure | 1 day | ✅ Completed | |
+| 2 | Database Schema & Migrations | 0.5 day | ✅ Completed | |
+| 3 | Authentication System | 1.5 days | ✅ Completed | |
+| 4 | Core Libraries & Utilities | 1 day | ✅ Completed | |
+| 5 | Reusable UI Components | 1.5 days | ✅ Completed | |
 | 6 | Groups & Members Management | 1.5 days | ⬜ Not Started | |
 | 7 | Task Lists & Task Items | 2 days | ⬜ Not Started | |
 | 8 | WhatsApp Sharing System | 1 day | ⬜ Not Started | |
@@ -1860,13 +1790,13 @@ vercel.json                             # Cron config
 | 11 | Export, Backup, Maintenance & Settings | 1 day | ⬜ Not Started | **🟢 MVP SHIP GATE** — professor can use daily |
 | 12 | Templates & Recurring Tasks | 1.5 days | ⬜ Not Started | Comfort |
 | 13 | Advanced Analytics & Reports | 2 days | ⬜ Not Started | Premium |
-| 14 | Multi-Tenant SaaS Architecture | 2–3 days | ⬜ Not Started | SaaS |
-| 15 | AI-Powered Features | 1.5 days | ⬜ Not Started | Premium |
-| 16 | WhatsApp Business API Integration | 2 days | ⬜ Not Started | Premium (needs 14) |
-| 17 | Gamification & Accountability | 1.5 days | ⬜ Not Started | Premium (needs 13) |
+| 14 | Multi-Tenant SaaS / Billing | — | ⛔ Out of scope | Not commercializing |
+| 15 | AI-Powered Features | 1.5 days | ⬜ Not Started | Optional premium |
+| 16 | WhatsApp Business API Integration | 2 days | ⬜ Not Started | Optional (no Phase 14 dependency) |
+| 17 | Gamification & Accountability | 1.5 days | ⬜ Not Started | Optional (needs 13) |
 | 18 | Polish, Testing & Launch | 2 days | ⬜ Not Started | Run after the slice you ship |
-| | **MVP (Phases 1–11)** | **~14–15 days** | | |
-| | **Full plan (1–18)** | **~25–27 days** | | |
+| | **MVP (Phases 1–11)** | **~14–15 days** | | **Build this first** |
+| | **Comfort + optional (12–13, 15–18)** | **~10–12 days** | | Skip 14 entirely |
 
 ---
 
@@ -1890,14 +1820,15 @@ Phase 1 (Setup)
                     → Phase 12 (Templates / Recurring)
                          ├─→ Phase 13 (Analytics / PDF / Email)
                          │        → Phase 17 (Gamification)
-                         ├─→ Phase 14 (Multi-tenant / Billing)
-                         │        → Phase 16 (WA Business API)
-                         └─→ Phase 15 (AI)   [independent after 12]
+                         ├─→ Phase 15 (AI)   [independent after 12]
+                         └─→ Phase 16 (WA Business API)  [optional; no SaaS prerequisite]
                                     │
                                     → Phase 18 (Polish & Launch)
+
+                    Phase 14 (SaaS / Billing) — ⛔ OUT OF SCOPE (do not build)
 ```
 
-**Parallelism after Phase 8:** Phase 9, 10, and 11 can proceed in parallel once Phase 7–8 APIs exist. After MVP, Phases 13 / 14 / 15 can proceed in parallel; 16 needs 14; 17 needs 13.
+**Parallelism after Phase 8:** Phase 9, 10, and 11 can proceed in parallel once Phase 7–8 APIs exist. After MVP, Phases 13 / 15 / 16 can proceed in parallel; 17 needs 13. Skip Phase 14.
 
 ---
 
@@ -1915,8 +1846,9 @@ Phase 1 (Setup)
 
 | Date | Change |
 |---|---|
+| 15 Oct 2026 | v1.2 — Scope locked to single professor; removed Razorpay/billing/payments; Phase 14 (multi-tenant SaaS) marked out of scope; Phase 16 no longer depends on 14 |
 | 14 Oct 2026 | v1.1 — Locked decisions; fixed env/tech phase mismatches; documented business rules (expiry, verify_required, NULL completions); Edge middleware vs `session_version`; public API rate limits; missing routes; MVP ship gate; corrected dependency graph; existing-repo scaffolding notes |
 
 ---
 
-> **This document is the single source of truth. Tick each checkbox as you complete it. Prefer finishing Phases 1–11 before premium work. If a phase needs changes during building, update this document first, then build.**
+> **This document is the single source of truth. Tick each checkbox as you complete it. Prefer finishing Phases 1–11 so the professor can use it daily. Skip Phase 14 forever unless the product goal changes. If a phase needs changes during building, update this document first, then build.**

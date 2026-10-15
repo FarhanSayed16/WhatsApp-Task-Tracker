@@ -1,0 +1,137 @@
+"use client";
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
+import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export type ToastType = "success" | "error" | "info";
+
+export interface ToastItem {
+  id: string;
+  type: ToastType;
+  title?: string;
+  message: string;
+  duration?: number;
+}
+
+interface ToastContextValue {
+  toast: {
+    success: (message: string, title?: string, duration?: number) => void;
+    error: (message: string, title?: string, duration?: number) => void;
+    info: (message: string, title?: string, duration?: number) => void;
+  };
+  removeToast: (id: string) => void;
+}
+
+const ToastContext = createContext<ToastContextValue | null>(null);
+
+export function useToast() {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error("useToast must be used within a ToastProvider");
+  }
+  return context;
+}
+
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const addToast = useCallback(
+    (type: ToastType, message: string, title?: string, duration = 5000) => {
+      const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      setToasts((prev) => [...prev, { id, type, title, message, duration }]);
+    },
+    []
+  );
+
+  const toast = {
+    success: (message: string, title?: string, duration?: number) =>
+      addToast("success", message, title, duration),
+    error: (message: string, title?: string, duration?: number) =>
+      addToast("error", message, title, duration),
+    info: (message: string, title?: string, duration?: number) =>
+      addToast("info", message, title, duration),
+  };
+
+  return (
+    <ToastContext.Provider value={{ toast, removeToast }}>
+      {children}
+      <div
+        className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none p-2 sm:p-0"
+        aria-live="polite"
+      >
+        {toasts.map((item) => (
+          <ToastCard key={item.id} item={item} onDismiss={removeToast} />
+        ))}
+      </div>
+    </ToastContext.Provider>
+  );
+}
+
+function ToastCard({
+  item,
+  onDismiss,
+}: {
+  item: ToastItem;
+  onDismiss: (id: string) => void;
+}) {
+  useEffect(() => {
+    if (!item.duration || item.duration <= 0) return;
+    const timer = setTimeout(() => {
+      onDismiss(item.id);
+    }, item.duration);
+    return () => clearTimeout(timer);
+  }, [item, onDismiss]);
+
+  const icons = {
+    success: <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />,
+    error: <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />,
+    info: <Info className="w-5 h-5 text-blue-500 shrink-0" />,
+  }[item.type];
+
+  const borderStyles = {
+    success: "border-emerald-500/30 bg-emerald-50/90 dark:bg-emerald-950/40",
+    error: "border-rose-500/30 bg-rose-50/90 dark:bg-rose-950/40",
+    info: "border-blue-500/30 bg-blue-50/90 dark:bg-blue-950/40",
+  }[item.type];
+
+  return (
+    <div
+      className={cn(
+        "pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-lg backdrop-blur-md transition-all animate-slide-up",
+        borderStyles
+      )}
+      role="alert"
+    >
+      <div className="pt-0.5">{icons}</div>
+      <div className="flex-1 min-w-0">
+        {item.title && (
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-0.5">
+            {item.title}
+          </h4>
+        )}
+        <p className="text-xs text-slate-700 dark:text-slate-300 leading-snug break-words">
+          {item.message}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onDismiss(item.id)}
+        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 -mr-1 -mt-1 rounded transition-colors"
+        aria-label="Dismiss toast"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}

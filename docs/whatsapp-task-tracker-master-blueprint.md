@@ -55,7 +55,7 @@
 | Component | Choice |
 |---|---|
 | Framework | Next.js (App Router) |
-| Hosting | Vercel (Hobby → Pro when selling) |
+| Hosting | Vercel Hobby (single professor) |
 | Database | Supabase Postgres (server-side only) |
 | Auth | Custom 6-digit PIN, bcrypt + JWT (30-day session) |
 | Realtime | SWR polling every ~15s |
@@ -136,9 +136,9 @@
 
 ---
 
-### 💰 Feature A — Multi-Tenant SaaS Platform ⭐ RECOMMENDED
+### Feature A — Multi-Tenant SaaS Platform — OUT OF SCOPE (15 Oct 2026)
 
-> **The single most important feature for making money. Without this, you can only sell one copy at a time.**
+> **Cancelled.** We are building a single-professor tool, not a paid SaaS. Keep one seeded org + `org_id` in schema only. Do not build signup, plans, or billing. Text below is historical context only.
 
 **What it is:** Instead of one professor hardcoded as admin, turn the system into a platform where **any team lead, manager, coach, or coordinator** can sign up, create their own workspace, and manage their own groups — completely isolated from other users.
 
@@ -175,12 +175,12 @@ URL structure: app.domain.com/login OR slug.domain.com
 
 **Revenue potential:** ⭐⭐⭐⭐⭐ — This is the foundation. Every paid feature below multiplies against the number of organizations.
 
-**Effort:** Medium-high (restructure DB schema, add org scoping to all queries, signup flow, billing)
+**Effort:** N/A — not building.
 
-**When to build:** Phase 2 — right after MVP works for the professor. Retrofit the schema early.
+**Decision:** Seed one org. Ignore SaaS signup/billing forever unless product goal changes.
 
-> [!IMPORTANT]
-> **My recommendation:** Build the DB schema with `org_id` from Day 1, even if Phase 1 only has one org. Retrofitting multi-tenancy later is 5× harder than designing for it upfront.
+> [!NOTE]
+> Schema still includes `org_id` from Day 1 (Master Execution Plan). That is a DB convenience for one professor install — **not** a multi-tenant product.
 
 ---
 
@@ -643,28 +643,22 @@ GET    /api/cron/keepalive                             (daily, cleans login_atte
 
 ---
 
-## 8. Pricing Strategy
+## 8. Pricing Strategy — OUT OF SCOPE
 
-> [!NOTE]
-> This only applies if you build Feature A (Multi-tenant). Without multi-tenancy, you're selling a custom deployment per client, which is less scalable.
+> [!IMPORTANT]
+> **Not commercializing.** This is a personal tool for one professor. No paid plans, no Razorpay/Stripe, no upgrade UI. Historical SaaS pricing ideas below are archived only — do not implement.
+
+<details>
+<summary>Archived SaaS pricing ideas (do not build)</summary>
 
 | Plan | Price (suggested) | What's Included |
 |---|---|---|
 | **Free** | ₹0/month | 1 admin, 3 groups, 15 members, 50 tasks/month, `wa.me` sharing, basic dashboard |
 | **Pro** | ₹499–999/month | Unlimited groups/members/tasks, templates, recurring lists, analytics charts, CSV + PDF export, 2 admins |
-| **Business** | ₹1,999–2,999/month | Everything in Pro + WhatsApp Business API integration (auto-send, auto-remind), AI task parsing, 5 admins, email digests, priority support |
-| **Enterprise** | Custom pricing | White-label branding, custom domain, unlimited admins, SSO, API access, dedicated support |
+| **Business** | ₹1,999–2,999/month | Everything in Pro + WhatsApp Business API, AI, 5 admins, email digests |
+| **Enterprise** | Custom | White-label, custom domain, SSO, API |
 
-**Revenue math (conservative):**
-- 50 paying clients × ₹999/month = **₹49,950/month** (~₹6 lakh/year)
-- 20 Business clients × ₹2,499/month = **₹49,980/month** (~₹6 lakh/year)
-- Combined = **₹12 lakh/year** from just 70 clients
-
-**Hosting costs at scale:**
-- Vercel Pro: ~$20/month
-- Supabase Pro: ~$25/month
-- WhatsApp API: pass-through + markup
-- **Total overhead: ~₹4,000/month** → margins are excellent
+</details>
 
 ---
 
@@ -686,40 +680,29 @@ GET    /api/cron/keepalive                             (daily, cleans login_atte
 | 9–10 | Testing with real group, bug fixes, accessibility pass |
 | **MVP ready** | **~10 days** |
 
-### Phase 2 — Daily-Use Comfort + Analytics Foundation (Week 3–4)
-> Goal: Templates, recurring, and basic analytics. Prep for multi-tenant.
+### Phase 2 — Daily-Use Comfort + Analytics (Week 3–4)
+> Goal: Templates, recurring, and analytics for the same professor.
 
 - Templates (checklist + message), duplicate/clone, paste-to-split
 - Recurring lists (daily/weekly/custom)
 - Reminder buttons (group + individual via `wa.me`)
-- Calendar/timeline view
 - Basic analytics charts (completion trends, group comparison)
 - `daily_stats` pre-computation
-- Onboarding flow for first-time users
+- PDF reports / email digests (optional)
 
-### Phase 3 — Multi-Tenant + Premium Features (Week 5–8)
-> Goal: Turn it into a SaaS product.
+### Phase 3 — Optional extras (only if professor wants them)
+> Goal: Nice-to-haves for the same single user — **not** SaaS.
 
-- **Multi-tenant:** organizations table, signup flow, org-scoped queries, slug-based routing
-- **Advanced analytics:** member leaderboard, on-time vs late, response time, heatmap
-- **PDF reports:** branded export with charts
-- **AI task parsing:** Gemini API integration, paste-to-checklist, draft reminders
-- Per-member assignment + personal links
-- Photo/file proof upload
-- Co-admin access
-- Billing integration (Razorpay / Stripe)
+- AI task parsing (Gemini): paste-to-checklist, draft reminders
+- WhatsApp Business API (auto-send) — only if free `wa.me` is not enough
+- Gamification (scores, streaks) — only if useful for students
+- Per-member links / photo proof — deferred until asked
 
-### Phase 4 — Growth Features (Month 3+)
-> Goal: Differentiation and retention.
-
-- WhatsApp Business API integration (auto-send, auto-remind, delivery receipts)
-- Gamification (scores, streaks, badges, leaderboard)
-- Email digests (scheduled weekly/monthly)
-- Web push notifications
-- Passkey/fingerprint login
-- Multilingual support (Hindi/Marathi templates + UI)
-- White-label / custom domain for Enterprise
-- API access for Enterprise integrations
+### Explicitly not building
+- Public signup / multi-org SaaS
+- Billing (Razorpay / Stripe)
+- Paid plan limits / upgrade prompts
+- White-label / custom domain / Enterprise API
 
 ---
 
@@ -733,24 +716,29 @@ GET    /api/cron/keepalive                             (daily, cleans login_atte
 - [x] Apply all 10 gap fixes to the plan
 - [x] Apply all 14 enhancement fixes to the plan
 
-### Premium Features
-- [x] **Feature A — Multi-Tenant SaaS** — `org_id` from Day 1; signup/billing in Execution Phase 14
-- [x] **Feature B — WhatsApp Business API** — Execution Phase 16
-- [x] **Feature C — Analytics & PDF Reports** — Execution Phase 13
-- [x] **Feature D — AI Smart Task Engine** — Execution Phase 15
-- [x] **Feature E — Gamification & Scores** — Execution Phase 17
+### Scope (locked 15 Oct 2026)
+- [x] **Single professor tool** — create tasks, share WhatsApp, track/verify completions
+- [x] **Not commercializing** — no SaaS signup, no Razorpay/Stripe, no paid plans
+
+### Features vs execution plan
+- [x] **Feature A — Multi-Tenant SaaS** — **Out** (Execution Phase 14 cancelled)
+- [x] **Feature B — WhatsApp Business API** — optional Phase 16
+- [x] **Feature C — Analytics & PDF Reports** — Phase 13
+- [x] **Feature D — AI Smart Task Engine** — Phase 15
+- [x] **Feature E — Gamification & Scores** — Phase 17
+- [x] Keep `org_id` + **one seeded org** (schema convenience only — not multi-tenant product)
 
 ### Architecture Decisions
-- [x] Keep Vercel Hobby for now, upgrade to Pro when selling
-- [x] Keep Supabase free tier for MVP, upgrade when multi-tenant scale needs it
-- [x] Use **Razorpay** for billing
-- [x] Custom domain later (Enterprise / after multi-tenant)
+- [x] Vercel Hobby + Supabase free tier
+- [x] **No payment gateway**
+- [x] No custom domain unless professor asks later
 
-### Explicitly deferred (documented in Master Execution Plan)
+### Explicitly deferred / out
 - Calendar/timeline view — only if professor asks
 - Personal member links (Mode B) — after MVP
 - Photo proof upload UI — schema keeps `proof_path`; UI after MVP
 - Passkeys / web push / full i18n — post Phase 18 backlog
+- Billing, plan limits, public signup — **out**
 
 ---
 
