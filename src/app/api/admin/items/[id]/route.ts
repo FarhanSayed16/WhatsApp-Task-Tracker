@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { apiError, apiSuccess, handleApiError } from "@/lib/errors";
 import { supabase } from "@/lib/supabase";
 import { updateTaskItemSchema, validateBody } from "@/lib/validation";
+import { getOrgScopedItem } from "@/lib/items";
 
 export async function PATCH(
   req: NextRequest,
@@ -13,6 +14,11 @@ export async function PATCH(
     if (!admin) return apiError("Unauthorized", "UNAUTHORIZED", 401);
 
     const { id } = await params;
+    const existing = await getOrgScopedItem(id, admin.orgId);
+    if (!existing) {
+      return apiError("Task item not found", "NOT_FOUND", 404);
+    }
+
     const body = await req.json();
     const data = validateBody(updateTaskItemSchema, body);
 
@@ -53,22 +59,13 @@ export async function DELETE(
     if (!admin) return apiError("Unauthorized", "UNAUTHORIZED", 401);
 
     const { id } = await params;
-
-    // 1. Get item to identify list & position
-    const { data: item, error: fetchErr } = await supabase
-      .from("task_items")
-      .select("id, task_list_id, position")
-      .eq("id", id)
-      .single();
-
-    if (fetchErr || !item) {
+    const item = await getOrgScopedItem(id, admin.orgId);
+    if (!item) {
       return apiError("Task item not found", "NOT_FOUND", 404);
     }
 
-    // 2. Delete completions for this item
     await supabase.from("completions").delete().eq("task_item_id", id);
 
-    // 3. Delete item
     const { error: deleteErr } = await supabase
       .from("task_items")
       .delete()
@@ -76,22 +73,21 @@ export async function DELETE(
 
     if (deleteErr) throw deleteErr;
 
-    // 4. Re-sequence positions of remaining items
     const { data: remainingItems } = await supabase
       .from("task_items")
       .select("id, position")
       .eq("task_list_id", item.task_list_id)
       .order("position", { ascending: true });
 
-    if (remainingItems) {
-      for (let i = 0; i < remainingItems.length; i++) {
-        if (remainingItems[i].position !== i) {
-          await supabase
+    if (remainingItems && remainingItems.length > 0) {
+      await Promise.all(
+        remainingItems.map((row, index) =>
+          supabase
             .from("task_items")
-            .update({ position: i })
-            .eq("id", remainingItems[i].id);
-        }
-      }
+            .update({ position: index, updated_at: new Date().toISOString() })
+            .eq("id", row.id)
+        )
+      );
     }
 
     return apiSuccess({ id, deleted: true });

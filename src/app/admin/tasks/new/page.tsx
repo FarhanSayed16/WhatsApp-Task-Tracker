@@ -25,6 +25,10 @@ import {
 
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ShareSheet } from "@/components/admin/ShareSheet";
+import { zonedDateTimeToUtcIso } from "@/lib/utils";
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
+import { useSession } from "@/hooks/useSession";
 
 interface ItemDraft {
   id: string;
@@ -55,6 +59,7 @@ function NewTaskForm() {
   const searchParams = useSearchParams();
   const preselectedGroupId = searchParams.get("group_id") || "";
   const { toast } = useToast();
+  const { session } = useSession();
 
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState(preselectedGroupId);
@@ -68,16 +73,33 @@ function NewTaskForm() {
   const [multiPasteText, setMultiPasteText] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [shareSheetOpen, setShareSheetOpen] = useState(false);
+  const [createdList, setCreatedList] = useState<{
+    id: string;
+    token: string;
+    title: string;
+    group_name: string;
+    list_date: string;
+    due_at?: string | null;
+    member_link?: string;
+    items: Array<{ id: string; text: string; status: string }>;
+    members: Array<{ id: string; name: string; phone?: string | null; active: boolean }>;
+  } | null>(null);
 
   // Fetch groups
   const { data: groupsData } = useSWRFetch<any>("/api/admin/groups?limit=100");
   const groups = Array.isArray(groupsData) ? groupsData : groupsData?.data || [];
 
-  // If preselectedGroupId wasn't set, default to first group
+  // Prefer last-used group from localStorage, else first group
   useEffect(() => {
-    if (!groupId && groups.length > 0) {
-      setGroupId(groups[0].id);
-    }
+    if (groupId) return;
+    if (groups.length === 0) return;
+    const last =
+      typeof window !== "undefined"
+        ? localStorage.getItem("wtt_last_group_id")
+        : null;
+    const match = last && groups.find((g: { id: string }) => g.id === last);
+    setGroupId(match ? match.id : groups[0].id);
   }, [groupId, groups]);
 
   // Fetch members for currently selected group
@@ -156,14 +178,22 @@ function NewTaskForm() {
       return;
     }
 
-    // Prepare due_at if dueTime provided
+    // Prepare due_at in admin timezone (not raw Zulu)
     let dueAt: string | null = null;
     if (dueTime) {
-      dueAt = `${listDate}T${dueTime}:00Z`;
+      dueAt = zonedDateTimeToUtcIso(
+        listDate,
+        dueTime,
+        session?.timezone || DEFAULT_TIMEZONE
+      );
     }
 
     try {
       setLoading(true);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("wtt_last_group_id", groupId);
+      }
+
       const res = await fetch("/api/admin/task-lists", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -186,17 +216,31 @@ function NewTaskForm() {
         throw new Error(json?.error?.message || "Failed to create task list");
       }
 
-      toast.success(isShare ? "Task list created & activated!" : "Task list saved as draft!");
+      toast.success(
+        isShare ? "Task list created — open Share sheet to send" : "Task list saved as draft!"
+      );
 
       if (isShare) {
-        // Fetch share details to open WhatsApp immediately
         const listId = json.data.id;
         const detailRes = await fetch(`/api/admin/task-lists/${listId}`);
         const detailJson = await detailRes.json();
-        if (detailJson.data?.task_list?.share_url) {
-          window.open(detailJson.data.task_list.share_url, "_blank");
+        const detail = detailJson.data;
+        if (detail?.task_list) {
+          setCreatedList({
+            id: detail.task_list.id,
+            token: detail.task_list.token,
+            title: detail.task_list.title,
+            group_name: detail.task_list.group_name,
+            list_date: detail.task_list.list_date,
+            due_at: detail.task_list.due_at,
+            member_link: detail.task_list.member_link,
+            items: detail.items || [],
+            members: detail.members || [],
+          });
+          setShareSheetOpen(true);
+        } else {
+          router.push(`/admin/tasks/${listId}`);
         }
-        router.push(`/admin/tasks/${listId}`);
       } else {
         router.push(`/admin/tasks/${json.data.id}`);
       }
@@ -473,11 +517,37 @@ function NewTaskForm() {
               onClick={() => handleSave(true)}
               className="flex-1 sm:flex-initial bg-[#25D366] hover:bg-[#20ba5a] text-white"
             >
-              <Send className="w-4 h-4 mr-1.5" /> Save &amp; Dispatch via WA
+              <Send className="w-4 h-4 mr-1.5" /> Save &amp; Share
             </Button>
           </div>
         </div>
       </div>
+
+      {createdList && (
+        <ShareSheet
+          isOpen={shareSheetOpen}
+          onClose={() => {
+            setShareSheetOpen(false);
+            router.push(`/admin/tasks/${createdList.id}`);
+          }}
+          taskList={{
+            id: createdList.id,
+            token: createdList.token,
+            title: createdList.title,
+            group_name: createdList.group_name,
+            list_date: createdList.list_date,
+            due_at: createdList.due_at,
+            member_link: createdList.member_link,
+            total_items: createdList.items.length,
+            completed_items: 0,
+          }}
+          items={createdList.items}
+          members={createdList.members}
+          onShareLogged={() => {
+            toast.success("Share logged");
+          }}
+        />
+      )}
     </AdminLayout>
   );
 }

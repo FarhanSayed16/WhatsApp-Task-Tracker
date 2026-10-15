@@ -27,14 +27,12 @@ export async function GET(
       return apiError("Group not found", "NOT_FOUND", 404);
     }
 
-    // 2. Fetch all members in this group
+    // 2. Fetch all members in this group (members has no org_id/sort_order — scoped via group)
     const { data: members, error: membersErr } = await supabase
       .from("members")
       .select("*")
       .eq("group_id", id)
-      .eq("org_id", admin.orgId)
       .is("deleted_at", null)
-      .order("sort_order", { ascending: true })
       .order("name", { ascending: true });
 
     if (membersErr) throw membersErr;
@@ -188,21 +186,24 @@ export async function DELETE(
     const now = new Date().toISOString();
 
     // 1. Soft-delete the group
-    const { error: groupError } = await supabase
+    const { data: deletedRows, error: groupError } = await supabase
       .from("groups")
       .update({ deleted_at: now, updated_at: now })
       .eq("id", id)
       .eq("org_id", admin.orgId)
-      .is("deleted_at", null);
+      .is("deleted_at", null)
+      .select("id");
 
     if (groupError) throw groupError;
+    if (!deletedRows || deletedRows.length === 0) {
+      return apiError("Group not found", "NOT_FOUND", 404);
+    }
 
-    // 2. Cascade soft-delete members
+    // 2. Cascade soft-delete members (no org_id on members)
     await supabase
       .from("members")
       .update({ deleted_at: now, active: false, updated_at: now })
       .eq("group_id", id)
-      .eq("org_id", admin.orgId)
       .is("deleted_at", null);
 
     // 3. Cascade soft-delete associated task_lists

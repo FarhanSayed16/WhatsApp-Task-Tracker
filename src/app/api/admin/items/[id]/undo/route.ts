@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { apiError, apiSuccess, handleApiError } from "@/lib/errors";
 import { supabase } from "@/lib/supabase";
+import { getOrgScopedItem } from "@/lib/items";
 
 export async function POST(
   _req: NextRequest,
@@ -12,24 +13,18 @@ export async function POST(
     if (!admin) return apiError("Unauthorized", "UNAUTHORIZED", 401);
 
     const { id } = await params;
-    const now = new Date().toISOString();
-
-    // 1. Fetch item
-    const { data: item, error: itemErr } = await supabase
-      .from("task_items")
-      .select("id, task_list_id")
-      .eq("id", id)
-      .single();
-
-    if (itemErr || !item) {
+    const item = await getOrgScopedItem(id, admin.orgId);
+    if (!item) {
       return apiError("Task item not found", "NOT_FOUND", 404);
     }
 
-    // 2. Reset item status to pending
+    const now = new Date().toISOString();
+
     const { data: updatedItem, error: updateErr } = await supabase
       .from("task_items")
       .update({
         status: "pending",
+        completed_by: null,
         completed_at: null,
         verified_at: null,
         updated_at: now,
@@ -40,10 +35,8 @@ export async function POST(
 
     if (updateErr) throw updateErr;
 
-    // 3. Delete completions for this item
     await supabase.from("completions").delete().eq("task_item_id", id);
 
-    // 4. Re-activate list if it was completed
     await supabase
       .from("task_lists")
       .update({ status: "active", updated_at: now })

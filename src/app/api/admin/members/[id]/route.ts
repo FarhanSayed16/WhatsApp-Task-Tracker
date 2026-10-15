@@ -4,6 +4,29 @@ import { apiError, apiSuccess, handleApiError } from "@/lib/errors";
 import { supabase } from "@/lib/supabase";
 import { updateMemberSchema, validateBody } from "@/lib/validation";
 
+async function getOrgScopedMember(memberId: string, orgId: string) {
+  const { data, error } = await supabase
+    .from("members")
+    .select(
+      `
+      *,
+      groups!inner (
+        id,
+        org_id,
+        deleted_at
+      )
+    `
+    )
+    .eq("id", memberId)
+    .eq("groups.org_id", orgId)
+    .is("deleted_at", null)
+    .is("groups.deleted_at", null)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data;
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -16,6 +39,11 @@ export async function PATCH(
     const body = await req.json();
     const data = validateBody(updateMemberSchema, body);
 
+    const existing = await getOrgScopedMember(id, admin.orgId);
+    if (!existing) {
+      return apiError("Member not found", "NOT_FOUND", 404);
+    }
+
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
@@ -27,7 +55,6 @@ export async function PATCH(
       .from("members")
       .update(updatePayload)
       .eq("id", id)
-      .eq("org_id", admin.orgId)
       .is("deleted_at", null)
       .select()
       .single();
@@ -51,6 +78,11 @@ export async function DELETE(
     if (!admin) return apiError("Unauthorized", "UNAUTHORIZED", 401);
 
     const { id } = await params;
+    const existing = await getOrgScopedMember(id, admin.orgId);
+    if (!existing) {
+      return apiError("Member not found", "NOT_FOUND", 404);
+    }
+
     const now = new Date().toISOString();
 
     const { error } = await supabase
@@ -61,7 +93,6 @@ export async function DELETE(
         updated_at: now,
       })
       .eq("id", id)
-      .eq("org_id", admin.orgId)
       .is("deleted_at", null);
 
     if (error) throw error;

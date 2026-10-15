@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { apiError, apiSuccess, handleApiError } from "@/lib/errors";
 import { supabase } from "@/lib/supabase";
+import { calendarDateInTimeZone } from "@/lib/utils";
 import type {
   DashboardData,
   DashboardKPIs,
@@ -37,8 +38,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const groupId = searchParams.get("group_id") || undefined;
 
-    // Default to today (YYYY-MM-DD)
-    const todayStr = new Date().toISOString().slice(0, 10);
+    // Default to today in admin timezone (list_date is a calendar date)
+    const todayStr = calendarDateInTimeZone(
+      new Date(),
+      admin.timezone || "Asia/Kolkata"
+    );
     const from = searchParams.get("from") || todayStr;
     const to = searchParams.get("to") || todayStr;
 
@@ -322,6 +326,7 @@ export async function GET(req: NextRequest) {
         text: item.text,
         priority: item.priority,
         due_at: item.due_at,
+        status: item.status,
         task_list_id: taskList?.id || "",
         task_list_title: taskList?.title || "Untitled List",
         task_list_token: taskList?.token || "",
@@ -331,12 +336,83 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    // 7. Items awaiting professor verification (status = done)
+    let verifyQuery = supabase
+      .from("task_items")
+      .select(`
+        id,
+        text,
+        priority,
+        completed_at,
+        completed_by,
+        task_list_id,
+        task_list:task_lists!inner(
+          id,
+          title,
+          token,
+          org_id,
+          deleted_at,
+          group_id,
+          group:groups!inner(id, name)
+        )
+      `)
+      .eq("status", "done")
+      .eq("task_list.org_id", admin.orgId)
+      .is("task_list.deleted_at", null)
+      .order("completed_at", { ascending: false })
+      .limit(20);
+
+    if (groupId) {
+      verifyQuery = verifyQuery.eq("task_list.group_id", groupId);
+    }
+
+    const { data: verifyData } = await verifyQuery;
+
+    const verifierIds = [
+      ...new Set(
+        (verifyData || [])
+          .map((i: { completed_by?: string | null }) => i.completed_by)
+          .filter(Boolean) as string[]
+      ),
+    ];
+    const verifierNames: Record<string, string> = {};
+    if (verifierIds.length > 0) {
+      const { data: verifiers } = await supabase
+        .from("members")
+        .select("id, name")
+        .in("id", verifierIds);
+      for (const m of verifiers || []) {
+        verifierNames[m.id] = m.name;
+      }
+    }
+
+    const pendingVerifyItems = (verifyData || []).map((item: any) => {
+      const taskList = item.task_list;
+      const group = Array.isArray(taskList?.group) ? taskList?.group[0] : taskList?.group;
+
+      return {
+        id: item.id,
+        text: item.text,
+        priority: item.priority,
+        completed_at: item.completed_at,
+        task_list_id: taskList?.id || "",
+        task_list_title: taskList?.title || "Untitled List",
+        task_list_token: taskList?.token || "",
+        group_id: group?.id || "",
+        group_name: group?.name || "Unknown Group",
+        completed_by_name: item.completed_by
+          ? verifierNames[item.completed_by] || null
+          : null,
+      };
+    });
+
     const responseData: DashboardData = {
       kpis,
       trends,
       groups: groupStats,
       recent_lists: recentLists,
       overdue_items: overdueItems,
+      pending_verify_items: pendingVerifyItems,
       todayLists: recentLists,
     };
 

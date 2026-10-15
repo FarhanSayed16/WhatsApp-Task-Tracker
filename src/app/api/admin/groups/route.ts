@@ -164,16 +164,14 @@ export async function POST(req: NextRequest) {
 
     if (groupError) throw groupError;
 
-    // Insert members if provided
+    // Insert members if provided (members table has no org_id / sort_order)
     let insertedMembers = [];
     if (data.members && data.members.length > 0) {
-      const memberInserts = data.members.map((m, index) => ({
-        org_id: admin.orgId,
+      const memberInserts = data.members.map((m) => ({
         group_id: newGroup.id,
         name: m.name,
         phone: m.phone || null,
         active: true,
-        sort_order: index,
       }));
 
       const { data: members, error: membersError } = await supabase
