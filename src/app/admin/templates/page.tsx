@@ -103,7 +103,7 @@ export default function TemplatesPage() {
     setNewItemText("");
     setMessageText(
       type === "message"
-        ? "*{title}*\n{group}  ·  {date}\n\n{items}\n\n*Due:* {due}\n\nTick done here:\n{link}"
+        ? "*{title}*\n{group}\nDate: {date}\n\n*Tasks*\n{items}\n\n*Due:* {due}\n\n*Tick done here*\n{link}"
         : ""
     );
     setModalOpen(true);

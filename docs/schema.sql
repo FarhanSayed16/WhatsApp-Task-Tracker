@@ -155,6 +155,7 @@ CREATE TABLE IF NOT EXISTS task_lists (
   status text DEFAULT 'draft' CHECK (status IN ('draft','active','completed','archived')),
   recurrence jsonb,
   shared_at timestamptz,
+  reminder jsonb DEFAULT '{}'::jsonb,
   created_by uuid REFERENCES admin(id),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),

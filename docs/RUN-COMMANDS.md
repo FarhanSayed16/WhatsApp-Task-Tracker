@@ -52,6 +52,7 @@ Generate secrets (PowerShell):
    - `supabase/migrations/20261015000000_init_schema.sql`  
      *(or `docs/schema.sql` if that is your single source — prefer the migration that matches your project)*
    - `supabase/migrations/20261015120000_professor_complete_item.sql`
+   - `supabase/migrations/20261016140000_task_list_reminders.sql` *(reminder queue / snooze persistence)*
 3. Confirm seed admin exists (default PIN from seed is usually `123456` — change it after first login)
 
 ### Verify DB connection

@@ -73,6 +73,8 @@ export interface TaskList {
   status: TaskListStatus;
   recurrence?: Record<string, unknown> | null;
   shared_at?: string | null;
+  /** Due-soon / overdue one-tap reminder state */
+  reminder?: Record<string, unknown> | null;
   created_by?: string | null;
   created_at: string;
   updated_at: string;
@@ -289,6 +291,20 @@ export interface DashboardPendingVerifyItem {
   completed_by_name?: string | null;
 }
 
+/** One-tap WhatsApp reminder ready for the professor to send */
+export interface DashboardReminderReady {
+  id: string;
+  token: string;
+  title: string;
+  group_id: string;
+  group_name: string;
+  due_at: string;
+  kind: "due_soon" | "overdue";
+  pending_count: number;
+  total_items: number;
+  label: string;
+}
+
 export interface DashboardData {
   kpis: DashboardKPIs;
   trends: DashboardKPITrends;
@@ -297,6 +313,8 @@ export interface DashboardData {
   overdue_items: DashboardOverdueItem[];
   pending_verify_items?: DashboardPendingVerifyItem[];
   todayLists?: DashboardRecentList[];
+  /** Lists due soon / overdue with pending tasks — open ShareSheet in one tap */
+  reminders_ready?: DashboardReminderReady[];
 }
 
 // ═════════════════════════════════════════════════════════════

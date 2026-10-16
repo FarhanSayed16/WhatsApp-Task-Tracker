@@ -63,6 +63,10 @@ export async function GET(_req: NextRequest) {
         day_of_week: 1,
       },
       default_wa_phone: orgSettings.default_wa_phone || null,
+      reminders: orgSettings.reminders || {
+        enabled: true,
+        due_soon_hours: 24,
+      },
       stats: {
         total_groups: groupCount || 0,
         total_lists: listCount || 0,
@@ -80,7 +84,7 @@ export async function PATCH(req: NextRequest) {
     if (!admin) return apiError("Unauthorized", "UNAUTHORIZED", 401);
 
     const body = await req.json();
-    const { name, timezone, report_digest, default_wa_phone } = body;
+    const { name, timezone, report_digest, default_wa_phone, reminders } = body;
 
     const updates: Record<string, any> = {
       updated_at: new Date().toISOString(),
@@ -105,10 +109,11 @@ export async function PATCH(req: NextRequest) {
       return apiError("Failed to update profile", "DB_ERROR", 500);
     }
 
-    // Organization settings (digest + default WhatsApp number for wa.me share)
+    // Organization settings (digest + WA number + reminder prefs)
     if (
       (report_digest && typeof report_digest === "object") ||
-      default_wa_phone !== undefined
+      default_wa_phone !== undefined ||
+      (reminders && typeof reminders === "object")
     ) {
       const { data: currentOrg } = await supabase
         .from("organizations")
@@ -129,6 +134,18 @@ export async function PATCH(req: NextRequest) {
       if (default_wa_phone !== undefined) {
         const cleaned = String(default_wa_phone || "").replace(/[^0-9]/g, "");
         nextSettings.default_wa_phone = cleaned || null;
+      }
+
+      if (reminders && typeof reminders === "object") {
+        const hours = Number(reminders.due_soon_hours);
+        nextSettings.reminders = {
+          ...(existingSettings.reminders || {}),
+          enabled: reminders.enabled !== false,
+          due_soon_hours:
+            Number.isFinite(hours) && hours > 0
+              ? Math.min(168, Math.max(1, hours))
+              : 24,
+        };
       }
 
       await supabase

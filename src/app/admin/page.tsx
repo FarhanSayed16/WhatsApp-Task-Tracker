@@ -14,14 +14,15 @@ import { useSession } from "@/hooks/useSession";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate, cn, getDateRange, calendarDateInTimeZone } from "@/lib/utils";
 import { DEFAULT_TIMEZONE } from "@/lib/constants";
-import { buildReminderMessage, waLink } from "@/lib/whatsapp";
 import type {
   DashboardData,
   DashboardOverdueItem,
   DashboardPendingVerifyItem,
+  DashboardReminderReady,
 } from "@/types";
 import {
   AlertTriangle,
+  Bell,
   Check,
   Clock,
   CopyPlus,
@@ -37,6 +38,8 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/icons/WhatsApp";
+import { ShareSheet } from "@/components/admin/ShareSheet";
+import { formatWaDueTime } from "@/lib/whatsapp";
 
 function getGreeting(name?: string) {
   const hour = new Date().getHours();
@@ -68,6 +71,22 @@ export default function AdminDashboardPage() {
   const [tickingItemId, setTickingItemId] = useState<string | null>(null);
   const [duplicatingYesterday, setDuplicatingYesterday] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
+  const [reminderSheetOpen, setReminderSheetOpen] = useState(false);
+  const [reminderLoadingId, setReminderLoadingId] = useState<string | null>(null);
+  const [reminderSheetData, setReminderSheetData] = useState<{
+    taskList: {
+      id: string;
+      token: string;
+      title: string;
+      group_name: string;
+      list_date: string;
+      due_at?: string | null;
+      member_link?: string;
+    };
+    items: Array<{ id: string; text: string; status: string; assigned_member_id?: string | null }>;
+    members: Array<{ id: string; name: string; phone?: string | null; active?: boolean }>;
+    kind: "due_soon" | "overdue";
+  } | null>(null);
 
   // Compute date range query params in admin timezone
   const { fromStr, toStr } = useMemo(() => {
@@ -102,6 +121,68 @@ export default function AdminDashboardPage() {
   const groupStats = dashboardData?.groups || [];
   const overdueItems = dashboardData?.overdue_items || [];
   const pendingVerifyItems = dashboardData?.pending_verify_items || [];
+  const remindersReady = dashboardData?.reminders_ready || [];
+
+  const openListReminder = async (row: DashboardReminderReady) => {
+    try {
+      setReminderLoadingId(row.id);
+      const res = await fetch(`/api/admin/task-lists/${row.id}`);
+      const json = await res.json();
+      if (!res.ok || !json.data?.task_list) {
+        throw new Error(json.error?.message || "Could not load checklist");
+      }
+      const detail = json.data;
+      setReminderSheetData({
+        taskList: {
+          id: detail.task_list.id,
+          token: detail.task_list.token,
+          title: detail.task_list.title,
+          group_name: detail.task_list.group_name,
+          list_date: detail.task_list.list_date,
+          due_at: detail.task_list.due_at,
+          member_link: detail.task_list.member_link,
+        },
+        items: detail.items || [],
+        members: detail.members || [],
+        kind: row.kind,
+      });
+      setReminderSheetOpen(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to open reminder");
+    } finally {
+      setReminderLoadingId(null);
+    }
+  };
+
+  const markReminderDispatched = async (
+    listId: string,
+    kind: "due_soon" | "overdue"
+  ) => {
+    try {
+      await fetch(`/api/admin/task-lists/${listId}/reminder`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark_sent", kind }),
+      });
+      mutate();
+    } catch {
+      /* non-blocking */
+    }
+  };
+
+  const snoozeReminder = async (listId: string) => {
+    try {
+      await fetch(`/api/admin/task-lists/${listId}/reminder`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "snooze", hours: 4 }),
+      });
+      toast.success("Snoozed for 4 hours");
+      mutate();
+    } catch {
+      toast.error("Could not snooze reminder");
+    }
+  };
 
   // Quick Action: Professor ticks an item done directly from dashboard
   const handleQuickTick = async (item: DashboardOverdueItem) => {
@@ -143,21 +224,20 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Quick Action: Remind via WhatsApp for overdue item
+  // Quick Action: Remind via ShareSheet (one-tap group message)
   const handleQuickRemind = (item: DashboardOverdueItem) => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const memberLink = `${origin}/t/${item.task_list_token}`;
-    const reminderMsg = buildReminderMessage({
-      type: "overdue",
+    void openListReminder({
+      id: item.task_list_id,
+      token: item.task_list_token,
       title: item.task_list_title,
-      groupName: item.group_name,
-      pendingItems: [item.text],
-      link: memberLink,
+      group_id: item.group_id,
+      group_name: item.group_name,
+      due_at: item.due_at,
+      kind: "overdue",
+      pending_count: 1,
+      total_items: 1,
+      label: "Overdue — send nudge",
     });
-
-    const url = waLink(reminderMsg);
-    window.open(url, "_blank");
-    toast.success("WhatsApp reminder opened");
   };
 
   // Monthly backup reminder (1st of month in admin TZ, once per month)
@@ -283,6 +363,80 @@ export default function AdminDashboardPage() {
       }
     >
       <div className="space-y-8 pb-12">
+        {/* REMINDERS READY — one-tap WhatsApp (free automation) */}
+        {remindersReady.length > 0 && (
+          <section className="rounded-xl border border-[var(--color-warning)]/35 bg-[var(--color-surface)] shadow-sm overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-[var(--color-border-primary)] flex items-center justify-between bg-[var(--color-warning-bg)]">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-[var(--color-warning)]" />
+                <h2 className="text-sm font-semibold tracking-tight text-[var(--color-text-primary)]">
+                  Reminders ready
+                </h2>
+              </div>
+              <span className="text-xs font-medium text-[var(--color-text-secondary)]">
+                {remindersReady.length} list{remindersReady.length === 1 ? "" : "s"} · one tap to WhatsApp
+              </span>
+            </div>
+            <div className="p-4 space-y-2">
+              {remindersReady.map((row) => (
+                <div
+                  key={`${row.id}-${row.kind}`}
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface)]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                      <span
+                        className={cn(
+                          "text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded",
+                          row.kind === "overdue"
+                            ? "bg-[var(--color-status-overdue-bg)] text-[var(--color-status-overdue-fg)]"
+                            : "bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-fg)]"
+                        )}
+                      >
+                        {row.kind === "overdue" ? "Overdue" : "Due soon"}
+                      </span>
+                      <span className="text-[11px] text-[var(--color-text-tertiary)] truncate">
+                        {row.group_name}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                      {row.title}
+                    </p>
+                    <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
+                      {row.pending_count} pending · Due {formatWaDueTime(row.due_at) || row.due_at}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-[11px] h-8"
+                      onClick={() => snoozeReminder(row.id)}
+                    >
+                      Snooze 4h
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="whatsapp"
+                      className="text-[11px] h-8"
+                      disabled={reminderLoadingId === row.id}
+                      onClick={() => openListReminder(row)}
+                    >
+                      <WhatsAppIcon className="w-3.5 h-3.5 mr-1" />
+                      {reminderLoadingId === row.id ? "Loading…" : "Send reminder"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <p className="text-[11px] text-[var(--color-text-tertiary)] px-1 pt-1">
+                Opens a ready-made WhatsApp message — pick your class group and send. No paid WhatsApp Business API needed.
+              </p>
+            </div>
+          </section>
+        )}
+
         {/* ACTION REQUIRED BANNER (Conditional: only shown when items need attention) */}
         {hasActionRequired && (
           <section className="rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
@@ -710,6 +864,29 @@ export default function AdminDashboardPage() {
           </div>
         </section>
       </div>
+
+      {reminderSheetData && (
+        <ShareSheet
+          isOpen={reminderSheetOpen}
+          initialMode="reminder"
+          initialReminderType={
+            reminderSheetData.kind === "overdue" ? "overdue" : "group"
+          }
+          onClose={() => {
+            setReminderSheetOpen(false);
+            setReminderSheetData(null);
+          }}
+          taskList={reminderSheetData.taskList}
+          items={reminderSheetData.items}
+          members={reminderSheetData.members}
+          onDispatched={() => {
+            markReminderDispatched(
+              reminderSheetData.taskList.id,
+              reminderSheetData.kind
+            );
+          }}
+        />
+      )}
     </AdminLayout>
   );
 }

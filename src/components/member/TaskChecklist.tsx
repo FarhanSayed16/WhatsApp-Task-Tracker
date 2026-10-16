@@ -86,19 +86,30 @@ export function TaskChecklist({
                 disabled={readOnly || !currentMemberId || isToggling}
                 aria-label={`Mark task ${item.text}`}
                 className={cn(
-                  "w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 transition-all duration-200",
+                  "w-11 h-11 min-w-[44px] min-h-[44px] -m-2 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200",
                   isVerified
-                    ? "bg-[var(--color-status-verified-fg)] text-white"
+                    ? "text-[var(--color-status-verified-fg)]"
                     : isDone
-                    ? "bg-[var(--color-status-done-fg)] text-white"
-                    : "border-2 border-[var(--color-border-input)] hover:border-[var(--color-primary)] bg-transparent"
+                    ? "text-[var(--color-status-done-fg)]"
+                    : "text-[var(--color-border-input)] hover:text-[var(--color-primary)]"
                 )}
               >
-                {isVerified ? (
-                  <ShieldCheck className="w-4 h-4 animate-scale-in" />
-                ) : isDone ? (
-                  <Check className="w-4 h-4 animate-scale-in" />
-                ) : null}
+                <span
+                  className={cn(
+                    "w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200",
+                    isVerified
+                      ? "bg-[var(--color-status-verified-fg)] text-white check-draw"
+                      : isDone
+                      ? "bg-[var(--color-status-done-fg)] text-white check-draw"
+                      : "border-2 border-current bg-transparent"
+                  )}
+                >
+                  {isVerified ? (
+                    <ShieldCheck className="w-4 h-4" />
+                  ) : isDone ? (
+                    <Check className="w-4 h-4" strokeWidth={3} />
+                  ) : null}
+                </span>
               </button>
 
               {/* Task Text & Details */}

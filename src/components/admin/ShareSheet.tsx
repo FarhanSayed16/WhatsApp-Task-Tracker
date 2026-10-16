@@ -7,7 +7,9 @@ import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast";
 import {
   buildTaskMessage,
+  buildAssignmentMessage,
   buildReminderMessage,
+  formatWaDueTime,
   waLink,
   inspectWaUrl,
   sanitizeWhatsAppText,
@@ -55,7 +57,17 @@ export interface ShareSheetProps {
     active?: boolean;
   }>;
   initialMode?: "share" | "reminder";
+  /** When true (after create), use "New checklist assigned" copy */
+  isAssignment?: boolean;
+  /** Prefill reminder subtype when opening in reminder mode */
+  initialReminderType?: ReminderType;
   onShareLogged?: () => void;
+  /** Called after a successful open/copy so parent can mark reminder sent */
+  onDispatched?: (payload: {
+    channel: string;
+    mode: "share" | "reminder";
+    reminderType: ReminderType;
+  }) => void;
 }
 
 export function ShareSheet({
@@ -65,11 +77,14 @@ export function ShareSheet({
   items = [],
   members = [],
   initialMode = "share",
+  isAssignment = false,
+  initialReminderType = "group",
   onShareLogged,
+  onDispatched,
 }: ShareSheetProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"share" | "reminder">(initialMode);
-  const [reminderType, setReminderType] = useState<ReminderType>("group");
+  const [reminderType, setReminderType] = useState<ReminderType>(initialReminderType);
   const [messageText, setMessageText] = useState("");
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
   const [markedSent, setMarkedSent] = useState(false);
@@ -126,16 +141,26 @@ export function ShareSheet({
     };
   }, [isOpen]);
 
+  // Sync tab when parent opens sheet for assignment / reminder
+  useEffect(() => {
+    if (!isOpen) return;
+    setActiveTab(initialMode);
+    setReminderType(initialReminderType);
+  }, [isOpen, initialMode, initialReminderType]);
+
   // Generate initial message according to active tab and reminder type
   useEffect(() => {
     if (!isOpen) return;
 
+    const dueLabel = formatWaDueTime(taskList.due_at);
+
     if (activeTab === "share") {
-      const msg = buildTaskMessage({
+      const builder = isAssignment ? buildAssignmentMessage : buildTaskMessage;
+      const msg = builder({
         title: taskList.title,
         groupName: taskList.group_name,
         dateStr: taskList.list_date,
-        dueTimeStr: taskList.due_at || undefined,
+        dueTimeStr: dueLabel,
         items: items.map((i) => i.text),
         link: publicLink,
       });
@@ -150,16 +175,19 @@ export function ShareSheet({
                 i.status !== "verified"
             )
             .map((i) => i.text)
-        : pendingItems.map((i) => i.text);
+        : pendingItems
+            .filter((i) => i.status === "pending")
+            .map((i) => i.text);
 
       const msg = buildReminderMessage({
         type: reminderType,
         title: taskList.title,
         groupName: taskList.group_name,
-        pendingItems: memberPending.length > 0 ? memberPending : ["Remaining pending tasks"],
+        pendingItems:
+          memberPending.length > 0 ? memberPending : ["Remaining pending tasks"],
         link: publicLink,
         memberName: selectedMember?.name,
-        dueTimeStr: taskList.due_at || undefined,
+        dueTimeStr: dueLabel,
       });
       setMessageText(msg);
     }
@@ -173,6 +201,7 @@ export function ShareSheet({
     items,
     members,
     publicLink,
+    isAssignment,
   ]);
 
   const targetPhone =
@@ -205,6 +234,11 @@ export function ShareSheet({
 
       setMarkedSent(true);
       onShareLogged?.();
+      onDispatched?.({
+        channel,
+        mode: activeTab,
+        reminderType,
+      });
     } catch {
       // Background logging shouldn't block the user
     } finally {
@@ -228,7 +262,7 @@ export function ShareSheet({
       if (!res.ok) throw new Error(json.error?.message || "Failed to draft reminder with AI");
 
       if (json.data?.message) {
-        setMessageText(json.data.message);
+        setMessageText(sanitizeWhatsAppText(json.data.message));
         toast.success(
           `AI drafted reminder in ${aiLang === "hi" ? "Hindi" : aiLang === "mr" ? "Marathi" : "English"}!`
         );
@@ -314,8 +348,18 @@ export function ShareSheet({
       description={`Share "${taskList.title}" with ${taskList.group_name}`}
     >
       <div className="space-y-4 pt-1">
+        {isAssignment && activeTab === "share" && (
+          <div className="p-3 rounded-xl bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/25 text-xs text-[var(--color-primary-text)] space-y-1">
+            <p className="font-semibold">Assignment ready to notify the group</p>
+            <p className="text-[11px] leading-relaxed opacity-90">
+              Open WhatsApp, pick your class group, and send. Students get the tasks, due time, and checklist link.
+              WhatsApp cannot auto-post to groups — this one tap is the free reliable way.
+            </p>
+          </div>
+        )}
+
         {/* Share vs Reminder Mode Switch */}
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div className="flex items-center justify-between border-b border-[var(--color-border-secondary)] pb-3">
           <Tabs
             tabs={[
               { id: "share", label: "Initial Share", icon: <Send className="w-3.5 h-3.5" /> },

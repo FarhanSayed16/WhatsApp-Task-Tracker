@@ -181,18 +181,21 @@ export async function draftContextualReminder(context: ReminderContext): Promise
     tone = "polite",
   } = context;
 
-  // Fallback template
+  // Fallback template — no emoji (WhatsApp Desktop often shows them as diamond �)
   const fallbackReminder = () => {
-    const pendingList = pendingItems.slice(0, 3).map((t) => `• ${t}`).join("\n");
+    const pendingList = pendingItems
+      .slice(0, 5)
+      .map((t, i) => `${i + 1}) ${t}`)
+      .join("\n");
     if (language === "hi") {
-      return `📢 *रिमाइंडर: ${taskListTitle}*\n\nनमस्ते ${groupName} टीम,\nकृपया अपने बाकी काम पूरे करें:\n${pendingList}\n\n👉 *यहाँ चेक करें:* ${link}\nधन्यवाद!`;
+      return `*रिमाइंडर: ${taskListTitle}*\n\nनमस्ते ${groupName} टीम,\nकृपया अपने बाकी काम पूरे करें:\n${pendingList}\n\n*यहाँ चेक करें:*\n${link}\n\nधन्यवाद!`;
     }
     if (language === "mr") {
-      return `📢 *स्मरणपत्र: ${taskListTitle}*\n\nनमस्कार ${groupName} टीम,\nकृपया उर्वरित कामे पूर्ण करा:\n${pendingList}\n\n👉 *येथे तपासा:* ${link}\nधन्यवाद!`;
+      return `*स्मरणपत्र: ${taskListTitle}*\n\nनमस्कार ${groupName} टीम,\nकृपया उर्वरित कामे पूर्ण करा:\n${pendingList}\n\n*येथे तपासा:*\n${link}\n\nधन्यवाद!`;
     }
-    return `📢 *Reminder: ${taskListTitle}*\n\nHi ${groupName} team,\nQuick reminder to complete remaining tasks (${completedItems}/${totalItems} done):\n${pendingList}\n${
-      overdueCount > 0 ? `\n⚠️ *${overdueCount} task(s) are overdue!*` : ""
-    }\n\n👉 *Mark completed here:* ${link}\nThank you!`;
+    return `*Reminder: ${taskListTitle}*\n\nHi ${groupName} team,\nPlease complete remaining tasks (${completedItems}/${totalItems} done):\n${pendingList}\n${
+      overdueCount > 0 ? `\n*${overdueCount} task(s) are overdue.*\n` : ""
+    }\n*Mark completed here:*\n${link}\n\nThank you!`;
   };
 
   if (!genAI || !checkRateLimit()) {
@@ -228,9 +231,9 @@ Context:
 - Desired Tone: ${tone} (e.g. polite and encouraging, or urgent if overdue)
 
 Formatting instructions:
-1. Use WhatsApp markdown (*bold* for headlines/list title, emojis for bullet points).
-2. Keep it concise (under 5-6 lines total) so students read it immediately.
-3. Clearly mention the remaining tasks and include the link: ${link}.
+1. Use WhatsApp markdown *bold* only. Numbered lists like 1) 2) 3).
+2. Do NOT use any emoji or special symbols (they break as diamond characters on WhatsApp Desktop).
+3. Keep it concise (under 8 lines). Include the link on its own line: ${link}
 4. Return ONLY the raw WhatsApp text message with no surrounding quotes or explanations.`;
 
     const result = await model.generateContent(prompt);

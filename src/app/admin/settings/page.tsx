@@ -58,6 +58,8 @@ export default function AdminSettingsPage() {
   const [name, setName] = useState("");
   const [timezone, setTimezone] = useState("Asia/Kolkata");
   const [defaultWaPhone, setDefaultWaPhone] = useState("");
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [dueSoonHours, setDueSoonHours] = useState(24);
   const [profileSaving, setProfileSaving] = useState(false);
 
   // Email Digest State
@@ -75,6 +77,10 @@ export default function AdminSettingsPage() {
       setName(profileData.name || "");
       setTimezone(profileData.timezone || "Asia/Kolkata");
       setDefaultWaPhone(profileData.default_wa_phone || "");
+      if (profileData.reminders) {
+        setRemindersEnabled(profileData.reminders.enabled !== false);
+        setDueSoonHours(profileData.reminders.due_soon_hours || 24);
+      }
       if (profileData.report_digest) {
         setDigestFreq(profileData.report_digest.frequency || "off");
         setDigestRecipients((profileData.report_digest.recipients || []).join(", "));
@@ -147,6 +153,10 @@ export default function AdminSettingsPage() {
           name,
           timezone,
           default_wa_phone: defaultWaPhone,
+          reminders: {
+            enabled: remindersEnabled,
+            due_soon_hours: dueSoonHours,
+          },
         }),
       });
 
@@ -344,6 +354,44 @@ export default function AdminSettingsPage() {
                   <strong className="font-medium">pick any WhatsApp group</strong> you&apos;re in.
                   A number here is only for optional 1:1 personal testing — WhatsApp cannot open a group by phone number.
                 </p>
+              </div>
+
+              <div className="pt-3 border-t border-[var(--color-border-secondary)] space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-[var(--color-text-primary)] mb-1">
+                    Task reminders (free one-tap WhatsApp)
+                  </p>
+                  <p className="text-[11px] text-[var(--color-text-tertiary)] leading-relaxed mb-3">
+                    WhatsApp cannot auto-post into a group for free. The app watches due times and shows{" "}
+                    <strong className="font-medium text-[var(--color-text-secondary)]">Reminders ready</strong> on
+                    the dashboard — you tap once, pick the class group, and send.
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={remindersEnabled}
+                    onChange={(e) => setRemindersEnabled(e.target.checked)}
+                    className="rounded border-[var(--color-border-input)]"
+                  />
+                  Show due-soon / overdue reminders on dashboard
+                </label>
+                <div>
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
+                    Remind me this many hours before due time
+                  </label>
+                  <select
+                    value={dueSoonHours}
+                    onChange={(e) => setDueSoonHours(Number(e.target.value))}
+                    disabled={!remindersEnabled}
+                    className="w-full max-w-xs px-3 py-2 rounded-lg border border-[var(--color-border-input)] bg-[var(--color-surface)] text-sm text-[var(--color-text-primary)] disabled:opacity-50"
+                  >
+                    <option value={4}>4 hours before</option>
+                    <option value={12}>12 hours before</option>
+                    <option value={24}>24 hours before (default)</option>
+                    <option value={48}>48 hours before</option>
+                  </select>
+                </div>
               </div>
 
               <Button

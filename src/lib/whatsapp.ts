@@ -1,30 +1,25 @@
 import {
-  NUMBER_EMOJIS,
   MAX_WA_URL_LENGTH,
   WA_URL_WARNING_THRESHOLD,
 } from "./constants";
 
 /**
- * Builds an official wa.me deep link
- * If phone is provided, targets that phone; otherwise opens WhatsApp chat picker.
+ * Builds an official wa.me deep link.
+ * - With phone → opens that 1:1 chat
+ * - Without phone → opens WhatsApp chat picker (for groups)
  */
 export function waLink(text: string, phone?: string | null): string {
-  // Strip + and non-numeric chars from phone
   const cleanPhone = phone ? phone.replace(/[^0-9]/g, "") : "";
   const base = cleanPhone ? `https://wa.me/${cleanPhone}` : "https://wa.me/";
-  return `${base}?text=${encodeURIComponent(text)}`;
+  // Normalize before encode — strips broken emoji that become diamond � on WA Desktop
+  const safe = sanitizeWhatsAppText(text);
+  return `${base}?text=${encodeURIComponent(safe)}`;
 }
 
-/**
- * Returns the exact character length of the full wa.me URL after encoding
- */
 export function getEncodedUrlLength(text: string, phone?: string | null): number {
   return waLink(text, phone).length;
 }
 
-/**
- * Inspects URL length against mobile browser & WhatsApp limits (~2048 chars)
- */
 export function inspectWaUrl(
   text: string,
   phone?: string | null
@@ -44,9 +39,6 @@ export function inspectWaUrl(
   };
 }
 
-/**
- * Replaces template placeholders: {group}, {title}, {date}, {due}, {items}, {link}, {name}, {pending_count}
- */
 export function interpolateTemplate(
   template: string,
   data: Record<string, string | number | undefined | null>
@@ -57,7 +49,106 @@ export function interpolateTemplate(
 }
 
 /**
- * Builds the standard task list message for WhatsApp
+ * Strip characters that WhatsApp Desktop often shows as diamond �
+ * (emoji, symbols, replacement chars). Keeps letters, digits, punctuation,
+ * newlines, and WhatsApp *bold* / _italic_ markers.
+ */
+export function sanitizeWhatsAppText(text: string): string {
+  return text
+    // Remove already-broken replacement characters
+    .replace(/\uFFFD/g, "")
+    // Remove emoji & symbol blocks (keeps basic Latin + common punctuation)
+    .replace(
+      /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu,
+      ""
+    )
+    // Remove other common "pretty" unicode that breaks in wa.me on Windows WA
+    .replace(/[•·▪▫▸►‣◆◇○●★☆⚠✅❌🔔📋👉⏰📅👥🚨👏▫️]/g, "")
+    // Collapse leftover double spaces from stripped chars (keep newlines)
+    .replace(/[^\S\n]{2,}/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Readable ASCII date for WhatsApp. */
+export function formatWaDate(dateStr: string): string {
+  if (!dateStr) return "";
+  if (/[a-zA-Z]/.test(dateStr) && !/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    return dateStr;
+  }
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return dateStr;
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  const month = months[Number(m[2]) - 1] || m[2];
+  return `${Number(m[3])} ${month} ${m[1]}`;
+}
+
+/**
+ * Format due datetime for WhatsApp.
+ * Accepts ISO timestamptz or already-human strings / HH:mm.
+ */
+export function formatWaDueTime(
+  dueInput?: string | null,
+  timeZone = "Asia/Kolkata"
+): string | undefined {
+  if (!dueInput) return undefined;
+  const trimmed = dueInput.trim();
+  if (!trimmed) return undefined;
+
+  // Already a clock time like 17:30
+  if (/^\d{1,2}:\d{2}$/.test(trimmed)) {
+    const [h, m] = trimmed.split(":").map(Number);
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+  }
+
+  const d = new Date(trimmed);
+  if (Number.isNaN(d.getTime())) return sanitizeWhatsAppText(trimmed);
+
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone,
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(d);
+  } catch {
+    return d.toISOString();
+  }
+}
+
+/** Assignment message right after create (clearer than generic share). */
+export function buildAssignmentMessage(params: {
+  title: string;
+  groupName: string;
+  dateStr: string;
+  dueTimeStr?: string | null;
+  items: string[];
+  link: string;
+}): string {
+  const body = buildTaskMessage(params);
+  // Replace first title line with assignment headline + title
+  const lines = body.split("\n");
+  if (lines.length > 0 && lines[0].startsWith("*") && lines[0].endsWith("*")) {
+    lines[0] = `*New checklist assigned*`;
+    lines.splice(1, 0, `*${params.title.trim()}*`);
+  } else {
+    lines.unshift(`*New checklist assigned*`, `*${params.title.trim()}*`);
+  }
+  return sanitizeWhatsAppText(lines.join("\n"));
+}
+
+/**
+ * Clean, organised checklist message — ASCII + WhatsApp *bold* only.
+ * No emoji (they become diamond � on many WhatsApp Desktop / wa.me paths).
  */
 export function buildTaskMessage(params: {
   title: string;
@@ -67,33 +158,37 @@ export function buildTaskMessage(params: {
   items: string[];
   link: string;
 }): string {
-  const maxShown = Math.min(params.items.length, NUMBER_EMOJIS.length);
-  const shownItems = params.items
-    .slice(0, maxShown)
-    .map((item, idx) => `${NUMBER_EMOJIS[idx]} ${item}`)
-    .join("\n");
+  const maxShown = Math.min(params.items.length, 15);
+  const lines = params.items.slice(0, maxShown).map((item, idx) => {
+    const clean = String(item || "")
+      .replace(/\s+/g, " ")
+      .trim();
+    return `${idx + 1}) ${clean}`;
+  });
 
-  const overflowCount = params.items.length - maxShown;
-  const moreText = overflowCount > 0 ? `\n…and ${overflowCount} more items` : "";
+  const overflow = params.items.length - maxShown;
+  if (overflow > 0) {
+    lines.push(`(+${overflow} more - open the link)`);
+  }
 
-  return [
-    `📋 *${params.title}*`,
-    `👥 ${params.groupName}  |  📅 ${params.dateStr}`,
-    "",
-    shownItems + moreText,
-    "",
-    params.dueTimeStr ? `⏰ *Due:* ${params.dueTimeStr}` : null,
-    `👉 *Tick done here:* ${params.link}`,
-  ]
-    .filter((line) => line !== null)
-    .join("\n");
+  const dateLabel = formatWaDate(params.dateStr);
+  const parts: string[] = [
+    `*${params.title.trim()}*`,
+    `${params.groupName.trim()}`,
+    `Date: ${dateLabel}`,
+  ];
+
+  if (params.dueTimeStr) {
+    parts.push(`Due: ${params.dueTimeStr}`);
+  }
+
+  parts.push("", "*Tasks*", ...lines, "", "*Tick done here*", params.link);
+
+  return sanitizeWhatsAppText(parts.join("\n"));
 }
 
 export type ReminderType = "group" | "individual" | "overdue" | "closure";
 
-/**
- * Builds a contextual reminder message for pending items
- */
 export function buildReminderMessage(params: {
   type?: ReminderType;
   title: string;
@@ -105,56 +200,59 @@ export function buildReminderMessage(params: {
 }): string {
   const type = params.type || (params.memberName ? "individual" : "group");
 
+  const listBlock = (items: string[], limit: number) => {
+    const slice = items.slice(0, limit);
+    const body = slice.map((x, i) => `${i + 1}) ${String(x).replace(/\s+/g, " ").trim()}`);
+    if (items.length > limit) {
+      body.push(`(+${items.length - limit} more - open the link)`);
+    }
+    return body;
+  };
+
+  let parts: string[] = [];
+
   if (type === "individual") {
-    const greeting = params.memberName
-      ? `Hi *${params.memberName}*, gentle reminder:`
-      : `Hi, gentle reminder:`;
-    const itemsText = params.pendingItems.slice(0, 5).map((x) => `▫️ ${x}`).join("\n");
-    const overflow = params.pendingItems.length > 5 ? `\n…and ${params.pendingItems.length - 5} more` : "";
-
-    return [
-      greeting,
-      `You have pending tasks for *${params.title}* (${params.groupName}):\n`,
-      itemsText + overflow,
+    parts = [
+      params.memberName
+        ? `Hi *${params.memberName}*,`
+        : `Hi,`,
+      `Gentle reminder for *${params.title}* (${params.groupName}):`,
       "",
-      params.dueTimeStr ? `⏰ *Due by:* ${params.dueTimeStr}\n` : null,
-      `👉 *Please check off completed items here:* ${params.link}`,
-    ]
-      .filter((line) => line !== null)
-      .join("\n");
-  }
-
-  if (type === "overdue") {
-    const itemsText = params.pendingItems.slice(0, 5).map((x) => `⚠️ ${x}`).join("\n");
-    return [
-      `🚨 *URGENT: Overdue Tasks* — ${params.groupName}`,
-      `The following tasks for *${params.title}* are past due:\n`,
-      itemsText,
+      "*Pending*",
+      ...listBlock(params.pendingItems, 6),
+    ];
+    if (params.dueTimeStr) parts.push("", `Due by: ${params.dueTimeStr}`);
+    parts.push("", "*Please check off here*", params.link);
+  } else if (type === "overdue") {
+    parts = [
+      `*URGENT - Overdue*`,
+      params.groupName,
+      `Past due for *${params.title}*:`,
       "",
-      `👉 *Submit updates immediately here:* ${params.link}`,
-    ].join("\n");
+      ...listBlock(params.pendingItems, 6),
+      "",
+      "*Submit updates here*",
+      params.link,
+    ];
+  } else if (type === "closure") {
+    parts = [
+      `*Review complete*`,
+      params.groupName,
+      `All tasks for *${params.title}* have been reviewed.`,
+      `Thank you for submitting on time.`,
+    ];
+  } else {
+    parts = [
+      `*Reminder* - ${params.pendingItems.length} pending`,
+      `*${params.title}*`,
+      params.groupName,
+      "",
+      "*Pending*",
+      ...listBlock(params.pendingItems, 8),
+    ];
+    if (params.dueTimeStr) parts.push("", `Due: ${params.dueTimeStr}`);
+    parts.push("", "*Check off here*", params.link);
   }
 
-  if (type === "closure") {
-    return [
-      `✅ *Task Review Complete* — ${params.groupName}`,
-      `All assigned tasks for *${params.title}* have been reviewed & verified.`,
-      `Thank you for your timely submissions! 👏`,
-    ].join("\n");
-  }
-
-  // Default: Group reminder
-  const itemsText = params.pendingItems.slice(0, 7).map((x) => `▫️ ${x}`).join("\n");
-  const overflow = params.pendingItems.length > 7 ? `\n…and ${params.pendingItems.length - 7} more` : "";
-
-  return [
-    `🔔 *Reminder:* ${params.pendingItems.length} pending tasks for *${params.title}* (${params.groupName})`,
-    "",
-    itemsText + overflow,
-    "",
-    params.dueTimeStr ? `⏰ *Due:* ${params.dueTimeStr}` : null,
-    `👉 *Check off completed tasks:* ${params.link}`,
-  ]
-    .filter((line) => line !== null)
-    .join("\n");
+  return sanitizeWhatsAppText(parts.join("\n"));
 }

@@ -873,6 +873,8 @@ function NewTaskForm() {
       {createdList && (
         <ShareSheet
           isOpen={shareSheetOpen}
+          initialMode="share"
+          isAssignment
           onClose={() => {
             setShareSheetOpen(false);
             router.push(`/admin/tasks/${createdList.id}`);
@@ -891,7 +893,18 @@ function NewTaskForm() {
           items={createdList.items}
           members={createdList.members}
           onShareLogged={() => {
-            toast.success("Share logged");
+            toast.success("Assignment share logged");
+          }}
+          onDispatched={async () => {
+            try {
+              await fetch(`/api/admin/task-lists/${createdList.id}/reminder`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "assignment_sent" }),
+              });
+            } catch {
+              /* non-blocking */
+            }
           }}
         />
       )}

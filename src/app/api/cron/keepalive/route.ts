@@ -383,6 +383,73 @@ export async function GET(req: NextRequest) {
     results.cleaned = results.cleaned_login_attempts;
     results.archived = results.archived_lists;
 
+    // 6. Flag due-soon / overdue lists for professor one-tap reminders
+    let remindersFlagged = 0;
+    try {
+      const {
+        evaluateListReminder,
+        nextReminderStateAfterCronFlag,
+        parseReminderSettings,
+        parseReminderState,
+      } = await import("@/lib/reminders");
+
+      for (const org of orgs || []) {
+        const settings = (org.settings as Record<string, unknown>) || {};
+        const reminderSettings = parseReminderSettings(settings);
+        if (!reminderSettings.enabled) continue;
+
+        const { data: activeLists } = await supabase
+          .from("task_lists")
+          .select(
+            "id, title, token, due_at, status, reminder, group_id, group:groups(name), items:task_items(status)"
+          )
+          .eq("org_id", org.id)
+          .eq("status", "active")
+          .is("deleted_at", null)
+          .not("due_at", "is", null)
+          .limit(100);
+
+        for (const list of activeLists || []) {
+          const items = (list as any).items || [];
+          const pending = items.filter((i: any) => i.status === "pending").length;
+          const ready = evaluateListReminder(
+            {
+              id: list.id,
+              title: list.title,
+              token: list.token,
+              due_at: list.due_at,
+              status: list.status,
+              reminder: list.reminder,
+              group_id: list.group_id,
+              group_name: (list as any).group?.name,
+              pending_count: pending,
+              total_items: items.length,
+            },
+            reminderSettings
+          );
+          if (!ready) continue;
+
+          const current = parseReminderState(list.reminder);
+          const already =
+            ready.kind === "overdue"
+              ? current.overdue_ready_at
+              : current.due_soon_ready_at;
+          if (already) continue;
+
+          const next = nextReminderStateAfterCronFlag(current, ready.kind);
+          const { error: remErr } = await supabase
+            .from("task_lists")
+            .update({ reminder: next, updated_at: new Date().toISOString() })
+            .eq("id", list.id);
+
+          if (!remErr) remindersFlagged++;
+        }
+      }
+    } catch (e) {
+      console.error("Keepalive reminder scan error:", e);
+    }
+    results.reminders_flagged = remindersFlagged;
+
     return apiSuccess(results);
   } catch (err) {
     return apiError(

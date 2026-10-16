@@ -1,13 +1,35 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
+export type BadgeVariant =
+  | "pending"
+  | "done"
+  | "verified"
+  | "overdue"
+  | "neutral"
+  | "draft"
+  | "active";
+
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: "pending" | "done" | "verified" | "overdue" | "neutral" | "draft" | "active";
+  variant?: BadgeVariant;
+  /** Show status glyph (○ ✓ ✓✓ ⚠ ●) */
+  showGlyph?: boolean;
 }
+
+const GLYPH: Record<BadgeVariant, string> = {
+  pending: "○",
+  done: "✓",
+  verified: "✓✓",
+  overdue: "⚠",
+  active: "●",
+  draft: "◌",
+  neutral: "",
+};
 
 export function Badge({
   className,
   variant = "neutral",
+  showGlyph = false,
   children,
   ...props
 }: BadgeProps) {
@@ -28,15 +50,18 @@ export function Badge({
       "bg-[var(--color-status-draft-bg)] text-[var(--color-status-draft-fg)] border border-dashed border-[var(--color-status-draft-fg)]/30",
   }[variant];
 
+  const glyph = showGlyph ? GLYPH[variant] : "";
+
   return (
     <span
       className={cn(
-        "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold tracking-wide",
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold",
         variantStyles,
         className
       )}
       {...props}
     >
+      {glyph ? <span aria-hidden className="text-[10px] leading-none">{glyph}</span> : null}
       {children}
     </span>
   );

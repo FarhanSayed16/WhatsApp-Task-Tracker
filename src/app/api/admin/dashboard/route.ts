@@ -11,6 +11,10 @@ import type {
   DashboardRecentList,
   DashboardOverdueItem,
 } from "@/types";
+import {
+  evaluateListReminder,
+  parseReminderSettings,
+} from "@/lib/reminders";
 
 function formatOverdueTime(dueAt: string): string {
   const diffMs = Date.now() - new Date(dueAt).getTime();
@@ -408,6 +412,76 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    // Reminders ready (due soon / overdue lists) — free one-tap WhatsApp queue
+    const { data: orgForReminders } = await supabase
+      .from("organizations")
+      .select("settings")
+      .eq("id", admin.orgId)
+      .single();
+    const reminderSettings = parseReminderSettings(
+      (orgForReminders?.settings as Record<string, unknown>) || {}
+    );
+
+    let reminderListsQuery = supabase
+      .from("task_lists")
+      .select(
+        "id, title, token, due_at, status, reminder, group_id, group:groups(id, name), items:task_items(id, status)"
+      )
+      .eq("org_id", admin.orgId)
+      .eq("status", "active")
+      .is("deleted_at", null)
+      .not("due_at", "is", null)
+      .order("due_at", { ascending: true })
+      .limit(40);
+
+    if (groupId) {
+      reminderListsQuery = reminderListsQuery.eq("group_id", groupId);
+    }
+
+    let { data: reminderListsRaw, error: reminderListsErr } =
+      await reminderListsQuery;
+
+    // If reminder column not migrated yet, retry without it (computed-only mode)
+    if (reminderListsErr) {
+      let fallbackQ = supabase
+        .from("task_lists")
+        .select(
+          "id, title, token, due_at, status, group_id, group:groups(id, name), items:task_items(id, status)"
+        )
+        .eq("org_id", admin.orgId)
+        .eq("status", "active")
+        .is("deleted_at", null)
+        .not("due_at", "is", null)
+        .order("due_at", { ascending: true })
+        .limit(40);
+      if (groupId) fallbackQ = fallbackQ.eq("group_id", groupId);
+      const fallback = await fallbackQ;
+      reminderListsRaw = fallback.data;
+    }
+
+    const remindersReady = (reminderListsRaw || [])
+      .map((list: any) => {
+        const group = Array.isArray(list.group) ? list.group[0] : list.group;
+        const items = list.items || [];
+        const pending = items.filter((i: any) => i.status === "pending").length;
+        return evaluateListReminder(
+          {
+            id: list.id,
+            title: list.title,
+            token: list.token,
+            due_at: list.due_at,
+            status: list.status,
+            reminder: list.reminder,
+            group_id: group?.id || list.group_id,
+            group_name: group?.name || "Group",
+            pending_count: pending,
+            total_items: items.length,
+          },
+          reminderSettings
+        );
+      })
+      .filter(Boolean) as DashboardData["reminders_ready"];
+
     const responseData: DashboardData = {
       kpis,
       trends,
@@ -416,6 +490,7 @@ export async function GET(req: NextRequest) {
       overdue_items: overdueItems,
       pending_verify_items: pendingVerifyItems,
       todayLists: recentLists,
+      reminders_ready: remindersReady || [],
     };
 
     return apiSuccess(responseData);
