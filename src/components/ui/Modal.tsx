@@ -100,29 +100,32 @@ export function Modal({
       role="dialog"
       aria-modal="true"
     >
+      {/* Overlay — lighter for friendlier feel */}
       <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-fade-in"
+        className="fixed inset-0 bg-black/40 transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
+      {/* Panel */}
       <div
         ref={modalRef}
         className={cn(
-          "relative w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl shadow-slate-900/20 overflow-hidden z-10 transition-all transform animate-scale-in my-8",
+          "relative w-full rounded-xl bg-[var(--color-surface-overlay)] border border-[var(--color-border-primary)] shadow-[var(--shadow-float)] overflow-hidden z-10 transition-all transform animate-scale-in my-8",
           sizeClasses
         )}
       >
+        {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3 border-b border-[var(--color-border-secondary)]">
             <div className="min-w-0 space-y-1">
               {title && (
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
                   {title}
                 </h2>
               )}
               {description && (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-[var(--color-text-tertiary)]">
                   {description}
                 </p>
               )}
@@ -131,7 +134,7 @@ export function Modal({
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="p-1.5 rounded-lg text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] transition-colors"
                 aria-label="Close dialog"
               >
                 <X className="w-4 h-4" />
@@ -140,10 +143,12 @@ export function Modal({
           </div>
         )}
 
+        {/* Content */}
         <div className="px-5 py-4">{children}</div>
 
+        {/* Footer */}
         {footer && (
-          <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40">
+          <div className="px-5 py-4 border-t border-[var(--color-border-secondary)] bg-[var(--color-surface-sunken)]/50">
             {footer}
           </div>
         )}

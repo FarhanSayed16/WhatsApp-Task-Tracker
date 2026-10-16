@@ -11,7 +11,7 @@ export function Skeleton({
   ...props
 }: SkeletonProps) {
   const base =
-    "animate-pulse bg-slate-200/80 dark:bg-slate-800/80 transition-colors";
+    "animate-pulse bg-[var(--color-border-primary)] transition-colors";
 
   if (variant === "circle") {
     return (
@@ -26,14 +26,14 @@ export function Skeleton({
     return (
       <div
         className={cn(
-          "rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4",
+          "rounded-xl border border-[var(--color-border-primary)] p-5 space-y-4",
           className
         )}
         {...props}
       >
         <div className="flex items-center justify-between">
-          <div className={cn(base, "h-5 w-1/3 rounded-lg")} />
-          <div className={cn(base, "h-5 w-16 rounded-full")} />
+          <div className={cn(base, "h-5 w-1/3 rounded-md")} />
+          <div className={cn(base, "h-5 w-16 rounded-md")} />
         </div>
         <div className="space-y-2">
           <div className={cn(base, "h-4 w-full rounded")} />
@@ -41,7 +41,7 @@ export function Skeleton({
         </div>
         <div className="pt-2 flex justify-between items-center">
           <div className={cn(base, "h-3 w-20 rounded")} />
-          <div className={cn(base, "h-8 w-24 rounded-xl")} />
+          <div className={cn(base, "h-8 w-24 rounded-lg")} />
         </div>
       </div>
     );
@@ -51,7 +51,7 @@ export function Skeleton({
     return (
       <div
         className={cn(
-          "flex items-center justify-between py-4 px-4 border-b border-slate-100 dark:border-slate-800 gap-4",
+          "flex items-center justify-between py-4 px-4 border-b border-[var(--color-border-secondary)] gap-4",
           className
         )}
         {...props}
@@ -63,7 +63,7 @@ export function Skeleton({
             <div className={cn(base, "h-3 w-24 rounded")} />
           </div>
         </div>
-        <div className={cn(base, "h-6 w-16 rounded-full")} />
+        <div className={cn(base, "h-6 w-16 rounded-md")} />
         <div className={cn(base, "h-8 w-8 rounded-lg")} />
       </div>
     );

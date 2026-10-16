@@ -10,6 +10,10 @@ export interface EmptyStateProps {
   actionLabel?: string;
   onAction?: () => void;
   actionNode?: React.ReactNode;
+  /** Optional workflow steps to display instead of a simple message */
+  steps?: Array<{ icon: React.ReactNode; label: string; description: string }>;
+  /** Compact mode — less padding, used when inline within a section */
+  compact?: boolean;
   className?: string;
 }
 
@@ -20,24 +24,56 @@ export function EmptyState({
   actionLabel,
   onAction,
   actionNode,
+  steps,
+  compact = false,
   className,
 }: EmptyStateProps) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center text-center p-8 sm:p-12 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30",
+        "flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-[var(--color-border-primary)] bg-[var(--color-surface-sunken)]/50",
+        compact ? "p-6" : "p-8 sm:p-12",
         className
       )}
     >
-      <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4 ring-8 ring-emerald-500/5">
-        {icon || <Inbox className="w-7 h-7" />}
+      {/* Icon */}
+      <div className="w-12 h-12 rounded-xl bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center mb-4">
+        {icon || <Inbox className="w-6 h-6" />}
       </div>
-      <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1.5">
+
+      {/* Title & Description */}
+      <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">
         {title}
       </h3>
-      <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6 leading-relaxed">
+      <p className="text-sm text-[var(--color-text-secondary)] max-w-sm mb-5 leading-relaxed">
         {description}
       </p>
+
+      {/* Optional workflow steps — guided empty state */}
+      {steps && steps.length > 0 && (
+        <div className="w-full max-w-md space-y-3 mb-6 text-left">
+          {steps.map((step, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-3 p-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-secondary)]"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center shrink-0 text-sm">
+                {step.icon}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                  {step.label}
+                </p>
+                <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5">
+                  {step.description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Action */}
       {actionNode ? (
         actionNode
       ) : actionLabel && onAction ? (
