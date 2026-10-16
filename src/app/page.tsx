@@ -1,32 +1,34 @@
 import Link from "next/link";
+import { MessageSquare, ArrowRight } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <div className="w-full max-w-md p-8 rounded-2xl glass-panel shadow-xl shadow-slate-200/50 dark:shadow-none text-center space-y-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-3xl font-bold mb-2">
-          📋
+    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-[var(--color-canvas)]">
+      <div className="w-full max-w-sm p-8 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border-primary)] shadow-md text-center space-y-6">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] mb-1">
+          <MessageSquare className="w-7 h-7" />
         </div>
         
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            WhatsApp Task Tracker
+        <div className="space-y-1.5">
+          <h1 className="text-xl font-bold tracking-tight text-[var(--color-text-primary)]">
+            TaskTracker
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Lightweight, friction-free task management for WhatsApp groups.
+          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+            Friction-free daily task management and dispatch for WhatsApp groups.
           </p>
         </div>
 
-        <div className="pt-4 flex flex-col gap-3">
+        <div className="pt-2 flex flex-col gap-3">
           <Link
             href="/login"
-            className="w-full py-3 px-4 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] transition-all duration-150 shadow-md shadow-emerald-600/20"
+            className="w-full py-2.5 px-4 rounded-lg font-medium text-sm text-[var(--color-text-inverse)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2"
           >
-            Admin PIN Login
+            <span>Professor Login</span>
+            <ArrowRight className="w-4 h-4" />
           </Link>
-          <div className="text-xs text-slate-400 dark:text-slate-500">
-            Group members access their checklists directly via WhatsApp links.
-          </div>
+          <p className="text-[11px] text-[var(--color-text-tertiary)] leading-relaxed">
+            Students open checklists directly via shared WhatsApp links — no login required.
+          </p>
         </div>
       </div>
     </main>

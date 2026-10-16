@@ -63,48 +63,41 @@ export default function NewGroupPage() {
     setMemberPhone("");
   };
 
-  const handleParseCsv = () => {
-    if (!csvText.trim()) return;
-
-    const lines = csvText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    const newMembers: MemberDraft[] = [];
-    const seen = new Set(members.map((m) => m.name.toLowerCase()));
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (i === 0 && line.toLowerCase().startsWith("name")) continue;
-
-      const parts = line.split(",").map((p) => p.replace(/^["']|["']$/g, "").trim());
-      const rawName = parts[0];
-      const rawPhone = parts[1] || "";
-
-      if (!rawName) continue;
-      const lower = rawName.toLowerCase();
-      if (seen.has(lower)) continue;
-
-      seen.add(lower);
-      let phone: string | undefined = undefined;
-      if (rawPhone) {
-        const digits = rawPhone.replace(/\D/g, "");
-        if (digits.length >= 10 && digits.length <= 15) {
-          phone = digits;
-        }
-      }
-
-      newMembers.push({ name: rawName, phone });
-    }
-
-    if (newMembers.length > 0) {
-      setMembers([...members, ...newMembers]);
-      setCsvText("");
-      toast.success(`Added ${newMembers.length} members from CSV`);
-    } else {
-      toast.info("No new members found to import");
-    }
+  const handleRemoveMember = (index: number) => {
+    setMembers(members.filter((_, idx) => idx !== index));
   };
 
-  const handleRemoveMember = (indexToRemove: number) => {
-    setMembers(members.filter((_, idx) => idx !== indexToRemove));
+  const handleParseCsv = () => {
+    setMemberInputError("");
+    if (!csvText.trim()) return;
+
+    const lines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    const parsed: MemberDraft[] = [];
+    const seenNames = new Set(members.map((m) => m.name.toLowerCase()));
+
+    for (const line of lines) {
+      const parts = line.split(",").map((p) => p.trim());
+      const namePart = parts[0];
+      const phonePart = parts[1] ? parts[1].replace(/\D/g, "") : undefined;
+
+      if (!namePart) continue;
+      if (seenNames.has(namePart.toLowerCase())) continue;
+
+      seenNames.add(namePart.toLowerCase());
+      parsed.push({
+        name: namePart,
+        phone: phonePart && phonePart.length >= 10 ? phonePart : undefined,
+      });
+    }
+
+    if (parsed.length === 0) {
+      setMemberInputError("No valid or new members found in CSV paste");
+      return;
+    }
+
+    setMembers([...members, ...parsed]);
+    setCsvText("");
+    toast.success(`Parsed & added ${parsed.length} members`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,12 +111,13 @@ export default function NewGroupPage() {
 
     try {
       setLoading(true);
+
       const res = await fetch("/api/admin/groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
-          description: description.trim() || null,
+          description: description.trim() || undefined,
           verify_required: verifyRequired,
           members: members.map((m) => ({
             name: m.name,
@@ -132,13 +126,13 @@ export default function NewGroupPage() {
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok || data.success === false) {
-        throw new Error(data?.error?.message || "Failed to create group");
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json?.error?.message || "Failed to create group");
       }
 
-      toast.success("Group created successfully!");
-      router.push(`/admin/groups/${data.data.id}`);
+      toast.success("Group created successfully");
+      router.push(`/admin/groups/${json.data.id}`);
     } catch (err: any) {
       toast.error(err.message || "Failed to create group");
       setErrors({ form: err.message });
@@ -149,8 +143,8 @@ export default function NewGroupPage() {
 
   return (
     <AdminLayout
-      title="Create New Group"
-      subtitle="Define group details and add initial members"
+      title="Create Group"
+      subtitle="Define a student cohort, research lab, or staff roster"
       actions={
         <Link href="/admin/groups">
           <Button variant="ghost" size="sm">
@@ -159,17 +153,17 @@ export default function NewGroupPage() {
         </Link>
       }
     >
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-2xl mx-auto space-y-6 pb-12">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Group Details Card */}
-          <Card className="p-6 space-y-5">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
-              1. Group Details
+          <Card className="p-5 sm:p-6 space-y-4">
+            <h2 className="text-sm font-bold text-[var(--color-text-primary)] border-b border-[var(--color-border-secondary)] pb-2.5">
+              Group Details
             </h2>
 
             <Input
               label="Group Name"
-              placeholder="e.g. CS201 Lab Batch A, Research Assistants"
+              placeholder="e.g. MSc Chemistry 2026 or Lab Batch A"
               value={name}
               onChange={(e) => setName(e.target.value)}
               error={errors.name}
@@ -177,7 +171,7 @@ export default function NewGroupPage() {
             />
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 Description (Optional)
               </label>
               <textarea
@@ -185,47 +179,47 @@ export default function NewGroupPage() {
                 placeholder="Brief purpose of this group or schedule notes"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm p-3.5 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none"
+                className="w-full rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-input)] text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] text-xs p-3 focus:outline-none focus:border-[var(--color-primary)] transition-all resize-none"
               />
             </div>
 
             {/* Verification Setting */}
             <div
               onClick={() => setVerifyRequired(!verifyRequired)}
-              className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 cursor-pointer select-none transition-colors hover:border-emerald-500/30"
+              className="flex items-start gap-3 p-3.5 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface-sunken)] cursor-pointer select-none transition-colors hover:border-[var(--color-primary)]/40"
             >
               <div
-                className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                className={`w-4.5 h-4.5 rounded flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
                   verifyRequired
-                    ? "bg-emerald-600 text-white"
-                    : "border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "border border-[var(--color-border-input)] bg-[var(--color-surface)]"
                 }`}
               >
-                {verifyRequired && <Check className="w-3.5 h-3.5" />}
+                {verifyRequired && <Check className="w-3 h-3" />}
               </div>
               <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-[var(--color-text-primary)]">
                     Require Professor Verification
                   </span>
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-[var(--color-primary)]" />
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-[11px] text-[var(--color-text-secondary)] leading-relaxed">
                   When enabled, member ticks mark items as &quot;Done&quot;, and you confirm them as &quot;Verified&quot;.
-                  If disabled, member ticks immediately mark items as verified.
+                  If disabled, ticks immediately verify the item.
                 </p>
               </div>
             </div>
           </Card>
 
           {/* Members Roster Card */}
-          <Card className="p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <Card className="p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--color-border-secondary)] pb-2.5">
               <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  2. Member Roster
+                <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
+                  Member Roster
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-[var(--color-text-tertiary)]">
                   {members.length} member{members.length === 1 ? "" : "s"} added
                 </p>
               </div>
@@ -256,7 +250,7 @@ export default function NewGroupPage() {
                   />
                 </div>
                 {memberInputError && (
-                  <p className="text-xs text-rose-500 font-medium">
+                  <p className="text-xs text-[var(--color-danger)] font-medium">
                     {memberInputError}
                   </p>
                 )}
@@ -267,7 +261,7 @@ export default function NewGroupPage() {
                   onClick={handleAddMember}
                   className="w-full sm:w-auto"
                 >
-                  <UserPlus className="w-4 h-4 mr-1.5" /> Add Member
+                  <UserPlus className="w-3.5 h-3.5 mr-1.5" /> Add Member
                 </Button>
               </div>
             )}
@@ -280,7 +274,7 @@ export default function NewGroupPage() {
                   placeholder={`Paste names (or name,phone per line):\nAlex Smith,9876543210\nSarah Jenkins,9876543211\nMichael Scott`}
                   value={csvText}
                   onChange={(e) => setCsvText(e.target.value)}
-                  className="w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-xs font-mono p-3 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 resize-none"
+                  className="w-full rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-input)] text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] text-xs font-mono p-3 focus:outline-none focus:border-[var(--color-primary)] resize-none"
                 />
                 <Button
                   type="button"
@@ -289,38 +283,38 @@ export default function NewGroupPage() {
                   onClick={handleParseCsv}
                   disabled={!csvText.trim()}
                 >
-                  <FileText className="w-4 h-4 mr-1.5" /> Parse &amp; Add Members
+                  <FileText className="w-3.5 h-3.5 mr-1.5" /> Parse &amp; Add Members
                 </Button>
               </div>
             )}
 
             {/* Added members list preview */}
             {members.length > 0 ? (
-              <div className="space-y-2 pt-2">
-                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <div className="space-y-1.5 pt-1">
+                <p className="text-xs font-semibold text-[var(--color-text-secondary)]">
                   Roster Preview ({members.length}):
                 </p>
-                <div className="max-h-48 overflow-y-auto space-y-1.5 p-1">
+                <div className="max-h-48 overflow-y-auto space-y-1 p-1">
                   {members.map((member, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs"
+                      className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)] text-xs"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-[10px]">
+                        <span className="w-4.5 h-4.5 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] font-bold flex items-center justify-center text-[10px]">
                           {idx + 1}
                         </span>
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                        <span className="font-semibold text-[var(--color-text-primary)]">
                           {member.name}
                         </span>
                         {member.phone && (
-                          <span className="text-slate-400">({member.phone})</span>
+                          <span className="text-[var(--color-text-tertiary)]">({member.phone})</span>
                         )}
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveMember(idx)}
-                        className="text-slate-400 hover:text-rose-500 p-1 rounded"
+                        className="text-[var(--color-text-tertiary)] hover:text-[var(--color-danger)] p-1 rounded"
                         aria-label={`Remove ${member.name}`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -330,14 +324,14 @@ export default function NewGroupPage() {
                 </div>
               </div>
             ) : (
-              <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400">
+              <div className="p-4 rounded-lg border border-dashed border-[var(--color-border-primary)] text-center text-xs text-[var(--color-text-tertiary)]">
                 No members added yet. You can also add members anytime later.
               </div>
             )}
           </Card>
 
           {errors.form && (
-            <p className="text-xs text-rose-500 font-semibold">{errors.form}</p>
+            <p className="text-xs text-[var(--color-danger)] font-semibold">{errors.form}</p>
           )}
 
           {/* Action Footer */}
@@ -347,7 +341,7 @@ export default function NewGroupPage() {
                 Cancel
               </Button>
             </Link>
-            <Button type="submit" loading={loading}>
+            <Button type="submit" variant="primary" loading={loading}>
               Create Group
             </Button>
           </div>

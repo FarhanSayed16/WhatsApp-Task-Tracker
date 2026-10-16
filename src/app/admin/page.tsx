@@ -4,10 +4,9 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { KpiCard } from "@/components/admin/KpiCard";
 import { TaskListCard } from "@/components/admin/TaskListCard";
 import { Button } from "@/components/ui/Button";
-import { DatePicker } from "@/components/ui/DatePicker";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
@@ -21,88 +20,27 @@ import type {
   DashboardData,
   DashboardOverdueItem,
   DashboardPendingVerifyItem,
-  DashboardGroupStat,
 } from "@/types";
 import {
-  ClipboardList,
+  AlertTriangle,
+  Check,
   CheckCircle2,
   Clock,
-  AlertTriangle,
-  Users,
+  CopyPlus,
+  Download,
+  Filter,
   Plus,
   RefreshCw,
   Send,
-  Calendar,
-  Filter,
-  Check,
+  ShieldCheck,
+  Users,
+  ChevronRight,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
-  ChevronRight,
-  ShieldCheck,
-  Sparkles,
-  Copy,
-  FileText,
-  Download,
-  CopyPlus,
+  BarChart3,
+  Calendar,
+  ClipboardList,
 } from "lucide-react";
-
-// Sleek animated SVG circular progress ring for group cards
-function CircularProgress({
-  value,
-  size = 54,
-  strokeWidth = 5,
-}: {
-  value: number;
-  size?: number;
-  strokeWidth?: number;
-}) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const clamped = Math.min(100, Math.max(0, value));
-  const strokeDashoffset = circumference - (clamped / 100) * circumference;
-
-  const colorClass =
-    clamped >= 80
-      ? "text-emerald-500"
-      : clamped >= 40
-      ? "text-amber-500"
-      : "text-rose-500";
-
-  return (
-    <div
-      className="relative inline-flex items-center justify-center shrink-0"
-      style={{ width: size, height: size }}
-    >
-      <svg className="transform -rotate-90" width={size} height={size}>
-        <circle
-          className="text-slate-100 dark:text-slate-800"
-          strokeWidth={strokeWidth}
-          stroke="currentColor"
-          fill="transparent"
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-        />
-        <circle
-          className={cn("transition-all duration-700 ease-out", colorClass)}
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          stroke="currentColor"
-          fill="transparent"
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-        />
-      </svg>
-      <span className="absolute text-[11px] font-extrabold text-slate-800 dark:text-slate-200">
-        {Math.round(clamped)}%
-      </span>
-    </div>
-  );
-}
 
 function getGreeting(name?: string) {
   const hour = new Date().getHours();
@@ -164,8 +102,6 @@ export default function AdminDashboardPage() {
     mutate,
   } = useSWRFetch<DashboardData>(`/api/admin/dashboard?${queryParams.toString()}`);
 
-  const kpis = dashboardData?.kpis;
-  const trends = dashboardData?.trends;
   const recentLists = dashboardData?.recent_lists || dashboardData?.todayLists || [];
   const groupStats = dashboardData?.groups || [];
   const overdueItems = dashboardData?.overdue_items || [];
@@ -294,7 +230,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Delete list handler
   const handleDeleteList = async (id: string) => {
     try {
       const res = await fetch(`/api/admin/task-lists/${id}`, {
@@ -320,6 +255,8 @@ export default function AdminDashboardPage() {
     year: "numeric",
   });
 
+  const hasActionRequired = overdueItems.length > 0 || pendingVerifyItems.length > 0;
+
   return (
     <AdminLayout
       title={greeting}
@@ -332,469 +269,316 @@ export default function AdminDashboardPage() {
             size="sm"
             onClick={() => mutate()}
             disabled={isValidating}
-            className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 p-2"
+            className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2"
             title="Refresh dashboard"
           >
             <RefreshCw
-              className={cn("w-4 h-4", isValidating && "animate-spin text-emerald-500")}
+              className={cn("w-4 h-4", isValidating && "animate-spin text-[var(--color-primary)]")}
             />
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleExportCsv}
-            disabled={exportingCsv}
-            className="gap-1.5 hidden sm:inline-flex"
-            title="Export CSV for current date range"
-          >
-            <Download className="w-3.5 h-3.5" />
-            {exportingCsv ? "Exporting…" : "Export"}
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleDuplicateYesterday}
-            disabled={duplicatingYesterday}
-            className="gap-1.5 hidden md:inline-flex"
-            title="Clone yesterday's lists as today's drafts"
-          >
-            <CopyPlus className="w-3.5 h-3.5" />
-            {duplicatingYesterday ? "Duplicating…" : "Duplicate Yesterday"}
           </Button>
 
           <Link href="/admin/tasks/new">
             <Button size="sm" variant="primary" className="gap-1.5 shadow-sm">
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">New Task List</span>
-              <span className="sm:hidden">New List</span>
+              <span>New Task List</span>
             </Button>
           </Link>
         </div>
       }
     >
       <div className="space-y-8 pb-12">
-        {/* Filter Controls Bar */}
-        <section className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-          {/* Date Range Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-            {(
-              [
-                { id: "today", label: "Today" },
-                { id: "week", label: "This Week" },
-                { id: "month", label: "This Month" },
-                { id: "custom", label: "Custom" },
-              ] as const
-            ).map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setDateFilter(tab.id)}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap",
-                  dateFilter === tab.id
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+        {/* ACTION REQUIRED BANNER (Conditional: only shown when items need attention) */}
+        {hasActionRequired && (
+          <section className="rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-[var(--color-border-primary)] flex items-center justify-between bg-[var(--color-surface-sunken)]">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-status-overdue)] animate-pulse" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-primary)]">
+                  Action Required
+                </h2>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-secondary)]">
+                {overdueItems.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[var(--color-status-overdue)]">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {overdueItems.length} overdue
+                  </span>
                 )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Group Filter & Custom Range */}
-          <div className="flex flex-wrap items-center gap-3">
-            {dateFilter === "custom" && (
-              <div className="flex items-center gap-2 text-xs">
-                <input
-                  type="date"
-                  value={customFrom}
-                  onChange={(e) => setCustomFrom(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-slate-200"
-                />
-                <span className="text-slate-400">to</span>
-                <input
-                  type="date"
-                  value={customTo}
-                  onChange={(e) => setCustomTo(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-slate-200"
-                />
+                {overdueItems.length > 0 && pendingVerifyItems.length > 0 && <span>·</span>}
+                {pendingVerifyItems.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[var(--color-status-done)]">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    {pendingVerifyItems.length} awaiting verification
+                  </span>
+                )}
               </div>
-            )}
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <select
-                value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
-                className="w-full sm:w-auto px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-              >
-                <option value="">All Groups</option>
-                {allGroups.map((g: any) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
             </div>
-          </div>
-        </section>
 
-        {/* Overdue Alerts Section (Prominent if > 0) */}
-        {overdueItems.length > 0 && (
-          <section className="rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/20 p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center animate-pulse">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-bold text-rose-900 dark:text-rose-200">
-                      Overdue Tasks Attention Required
-                    </h2>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-600 text-white">
-                      {overdueItems.length}
+            <div className="p-5 space-y-5">
+              {/* Overdue items preview */}
+              {overdueItems.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[var(--color-text-secondary)]">
+                      Overdue Items
                     </span>
+                    {overdueItems.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowOverdueExpanded(!showOverdueExpanded)}
+                        className="text-xs font-medium text-[var(--color-primary-text)] hover:underline flex items-center gap-1"
+                      >
+                        {showOverdueExpanded ? (
+                          <>Show less <ChevronUp className="w-3.5 h-3.5" /></>
+                        ) : (
+                          <>View all ({overdueItems.length}) <ChevronDown className="w-3.5 h-3.5" /></>
+                        )}
+                      </button>
+                    )}
                   </div>
-                  <p className="text-xs text-rose-700/80 dark:text-rose-300/80">
-                    Students have pending items past due. Send a reminder or mark them done.
-                  </p>
-                </div>
-              </div>
 
-              {overdueItems.length > 3 && (
-                <button
-                  type="button"
-                  onClick={() => setShowOverdueExpanded(!showOverdueExpanded)}
-                  className="text-xs font-semibold text-rose-700 dark:text-rose-300 hover:underline flex items-center gap-1"
-                >
-                  {showOverdueExpanded ? (
-                    <>
-                      Show less <ChevronUp className="w-3.5 h-3.5" />
-                    </>
-                  ) : (
-                    <>
-                      View all ({overdueItems.length}){" "}
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {displayedOverdueItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-3.5 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface)] shadow-xs flex flex-col justify-between gap-3 hover:border-[var(--color-status-overdue)]/40 transition-all border-l-4 border-l-[var(--color-status-overdue)]"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)] truncate">
+                              {item.group_name}
+                            </span>
+                            <span className="text-[10px] font-semibold text-[var(--color-status-overdue)] flex items-center gap-1 shrink-0">
+                              <Clock className="w-3 h-3" />
+                              {item.time_overdue_label}
+                            </span>
+                          </div>
+                          <p className="text-xs font-semibold text-[var(--color-text-primary)] line-clamp-2">
+                            {item.text}
+                          </p>
+                          <p className="text-[11px] text-[var(--color-text-tertiary)] mt-1 truncate">
+                            {item.task_list_title}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2 border-t border-[var(--color-border-secondary)]">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="flex-1 text-[11px] h-7"
+                            onClick={() => handleQuickTick(item)}
+                            disabled={tickingItemId === item.id}
+                          >
+                            <Check className="w-3 h-3 mr-1 text-[var(--color-primary)]" />
+                            {tickingItemId === item.id ? "Saving…" : "Mark Done"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="whatsapp"
+                            className="flex-1 text-[11px] h-7"
+                            onClick={() => handleQuickRemind(item)}
+                          >
+                            <Send className="w-3 h-3 mr-1" />
+                            Remind
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pending verification items */}
+              {pendingVerifyItems.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <span className="text-xs font-semibold text-[var(--color-text-secondary)]">
+                    Awaiting Verification
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {pendingVerifyItems.slice(0, 6).map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface)] p-3 space-y-2 border-l-4 border-l-[var(--color-status-done)]"
+                      >
+                        <p className="text-xs font-semibold text-[var(--color-text-primary)] line-clamp-2">
+                          {item.text}
+                        </p>
+                        <p className="text-[11px] text-[var(--color-text-tertiary)] truncate">
+                          {item.group_name} · {item.task_list_title}
+                          {item.completed_by_name ? ` · by ${item.completed_by_name}` : ""}
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          className="w-full text-[11px] h-7"
+                          onClick={() => handleQuickVerify(item)}
+                          disabled={tickingItemId === item.id}
+                        >
+                          <ShieldCheck className="w-3 h-3 mr-1" />
+                          {tickingItemId === item.id ? "Verifying…" : "Confirm & Verify"}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {displayedOverdueItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-rose-200/80 dark:border-rose-900/40 shadow-xs flex flex-col justify-between gap-3 hover:border-rose-300 transition-all"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 truncate">
-                        {item.group_name}
-                      </span>
-                      <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1 shrink-0">
-                        <Clock className="w-3 h-3" />
-                        {item.time_overdue_label}
-                      </span>
-                    </div>
-
-                    <p className="text-xs font-semibold text-slate-900 dark:text-white line-clamp-2">
-                      {item.text}
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">
-                      List: {item.task_list_title}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 text-[11px] py-1 text-slate-700 dark:text-slate-300"
-                      onClick={() => handleQuickTick(item)}
-                      disabled={tickingItemId === item.id}
-                    >
-                      <Check className="w-3 h-3 mr-1 text-emerald-600" />
-                      {tickingItemId === item.id ? "Saving..." : "Mark Done"}
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      className="flex-1 text-[11px] py-1 bg-[#25D366] hover:bg-[#20ba5a] text-white"
-                      onClick={() => handleQuickRemind(item)}
-                    >
-                      <Send className="w-3 h-3 mr-1" />
-                      Remind
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
           </section>
         )}
 
-        {/* Awaiting Verification (quick-verify) */}
-        {pendingVerifyItems.length > 0 && (
-          <section className="rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/20 p-5 shadow-sm space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                <ShieldCheck className="w-5 h-5" />
+        {/* TODAY'S TASK LISTS (with subtle inline filter tabs) */}
+        <section className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-[var(--color-text-primary)]">
+                  {dateFilter === "today" ? "Today's Task Lists" : "Task Lists"}
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]">
+                  {recentLists.length}
+                </span>
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-bold text-blue-900 dark:text-blue-200">
-                    Awaiting Your Verification
-                  </h2>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-600 text-white">
-                    {pendingVerifyItems.length}
-                  </span>
-                </div>
-                <p className="text-[11px] text-blue-700/80 dark:text-blue-300/80">
-                  Members marked these done — confirm to verify
-                </p>
-              </div>
+              <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5">
+                Active checklists for student dispatch & tracking
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {pendingVerifyItems.slice(0, 6).map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/40 p-3 space-y-2"
-                >
-                  <p className="text-xs font-semibold text-slate-900 dark:text-white line-clamp-2">
-                    {item.text}
-                  </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                    {item.group_name} · {item.task_list_title}
-                    {item.completed_by_name
-                      ? ` · by ${item.completed_by_name}`
-                      : ""}
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    className="w-full text-[11px] py-1"
-                    onClick={() => handleQuickVerify(item)}
-                    disabled={tickingItemId === item.id}
+            {/* Inline subtle filter controls */}
+            <div className="flex items-center gap-2">
+              <div className="inline-flex rounded-lg bg-[var(--color-surface-sunken)] p-1 border border-[var(--color-border-primary)]">
+                {(
+                  [
+                    { id: "today", label: "Today" },
+                    { id: "week", label: "Week" },
+                    { id: "month", label: "Month" },
+                    { id: "custom", label: "Custom" },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setDateFilter(tab.id)}
+                    className={cn(
+                      "px-3 py-1 rounded-md text-xs font-medium transition-all",
+                      dateFilter === tab.id
+                        ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-xs font-semibold"
+                        : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                    )}
                   >
-                    <ShieldCheck className="w-3 h-3 mr-1" />
-                    {tickingItemId === item.id ? "Verifying..." : "Verify"}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
 
-        {/* KPI Cards Row (4 cards) */}
-        <section>
-          {isLoading && !kpis ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3"
+              {allGroups.length > 0 && (
+                <select
+                  value={selectedGroupId}
+                  onChange={(e) => setSelectedGroupId(e.target.value)}
+                  className="rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-primary)] text-xs px-2.5 py-1.5 text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+                  title="Filter by group"
                 >
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-8 w-16" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-              ))}
+                  <option value="">All Groups</option>
+                  {allGroups.map((g: any) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              <Link
+                href="/admin/tasks"
+                className="text-xs font-medium text-[var(--color-primary-text)] hover:underline flex items-center gap-0.5 ml-1 shrink-0"
+              >
+                View all <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Total Created */}
-              <KpiCard
-                label="Total Created"
-                value={kpis?.total_created ?? 0}
-                icon={<ClipboardList className="w-5 h-5" />}
-                color="blue"
-                trend={
-                  trends
-                    ? {
-                        value: `${trends.created_change >= 0 ? "+" : ""}${
-                          trends.created_change
-                        }%`,
-                        direction:
-                          trends.created_change > 0
-                            ? "up"
-                            : trends.created_change < 0
-                            ? "down"
-                            : "neutral",
-                        label: "vs previous period",
-                      }
-                    : undefined
-                }
-              />
+          </div>
 
-              {/* Completed */}
-              <KpiCard
-                label="Completed"
-                value={kpis?.total_done ?? 0}
-                icon={<CheckCircle2 className="w-5 h-5" />}
-                color="emerald"
-                trend={
-                  kpis
-                    ? {
-                        value: `${kpis.completion_rate}%`,
-                        direction: kpis.completion_rate >= 50 ? "up" : "neutral",
-                        label: "completion rate",
-                      }
-                    : undefined
-                }
+          {/* Custom Date Inputs if active */}
+          {dateFilter === "custom" && (
+            <div className="flex items-center gap-2 text-xs pt-1">
+              <span className="text-[var(--color-text-tertiary)]">Range:</span>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="px-2.5 py-1 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)]"
               />
-
-              {/* Pending */}
-              <KpiCard
-                label="Pending"
-                value={kpis?.total_pending ?? 0}
-                icon={<Clock className="w-5 h-5" />}
-                color="amber"
-                trend={
-                  trends
-                    ? {
-                        value: `${trends.pending_change >= 0 ? "+" : ""}${
-                          trends.pending_change
-                        }%`,
-                        direction:
-                          trends.pending_change < 0
-                            ? "up"
-                            : trends.pending_change > 0
-                            ? "down"
-                            : "neutral",
-                        label: "pending delta",
-                      }
-                    : undefined
-                }
-              />
-
-              {/* Overdue */}
-              <KpiCard
-                label="Overdue"
-                value={kpis?.total_overdue ?? 0}
-                icon={<AlertTriangle className="w-5 h-5" />}
-                color="rose"
-                className={cn(
-                  (kpis?.total_overdue ?? 0) > 0 &&
-                    "border-rose-400 dark:border-rose-700/80 shadow-rose-500/10"
-                )}
-                trend={
-                  trends
-                    ? {
-                        value: `${trends.overdue_change >= 0 ? "+" : ""}${
-                          trends.overdue_change
-                        }%`,
-                        direction:
-                          trends.overdue_change > 0
-                            ? "down"
-                            : trends.overdue_change < 0
-                            ? "up"
-                            : "neutral",
-                        label: "overdue delta",
-                      }
-                    : undefined
-                }
+              <span className="text-[var(--color-text-tertiary)]">to</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="px-2.5 py-1 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)]"
               />
             </div>
           )}
-        </section>
 
-        {/* Today's Task Lists Section */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                {dateFilter === "today"
-                  ? "Today's Task Lists"
-                  : "Task Lists in Period"}
-              </h2>
-              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                {recentLists.length}
-              </span>
-            </div>
-
-            <Link
-              href="/admin/tasks"
-              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
-            >
-              View all lists <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
+          {/* List Cards Grid */}
           {isLoading && recentLists.length === 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4"
-                >
-                  <Skeleton className="h-5 w-40" />
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-2 w-full" />
-                </div>
+                <Skeleton key={i} variant="card" className="h-60" />
               ))}
             </div>
           ) : recentLists.length === 0 ? (
             <EmptyState
-              icon={<ClipboardList className="w-10 h-10 text-slate-400" />}
-              title="No task lists for this period"
-              description="Create a task checklist and share it directly to your students on WhatsApp."
-              actionNode={
-                <Link href="/admin/tasks/new">
-                  <Button size="sm" variant="primary">
-                    <Plus className="w-4 h-4 mr-1.5" /> Create Task List
-                  </Button>
-                </Link>
-              }
+              icon={<ClipboardList className="w-8 h-8 text-[var(--color-text-tertiary)]" />}
+              title="No task lists for today yet"
+              description="Create a task checklist and share it directly with your students on WhatsApp, or duplicate yesterday's lists."
+              actionLabel="+ Create Task List"
+              onAction={() => router.push("/admin/tasks/new")}
+              secondaryActionLabel="Duplicate Yesterday"
+              onSecondaryAction={handleDuplicateYesterday}
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {recentLists.map((list) => (
-                  <TaskListCard
-                    key={list.id}
-                    id={list.id}
-                    token={list.token}
-                    title={list.title}
-                    groupName={list.group_name}
-                    listDate={list.list_date}
-                    dueAt={list.due_at}
-                    status={list.status || "active"}
-                    totalItems={list.total_items}
-                    completedItems={list.completed_items}
-                    recurrence={
-                      list.recurrence as {
-                        freq?: string;
-                        auto_generated?: boolean;
-                      } | null
-                    }
-                    onDelete={handleDeleteList}
-                  />
+                <TaskListCard
+                  key={list.id}
+                  id={list.id}
+                  token={list.token}
+                  title={list.title}
+                  groupName={list.group_name}
+                  listDate={list.list_date}
+                  dueAt={list.due_at}
+                  status={list.status || "active"}
+                  totalItems={list.total_items}
+                  completedItems={list.completed_items}
+                  recurrence={
+                    list.recurrence as {
+                      freq?: string;
+                      auto_generated?: boolean;
+                    } | null
+                  }
+                  onDelete={handleDeleteList}
+                />
               ))}
             </div>
           )}
         </section>
 
-        {/* Per-Group Progress Section */}
+        {/* GROUP SNAPSHOT */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                Group Performance
-              </h2>
-              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                {groupStats.length}
-              </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-[var(--color-text-primary)]">
+                  Group Snapshot
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]">
+                  {groupStats.length}
+                </span>
+              </div>
+              <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5">
+                Current progress and activity across your student rosters
+              </p>
             </div>
 
             <Link
               href="/admin/groups"
-              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+              className="text-xs font-medium text-[var(--color-primary-text)] hover:underline flex items-center gap-0.5"
             >
               Manage groups <ChevronRight className="w-3.5 h-3.5" />
             </Link>
@@ -803,27 +587,16 @@ export default function AdminDashboardPage() {
           {isLoading && groupStats.length === 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3"
-                >
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-48" />
-                </div>
+                <Skeleton key={i} variant="card" className="h-32" />
               ))}
             </div>
           ) : groupStats.length === 0 ? (
             <EmptyState
-              icon={<Users className="w-10 h-10 text-slate-400" />}
+              icon={<Users className="w-8 h-8 text-[var(--color-text-tertiary)]" />}
               title="No groups found"
               description="Create student groups to organize tasks and track team submissions."
-              actionNode={
-                <Link href="/admin/groups/new">
-                  <Button size="sm" variant="primary">
-                    <Plus className="w-4 h-4 mr-1.5" /> Create Group
-                  </Button>
-                </Link>
-              }
+              actionLabel="+ Create Group"
+              onAction={() => router.push("/admin/groups/new")}
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -833,51 +606,39 @@ export default function AdminDashboardPage() {
                   href={`/admin/groups/${grp.id}`}
                   className="group block"
                 >
-                  <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-emerald-500/50 hover:shadow-md transition-all flex flex-col justify-between h-full">
+                  <div className="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/40 hover:shadow-sm transition-all flex flex-col justify-between h-full space-y-3">
                     <div>
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div>
-                          <h3 className="font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">
-                            {grp.name}
-                          </h3>
-                          {grp.description && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
-                              {grp.description}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Circular Progress Ring */}
-                        <CircularProgress value={grp.completion_rate} />
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h3 className="font-semibold text-sm text-[var(--color-text-primary)] group-hover:text-[var(--color-primary)] transition-colors truncate">
+                          {grp.name}
+                        </h3>
+                        <span className="text-[11px] font-medium text-[var(--color-text-tertiary)] shrink-0 flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {grp.members_total}
+                        </span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y border-slate-100 dark:border-slate-800 my-2">
-                        <div>
-                          <span className="text-[11px] text-slate-400 block">
-                            Tasks in Period
-                          </span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
-                            {grp.done}/{grp.created} done
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[11px] text-slate-400 block">
-                            Link Activity
-                          </span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
-                            {grp.members_opened}/{grp.members_total} viewed
+                      <div className="space-y-1 mt-2">
+                        <ProgressBar
+                          value={grp.done}
+                          max={Math.max(grp.created, 1)}
+                          showLabel={false}
+                          size="sm"
+                          animateColor={true}
+                        />
+                        <div className="flex justify-between items-center text-[11px] text-[var(--color-text-secondary)]">
+                          <span>{grp.done} of {grp.created} done</span>
+                          <span className="font-semibold text-[var(--color-text-primary)]">
+                            {grp.completion_rate}%
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs pt-2">
-                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5" />
-                        {grp.members_total} members
-                      </span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                        Details <ChevronRight className="w-3.5 h-3.5" />
+                    <div className="pt-2 border-t border-[var(--color-border-secondary)] flex items-center justify-between text-[11px] text-[var(--color-text-tertiary)]">
+                      <span>{grp.members_opened} of {grp.members_total} opened links</span>
+                      <span className="text-[var(--color-primary-text)] font-medium group-hover:translate-x-0.5 transition-transform flex items-center">
+                        Details <ChevronRight className="w-3 h-3 ml-0.5" />
                       </span>
                     </div>
                   </div>
@@ -885,6 +646,72 @@ export default function AdminDashboardPage() {
               ))}
             </div>
           )}
+        </section>
+
+        {/* QUICK ACTIONS ROW (Bottom) */}
+        <section className="space-y-3 pt-2">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-tertiary)]">
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Duplicate Yesterday */}
+            <button
+              type="button"
+              onClick={handleDuplicateYesterday}
+              disabled={duplicatingYesterday}
+              className="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-sunken)] hover:border-[var(--color-primary)]/40 transition-all text-left flex items-start gap-3 disabled:opacity-50"
+            >
+              <div className="p-2.5 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary)] shrink-0">
+                <CopyPlus className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-[var(--color-text-primary)]">
+                  {duplicatingYesterday ? "Duplicating…" : "Duplicate Yesterday"}
+                </h3>
+                <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
+                  Clone yesterday’s lists into today as new drafts
+                </p>
+              </div>
+            </button>
+
+            {/* Reports */}
+            <Link
+              href="/admin/reports"
+              className="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-sunken)] hover:border-[var(--color-primary)]/40 transition-all text-left flex items-start gap-3"
+            >
+              <div className="p-2.5 rounded-lg bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] shrink-0">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-[var(--color-text-primary)]">
+                  View Reports
+                </h3>
+                <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
+                  Completion analytics, heatmaps & PDF export
+                </p>
+              </div>
+            </Link>
+
+            {/* Export CSV */}
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={exportingCsv}
+              className="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-sunken)] hover:border-[var(--color-primary)]/40 transition-all text-left flex items-start gap-3 disabled:opacity-50"
+            >
+              <div className="p-2.5 rounded-lg bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] shrink-0">
+                <Download className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-[var(--color-text-primary)]">
+                  {exportingCsv ? "Exporting…" : "Export CSV"}
+                </h3>
+                <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
+                  Download spreadsheet records for selected period
+                </p>
+              </div>
+            </button>
+          </div>
         </section>
       </div>
     </AdminLayout>

@@ -81,22 +81,21 @@ interface TaskDetailResponse {
     id: string;
     name: string;
     phone?: string | null;
-    active: boolean;
+  }>;
+  opens: Array<{
+    id: number;
+    member_id: string;
+    opened_at: string;
+    member?: { name: string };
   }>;
   share_logs: Array<{
-    id: string;
+    id: number;
     channel: string;
     shared_at: string;
   }>;
-  opens: Array<{
-    id: string;
-    member_id: string;
-    opened_at: string;
-    member?: { id: string; name: string };
-  }>;
 }
 
-export default function TaskListDetailPage({
+export default function TaskDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -109,30 +108,33 @@ export default function TaskListDetailPage({
     `/api/admin/task-lists/${id}`
   );
 
-  // Modals state
+  // Modals & form state
   const [showEditList, setShowEditList] = useState(false);
+  const [showDeleteList, setShowDeleteList] = useState(false);
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [shareSheetMode, setShareSheetMode] = useState<"share" | "reminder" | null>(null);
+
+  // Edit List Form State
   const [editTitle, setEditTitle] = useState("");
   const [editDate, setEditDate] = useState("");
   const [editDue, setEditDue] = useState("");
   const [savingList, setSavingList] = useState(false);
-
-  const [showDeleteList, setShowDeleteList] = useState(false);
   const [deletingList, setDeletingList] = useState(false);
 
-  const [showAddItem, setShowAddItem] = useState(false);
+  // Add Item Form State
   const [newItemText, setNewItemText] = useState("");
   const [newItemPriority, setNewItemPriority] = useState<"low" | "normal" | "high" | "urgent">("normal");
   const [newItemAssignee, setNewItemAssignee] = useState("");
   const [savingItem, setSavingItem] = useState(false);
 
+  // Action loadings
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
-  const [shareSheetMode, setShareSheetMode] = useState<"share" | "reminder" | null>(null);
 
   const handleOpenEditList = () => {
     if (!data?.task_list) return;
     setEditTitle(data.task_list.title);
     setEditDate(data.task_list.list_date);
-    setEditDue(data.task_list.due_at || "");
+    setEditDue(data.task_list.due_at ? data.task_list.due_at.slice(0, 16) : "");
     setShowEditList(true);
   };
 
@@ -148,12 +150,16 @@ export default function TaskListDetailPage({
         body: JSON.stringify({
           title: editTitle.trim(),
           list_date: editDate,
-          due_at: editDue || null,
+          due_at: editDue ? new Date(editDue).toISOString() : null,
         }),
       });
+
       const json = await res.json();
-      if (!res.ok || json.success === false) throw new Error(json?.error?.message);
-      toast.success("Task list updated!");
+      if (!res.ok || json.success === false) {
+        throw new Error(json?.error?.message || "Failed to update list");
+      }
+
+      toast.success("Task list updated successfully");
       setShowEditList(false);
       mutate();
     } catch (err: any) {
@@ -169,47 +175,22 @@ export default function TaskListDetailPage({
       const res = await fetch(`/api/admin/task-lists/${id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete list");
+      if (!res.ok) throw new Error("Failed to archive task list");
+
       toast.success("Task list archived");
       router.push("/admin/tasks");
     } catch (err: any) {
-      toast.error(err.message || "Failed to delete list");
+      toast.error(err.message || "Failed to archive task list");
     } finally {
       setDeletingList(false);
       setShowDeleteList(false);
     }
   };
 
-  const handleCopyLink = async () => {
-    if (!data?.task_list) return;
-    try {
-      await navigator.clipboard.writeText(data.task_list.member_link);
-      toast.success("Member checklist link copied to clipboard!");
-    } catch {
-      toast.error("Failed to copy link");
-    }
-  };
-
-  const handleShareWa = () => {
-    if (!data?.task_list?.share_url) return;
-    window.open(data.task_list.share_url, "_blank");
-  };
-
-  // Item Action Handlers
-  const handleCompleteItem = async (itemId: string) => {
-    try {
-      setActionLoadingId(itemId);
-      const res = await fetch(`/api/admin/items/${itemId}/complete`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error("Failed to mark item done");
-      toast.success("Item marked verified!");
-      mutate();
-    } catch (err: any) {
-      toast.error(err.message || "Action failed");
-    } finally {
-      setActionLoadingId(null);
-    }
+  const handleCopyLink = () => {
+    if (!data?.task_list.member_link) return;
+    navigator.clipboard.writeText(data.task_list.member_link);
+    toast.success("Member checklist link copied to clipboard!");
   };
 
   const handleVerifyItem = async (itemId: string) => {
@@ -218,11 +199,33 @@ export default function TaskListDetailPage({
       const res = await fetch(`/api/admin/items/${itemId}/verify`, {
         method: "POST",
       });
-      if (!res.ok) throw new Error("Failed to verify item");
-      toast.success("Member tick verified!");
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json?.error?.message || "Failed to verify item");
+      }
+      toast.success("Item verified!");
       mutate();
     } catch (err: any) {
-      toast.error(err.message || "Verification failed");
+      toast.error(err.message || "Verify failed");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleCompleteItem = async (itemId: string) => {
+    try {
+      setActionLoadingId(itemId);
+      const res = await fetch(`/api/admin/items/${itemId}/complete`, {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json?.error?.message || "Failed to complete item");
+      }
+      toast.success("Item marked done!");
+      mutate();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to complete item");
     } finally {
       setActionLoadingId(null);
     }
@@ -245,6 +248,8 @@ export default function TaskListDetailPage({
   };
 
   const handleDeleteItem = async (itemId: string) => {
+    if (!confirm("Are you sure you want to delete this task item?")) return;
+
     try {
       setActionLoadingId(itemId);
       const res = await fetch(`/api/admin/items/${itemId}`, {
@@ -294,7 +299,7 @@ export default function TaskListDetailPage({
 
   if (isLoading) {
     return (
-      <AdminLayout title="Loading Task List..." subtitle="Fetching checklist data">
+      <AdminLayout title="Loading Task List…" subtitle="Fetching checklist data">
         <div className="space-y-6">
           <Skeleton variant="card" className="h-32" />
           <Skeleton variant="card" className="h-64" />
@@ -344,8 +349,8 @@ export default function TaskListDetailPage({
           </Button>
           <Button
             size="sm"
+            variant="whatsapp"
             onClick={() => setShareSheetMode("share")}
-            className="bg-[#25D366] hover:bg-[#20ba5a] text-white"
           >
             <Share2 className="w-3.5 h-3.5 mr-1" /> Share WA
           </Button>
@@ -353,7 +358,6 @@ export default function TaskListDetailPage({
             variant="outline"
             size="sm"
             onClick={() => setShareSheetMode("reminder")}
-            className="border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
           >
             <Bell className="w-3.5 h-3.5 mr-1" /> Remind
           </Button>
@@ -366,10 +370,9 @@ export default function TaskListDetailPage({
             <Edit className="w-3.5 h-3.5" />
           </Button>
           <Button
-            variant="ghost"
+            variant="danger"
             size="sm"
             onClick={() => setShowDeleteList(true)}
-            className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -378,7 +381,7 @@ export default function TaskListDetailPage({
     >
       <div className="space-y-6">
         {/* Progress Card */}
-        <Card className="p-6 space-y-4">
+        <Card className="p-5 sm:p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge
@@ -389,7 +392,7 @@ export default function TaskListDetailPage({
                     ? "done"
                     : "neutral"
                 }
-                className="text-xs uppercase"
+                className="text-xs capitalize"
               >
                 {task_list.status}
               </Badge>
@@ -405,7 +408,7 @@ export default function TaskListDetailPage({
               )}
             </div>
 
-            <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-4">
+            <div className="text-xs text-[var(--color-text-tertiary)] flex items-center gap-4">
               <span className="flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" />
                 {formatDate(task_list.list_date)}
@@ -420,7 +423,7 @@ export default function TaskListDetailPage({
                 href={task_list.member_link}
                 target="_blank"
                 rel="noreferrer"
-                className="text-emerald-600 hover:underline flex items-center gap-1 font-semibold"
+                className="text-[var(--color-primary-text)] hover:underline flex items-center gap-1 font-semibold"
               >
                 Open Member Page <ExternalLink className="w-3 h-3" />
               </a>
@@ -433,26 +436,26 @@ export default function TaskListDetailPage({
             size="md"
           />
 
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
+          <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)] pt-1">
             <span>
               <strong>{task_list.completed_items}</strong> of{" "}
               <strong>{task_list.total_items}</strong> items completed
             </span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
+            <span className="font-semibold text-[var(--color-text-primary)]">
               {task_list.completion_rate}% Completed
             </span>
           </div>
         </Card>
 
         {/* Task Items Management Card */}
-        <Card className="p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <Card className="p-5 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-[var(--color-border-secondary)] pb-2.5">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
                 Task Items ({items.length})
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Click controls to verify member ticks or mark completed directly
+              <p className="text-xs text-[var(--color-text-tertiary)]">
+                Confirm member ticks or mark items done directly
               </p>
             </div>
 
@@ -462,11 +465,11 @@ export default function TaskListDetailPage({
           </div>
 
           {items.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-400">
+            <div className="p-8 text-center border border-dashed border-[var(--color-border-primary)] rounded-lg text-xs text-[var(--color-text-tertiary)]">
               No tasks in this list. Click &quot;Add Item&quot; to add one.
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {items.map((item, index) => {
                 const completion = getCompletionFor(item.id);
                 const assigned = members.find((m) => m.id === item.assigned_member_id);
@@ -481,49 +484,49 @@ export default function TaskListDetailPage({
                 return (
                   <div
                     key={item.id}
-                    className={`p-4 rounded-xl border transition-all ${
+                    className={`p-3.5 rounded-lg border transition-all ${
                       item.status === "verified"
-                        ? "bg-emerald-500/5 dark:bg-emerald-950/20 border-emerald-500/20"
+                        ? "bg-[var(--color-primary-subtle)]/40 border-[var(--color-status-verified)]/30"
                         : item.status === "done"
-                        ? "bg-blue-500/5 dark:bg-blue-950/20 border-blue-500/20"
-                        : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm"
+                        ? "bg-[var(--color-surface-sunken)] border-[var(--color-status-done)]/30"
+                        : "bg-[var(--color-surface)] border-[var(--color-border-primary)] shadow-xs"
                     }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <span className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 font-bold flex items-center justify-center text-xs shrink-0 text-slate-500 mt-0.5">
+                        <span className="w-5 h-5 rounded bg-[var(--color-surface-sunken)] font-bold flex items-center justify-center text-[10px] shrink-0 text-[var(--color-text-secondary)] mt-0.5">
                           {index + 1}
                         </span>
 
                         <div className="space-y-1 min-w-0 flex-1">
                           <p
-                            className={`text-sm font-medium leading-relaxed ${
+                            className={`text-xs font-medium leading-relaxed ${
                               item.status === "verified"
-                                ? "line-through text-slate-400 dark:text-slate-500"
-                                : "text-slate-900 dark:text-slate-100"
+                                ? "line-through text-[var(--color-text-tertiary)]"
+                                : "text-[var(--color-text-primary)]"
                             }`}
                           >
                             {item.text}
                           </p>
 
-                          <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                          <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-[var(--color-text-tertiary)]">
                             {statusBadge}
 
                             {item.priority !== "normal" && (
-                              <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600">
+                              <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]">
                                 {item.priority}
                               </span>
                             )}
 
                             {assigned && (
-                              <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                              <span className="text-[11px] text-[var(--color-text-secondary)] flex items-center gap-1">
                                 <User className="w-3 h-3" />
                                 Assigned: {assigned.name}
                               </span>
                             )}
 
                             {completion && (
-                              <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                              <span className="text-[11px] text-[var(--color-text-tertiary)] flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 {getMemberName(completion.member_id)} ·{" "}
                                 {formatRelativeTime(completion.completed_at)}
@@ -533,17 +536,17 @@ export default function TaskListDetailPage({
                         </div>
                       </div>
 
-                      {/* Professor Action Buttons per item */}
+                      {/* Action Buttons per item */}
                       <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
                         {item.status === "pending" && (
                           <Button
                             size="sm"
-                            variant="primary"
+                            variant="secondary"
                             loading={isItemLoading}
                             onClick={() => handleCompleteItem(item.id)}
-                            className="text-xs py-1 px-2.5 h-8"
+                            className="text-xs h-7 px-2"
                           >
-                            <Check className="w-3.5 h-3.5 mr-1" /> Mark Done
+                            <Check className="w-3 h-3 mr-1 text-[var(--color-primary)]" /> Mark Done
                           </Button>
                         )}
 
@@ -553,9 +556,9 @@ export default function TaskListDetailPage({
                             variant="primary"
                             loading={isItemLoading}
                             onClick={() => handleVerifyItem(item.id)}
-                            className="text-xs py-1 px-2.5 h-8 bg-emerald-600 hover:bg-emerald-500"
+                            className="text-xs h-7 px-2"
                           >
-                            <ShieldCheck className="w-3.5 h-3.5 mr-1" /> Verify
+                            <ShieldCheck className="w-3 h-3 mr-1" /> Verify
                           </Button>
                         )}
 
@@ -565,10 +568,10 @@ export default function TaskListDetailPage({
                             variant="outline"
                             loading={isItemLoading}
                             onClick={() => handleUndoItem(item.id)}
-                            className="text-xs py-1 px-2.5 h-8 text-slate-500 hover:text-slate-800"
+                            className="text-xs h-7 px-2"
                             title="Undo completion"
                           >
-                            <RotateCcw className="w-3.5 h-3.5" />
+                            <RotateCcw className="w-3 h-3" />
                           </Button>
                         )}
 
@@ -577,7 +580,7 @@ export default function TaskListDetailPage({
                           variant="ghost"
                           loading={isItemLoading}
                           onClick={() => handleDeleteItem(item.id)}
-                          className="text-xs p-1.5 h-8 text-slate-400 hover:text-rose-500"
+                          className="text-xs p-1 h-7 text-[var(--color-text-tertiary)] hover:text-[var(--color-danger)]"
                           title="Delete item"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -591,31 +594,31 @@ export default function TaskListDetailPage({
           )}
         </Card>
 
-        {/* Audit & Activity: Opens & Shares */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Opens Audit */}
-          <Card className="p-5 space-y-3">
-            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-              <Eye className="w-4 h-4 text-emerald-600" />
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+        {/* Audit & Activity */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Member Opens */}
+          <Card className="p-4 space-y-2.5">
+            <div className="flex items-center gap-2 border-b border-[var(--color-border-secondary)] pb-2">
+              <Eye className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+              <h3 className="text-xs font-bold text-[var(--color-text-primary)]">
                 Member Opens ({opens.length})
               </h3>
             </div>
             {opens.length === 0 ? (
-              <p className="text-xs text-slate-400 py-3 text-center">
+              <p className="text-xs text-[var(--color-text-tertiary)] py-2 text-center">
                 No member opens recorded yet.
               </p>
             ) : (
-              <div className="space-y-1.5 max-h-48 overflow-y-auto text-xs">
+              <div className="space-y-1 max-h-44 overflow-y-auto text-xs">
                 {opens.map((open) => (
                   <div
                     key={open.id}
-                    className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-slate-50 dark:bg-slate-800/40"
+                    className="flex items-center justify-between py-1 px-2 rounded bg-[var(--color-surface-sunken)]"
                   >
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    <span className="font-semibold text-[var(--color-text-primary)]">
                       {open.member?.name || "Member"}
                     </span>
-                    <span className="text-slate-400">
+                    <span className="text-[11px] text-[var(--color-text-tertiary)]">
                       {formatRelativeTime(open.opened_at)}
                     </span>
                   </div>
@@ -625,28 +628,28 @@ export default function TaskListDetailPage({
           </Card>
 
           {/* Share Log */}
-          <Card className="p-5 space-y-3">
-            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-              <Share2 className="w-4 h-4 text-blue-600" />
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+          <Card className="p-4 space-y-2.5">
+            <div className="flex items-center gap-2 border-b border-[var(--color-border-secondary)] pb-2">
+              <Share2 className="w-3.5 h-3.5 text-blue-600" />
+              <h3 className="text-xs font-bold text-[var(--color-text-primary)]">
                 Share Dispatch Log ({share_logs.length})
               </h3>
             </div>
             {share_logs.length === 0 ? (
-              <p className="text-xs text-slate-400 py-3 text-center">
+              <p className="text-xs text-[var(--color-text-tertiary)] py-2 text-center">
                 No share events logged yet.
               </p>
             ) : (
-              <div className="space-y-1.5 max-h-48 overflow-y-auto text-xs">
+              <div className="space-y-1 max-h-44 overflow-y-auto text-xs">
                 {share_logs.map((log) => (
                   <div
                     key={log.id}
-                    className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-slate-50 dark:bg-slate-800/40"
+                    className="flex items-center justify-between py-1 px-2 rounded bg-[var(--color-surface-sunken)]"
                   >
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 uppercase text-[11px]">
+                    <span className="font-semibold text-[var(--color-text-primary)] text-[11px] uppercase">
                       {log.channel.replace("_", " ")}
                     </span>
-                    <span className="text-slate-400">
+                    <span className="text-[11px] text-[var(--color-text-tertiary)]">
                       {formatRelativeTime(log.shared_at)}
                     </span>
                   </div>
@@ -656,8 +659,6 @@ export default function TaskListDetailPage({
           </Card>
         </div>
       </div>
-
-      {/* ══ Modals ══ */}
 
       {/* Edit List Modal */}
       <Modal
@@ -685,7 +686,7 @@ export default function TaskListDetailPage({
             value={editDue}
             onChange={(e) => setEditDue(e.target.value)}
           />
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[var(--color-border-secondary)]">
             <Button
               type="button"
               variant="outline"
@@ -693,8 +694,8 @@ export default function TaskListDetailPage({
             >
               Cancel
             </Button>
-            <Button type="submit" loading={savingList}>
-              Save
+            <Button type="submit" variant="primary" loading={savingList}>
+              Save Changes
             </Button>
           </div>
         </form>
@@ -730,13 +731,13 @@ export default function TaskListDetailPage({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 Priority
               </label>
               <select
                 value={newItemPriority}
                 onChange={(e) => setNewItemPriority(e.target.value as any)}
-                className="w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs p-2.5"
+                className="w-full rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-input)] text-xs p-2 text-[var(--color-text-primary)]"
               >
                 <option value="low">Low</option>
                 <option value="normal">Normal</option>
@@ -747,13 +748,13 @@ export default function TaskListDetailPage({
 
             {members.length > 0 && (
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   Assign To
                 </label>
                 <select
                   value={newItemAssignee}
                   onChange={(e) => setNewItemAssignee(e.target.value)}
-                  className="w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs p-2.5"
+                  className="w-full rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-input)] text-xs p-2 text-[var(--color-text-primary)]"
                 >
                   <option value="">Unassigned</option>
                   {members.map((m) => (
@@ -766,7 +767,7 @@ export default function TaskListDetailPage({
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[var(--color-border-secondary)]">
             <Button
               type="button"
               variant="outline"
@@ -774,7 +775,7 @@ export default function TaskListDetailPage({
             >
               Cancel
             </Button>
-            <Button type="submit" loading={savingItem}>
+            <Button type="submit" variant="primary" loading={savingItem}>
               Add Item
             </Button>
           </div>

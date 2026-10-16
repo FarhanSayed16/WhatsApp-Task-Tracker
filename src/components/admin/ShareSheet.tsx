@@ -27,6 +27,7 @@ import {
   Sparkles,
   Loader2,
 } from "lucide-react";
+import { WhatsAppIcon } from "@/components/icons/WhatsApp";
 
 export interface ShareSheetProps {
   isOpen: boolean;
@@ -313,8 +314,8 @@ export function ShareSheet({
                   onClick={() => setReminderType(r)}
                   className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors capitalize ${
                     reminderType === r
-                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900"
+                      ? "bg-[var(--color-text-primary)] text-[var(--color-text-inverse)]"
+                      : "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                   }`}
                 >
                   {r}
@@ -328,16 +329,16 @@ export function ShareSheet({
         {activeTab === "reminder" &&
           (reminderType === "individual" || reminderType === "overdue") &&
           members.length > 0 && (
-          <div className="space-y-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+          <div className="space-y-2 p-3 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-primary)]">
+            <label className="block text-xs font-semibold text-[var(--color-text-secondary)]">
               {reminderType === "overdue"
-                ? "Remind a member (pending items):"
+                 ? "Remind a member (pending items):"
                 : "Select Member to Remind:"}
             </label>
             <select
               value={selectedMemberId}
               onChange={(e) => setSelectedMemberId(e.target.value)}
-              className="w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs p-2 text-slate-900 dark:text-slate-100"
+              className="w-full rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-input)] text-xs p-2 text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-primary-subtle)]"
             >
               <option value="">Choose a member...</option>
               {members
@@ -362,7 +363,7 @@ export function ShareSheet({
             {selectedMemberId && (
               <button
                 type="button"
-                className="text-[11px] font-semibold text-emerald-600 hover:underline"
+                className="text-[11px] font-semibold text-[var(--color-primary)] hover:underline"
                 onClick={() => {
                   const m = members.find((x) => x.id === selectedMemberId);
                   if (m?.phone) handleOpenWhatsApp(m.phone, m.id);
@@ -488,20 +489,20 @@ export function ShareSheet({
             </div>
           )}
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
+            <span className="font-semibold text-[var(--color-text-primary)]">
               Message Preview (Editable):
             </span>
             <div className="flex items-center gap-2">
-              <span className="text-slate-400">
+              <span className="text-[var(--color-text-tertiary)]">
                 {messageText.length} chars
               </span>
               <span
                 className={`text-[11px] px-1.5 py-0.2 rounded font-semibold ${
                   urlStats.isExceeded
-                    ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
+                    ? "bg-[var(--color-danger-bg)] text-[var(--color-danger)]"
                     : urlStats.isWarning
-                    ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
-                    : "text-slate-400"
+                    ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
+                    : "text-[var(--color-text-tertiary)]"
                 }`}
               >
                 URL: {urlStats.length} / 2048
@@ -513,11 +514,11 @@ export function ShareSheet({
             rows={7}
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
-            className="w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-mono text-xs p-3.5 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 leading-relaxed resize-none"
+            className="w-full rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-input)] text-[var(--color-text-primary)] font-mono text-xs p-3.5 focus:outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-primary-subtle)] leading-relaxed resize-none"
           />
 
           {urlStats.isExceeded && (
-            <p className="text-xs text-rose-500 flex items-center gap-1 font-semibold">
+            <p className="text-xs text-[var(--color-danger)] flex items-center gap-1 font-semibold">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
               URL length exceeds 2048 characters. Please shorten title or items before sending.
             </p>
@@ -525,14 +526,14 @@ export function ShareSheet({
         </div>
 
         {/* Member Link Quick Copy */}
-        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
-          <div className="min-w-0 flex-1 truncate font-mono text-slate-600 dark:text-slate-400 text-[11px]">
+        <div className="p-3 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-primary)] flex items-center justify-between gap-2 text-xs">
+          <div className="min-w-0 flex-1 truncate font-mono text-[var(--color-text-secondary)] text-[11px]">
             {publicLink}
           </div>
           <button
             type="button"
             onClick={handleCopyLink}
-            className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold flex items-center gap-1 shrink-0"
+            className="text-[var(--color-primary)] hover:underline font-semibold flex items-center gap-1 shrink-0"
           >
             <Copy className="w-3.5 h-3.5" /> Copy Link
           </button>
@@ -542,18 +543,18 @@ export function ShareSheet({
         <div className="space-y-2 pt-2">
           <Button
             type="button"
-            variant="primary"
+            variant="whatsapp"
             size="lg"
             onClick={() => handleOpenWhatsApp(defaultWaPhone)}
-            className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white shadow-md shadow-emerald-600/20 text-sm font-bold py-3"
+            className="w-full text-sm font-bold py-3 flex items-center justify-center gap-2"
           >
-            <Send className="w-4 h-4 mr-2" />
+            <WhatsAppIcon className="w-5 h-5 mr-1" />
             {defaultWaPhone
               ? `Open WhatsApp (+${defaultWaPhone})`
               : "Open in WhatsApp"}
           </Button>
           {defaultWaPhone && (
-            <p className="text-[11px] text-center text-slate-500">
+            <p className="text-[11px] text-center text-[var(--color-text-tertiary)]">
               Opens a chat with your saved test number and the checklist + member link pre-filled.
               Change this under Settings.
             </p>

@@ -9,6 +9,8 @@ export interface EmptyStateProps {
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
   actionNode?: React.ReactNode;
   /** Optional workflow steps to display instead of a simple message */
   steps?: Array<{ icon: React.ReactNode; label: string; description: string }>;
@@ -23,6 +25,8 @@ export function EmptyState({
   description,
   actionLabel,
   onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
   actionNode,
   steps,
   compact = false,
@@ -73,13 +77,22 @@ export function EmptyState({
         </div>
       )}
 
-      {/* Action */}
+      {/* Actions */}
       {actionNode ? (
         actionNode
-      ) : actionLabel && onAction ? (
-        <Button onClick={onAction} size="md">
-          {actionLabel}
-        </Button>
+      ) : (actionLabel && onAction) || (secondaryActionLabel && onSecondaryAction) ? (
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {actionLabel && onAction && (
+            <Button onClick={onAction} size="md">
+              {actionLabel}
+            </Button>
+          )}
+          {secondaryActionLabel && onSecondaryAction && (
+            <Button onClick={onSecondaryAction} variant="secondary" size="md">
+              {secondaryActionLabel}
+            </Button>
+          )}
+        </div>
       ) : null}
     </div>
   );

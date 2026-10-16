@@ -86,8 +86,8 @@ export default function TaskListsPage() {
             }}
           />
 
-          <div className="flex items-center gap-3">
-            <div className="w-44 sm:w-56">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="w-full sm:w-56">
               <SearchInput
                 placeholder="Search lists..."
                 onDebouncedChange={(val) => {
@@ -104,7 +104,7 @@ export default function TaskListsPage() {
                   setGroupId(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs px-3 py-2 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500"
+                className="rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-input)] text-xs px-3 py-2 text-[var(--color-text-secondary)] focus:outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-primary-subtle)]"
               >
                 <option value="">All Groups</option>
                 {groups.map((g: any) => (
@@ -114,6 +114,16 @@ export default function TaskListsPage() {
                 ))}
               </select>
             )}
+
+            <div className="text-xs text-[var(--color-text-secondary)] font-medium ml-auto hidden sm:block">
+              {isLoading ? (
+                <span>Loading...</span>
+              ) : (
+                <span>
+                  Showing <strong className="text-[var(--color-text-primary)]">{taskLists.length}</strong> of <strong className="text-[var(--color-text-primary)]">{total}</strong>
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

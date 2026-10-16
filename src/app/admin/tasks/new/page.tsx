@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -9,13 +9,19 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { ShareSheet } from "@/components/admin/ShareSheet";
+import { VoiceTaskInput } from "@/components/admin/VoiceTaskInput";
 import { useSWRFetch } from "@/hooks/useSWRFetch";
+import { useSession } from "@/hooks/useSession";
 import { useToast } from "@/components/ui/Toast";
+import { zonedDateTimeToUtcIso, cn, parsePastedTasks } from "@/lib/utils";
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
+import type { ParsedAITaskItem } from "@/lib/ai";
 import {
   ArrowLeft,
   Plus,
   Trash2,
-  Share2,
   FileText,
   AlertTriangle,
   User,
@@ -26,15 +32,6 @@ import {
   Sparkles,
   Loader2,
 } from "lucide-react";
-
-import { Suspense } from "react";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { ShareSheet } from "@/components/admin/ShareSheet";
-import { zonedDateTimeToUtcIso, cn, parsePastedTasks } from "@/lib/utils";
-import { DEFAULT_TIMEZONE } from "@/lib/constants";
-import { useSession } from "@/hooks/useSession";
-import { VoiceTaskInput } from "@/components/admin/VoiceTaskInput";
-import type { ParsedAITaskItem } from "@/lib/ai";
 
 interface ItemDraft {
   id: string;
@@ -47,7 +44,7 @@ export default function NewTaskPage() {
   return (
     <Suspense
       fallback={
-        <AdminLayout title="Create Task List" subtitle="Loading form...">
+        <AdminLayout title="Create Task List" subtitle="Loading form…">
           <div className="max-w-3xl mx-auto space-y-6">
             <Skeleton variant="card" className="h-48" />
             <Skeleton variant="card" className="h-64" />
@@ -83,7 +80,7 @@ function NewTaskForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
 
-  // Recurrence Schedule State (Phase 12.5)
+  // Recurrence Schedule State
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceFreq, setRecurrenceFreq] = useState<"daily" | "weekly" | "custom">("daily");
   const [recurrenceDays, setRecurrenceDays] = useState<number[]>([1, 2, 3, 4, 5]);
@@ -98,129 +95,119 @@ function NewTaskForm() {
     group_name: string;
     list_date: string;
     due_at?: string | null;
-    member_link?: string;
-    items: Array<{ id: string; text: string; status: string }>;
-    members: Array<{ id: string; name: string; phone?: string | null; active: boolean }>;
+    member_link: string;
+    items: any[];
+    members: any[];
   } | null>(null);
 
-  // Fetch groups
+  // Fetch groups for dropdown
   const { data: groupsData } = useSWRFetch<any>("/api/admin/groups?limit=100");
   const groups = Array.isArray(groupsData) ? groupsData : groupsData?.data || [];
 
-  // Prefer last-used group from localStorage, else first group
+  // Auto-select group if only 1 group exists
   useEffect(() => {
-    if (groupId) return;
-    if (groups.length === 0) return;
-    const last =
-      typeof window !== "undefined"
-        ? localStorage.getItem("wtt_last_group_id")
-        : null;
-    const match = last && groups.find((g: { id: string }) => g.id === last);
-    setGroupId(match ? match.id : groups[0].id);
-  }, [groupId, groups]);
+    if (!groupId && groups.length === 1) {
+      setGroupId(groups[0].id);
+    } else if (!groupId && typeof window !== "undefined") {
+      const saved = localStorage.getItem("wtt_last_group_id");
+      if (saved && groups.some((g: any) => g.id === saved)) {
+        setGroupId(saved);
+      }
+    }
+  }, [groups, groupId]);
 
-  // Load template if template_id in URL (Phase 12.2)
-  useEffect(() => {
-    if (!templateId) return;
-    fetch(`/api/admin/templates/${templateId}`)
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.success && res.data) {
-          const t = res.data;
-          setTitle((prev) => prev || t.name);
-          if (t.body?.items && t.body.items.length > 0) {
-            const drafts: ItemDraft[] = t.body.items.map((itemText: string, idx: number) => ({
-              id: `${Date.now()}-${idx}`,
-              text: itemText,
-              priority: "normal",
-              assigned_member_id: null,
-            }));
-            setItems(drafts);
-            toast.success(`Loaded ${drafts.length} items from template "${t.name}"`);
-          }
-        }
-      })
-      .catch((err) => console.error("Error loading template:", err));
-  }, [templateId]);
-
-  // Clone from existing task list if clone_from in URL (Phase 12.3)
-  useEffect(() => {
-    if (!cloneFromId) return;
-    fetch(`/api/admin/task-lists/${cloneFromId}`)
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.success && res.data) {
-          const list = res.data.task_list;
-          const taskItems = res.data.items || [];
-          setTitle((prev) => prev || `${list.title} (Copy)`);
-          if (list.group_id) setGroupId(list.group_id);
-          if (taskItems.length > 0) {
-            const drafts: ItemDraft[] = taskItems.map((item: any, idx: number) => ({
-              id: `${Date.now()}-${idx}`,
-              text: item.text,
-              priority: item.priority || "normal",
-              assigned_member_id: item.assigned_member_id || null,
-            }));
-            setItems(drafts);
-            toast.success(`Cloned ${drafts.length} items from "${list.title}"`);
-          }
-        }
-      })
-      .catch((err) => console.error("Error cloning task list:", err));
-  }, [cloneFromId]);
-
-  // Fetch members for currently selected group
+  // Fetch members for selected group
   const { data: membersData } = useSWRFetch<any>(
-    groupId ? `/api/admin/members?group_id=${groupId}` : null
+    groupId ? `/api/admin/groups/${groupId}/members` : null
   );
   const members = Array.isArray(membersData) ? membersData : membersData?.data || [];
 
+  // Load from template if provided
+  const { data: templateData } = useSWRFetch<any>(
+    templateId ? `/api/admin/templates/${templateId}` : null
+  );
+
+  useEffect(() => {
+    if (templateData?.data) {
+      const t = templateData.data;
+      if (!title) setTitle(t.name);
+      if (t.body?.items && Array.isArray(t.body.items) && items.length === 0) {
+        setItems(
+          t.body.items.map((text: string) => ({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            text,
+            priority: "normal",
+          }))
+        );
+      }
+    }
+  }, [templateData]);
+
+  // Load from clone source if provided
+  const { data: cloneData } = useSWRFetch<any>(
+    cloneFromId ? `/api/admin/task-lists/${cloneFromId}` : null
+  );
+
+  useEffect(() => {
+    if (cloneData?.data) {
+      const { task_list, items: clonedItems } = cloneData.data;
+      if (!title && task_list?.title) setTitle(`${task_list.title} (Copy)`);
+      if (!groupId && task_list?.group_id) setGroupId(task_list.group_id);
+      if (clonedItems && Array.isArray(clonedItems) && items.length === 0) {
+        setItems(
+          clonedItems.map((ci: any) => ({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            text: ci.text,
+            priority: ci.priority || "normal",
+            assigned_member_id: ci.assigned_member_id || null,
+          }))
+        );
+      }
+    }
+  }, [cloneData]);
+
   const handleAddItem = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const text = newItemText.trim();
-    if (!text) return;
+    const trimmed = newItemText.trim();
+    if (!trimmed) return;
 
     if (items.length >= 50) {
-      toast.error("Maximum limit of 50 items reached");
+      toast.error("Maximum 50 items allowed per task list.");
       return;
     }
 
-    const newItem: ItemDraft = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      text,
-      priority: newItemPriority,
-      assigned_member_id: newItemAssignee || null,
-    };
-
-    setItems([...items, newItem]);
+    setItems([
+      ...items,
+      {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        text: trimmed,
+        priority: newItemPriority,
+        assigned_member_id: newItemAssignee || null,
+      },
+    ]);
     setNewItemText("");
-    setNewItemPriority("normal");
-    setNewItemAssignee("");
+    setErrors((prev) => ({ ...prev, items: "" }));
   };
 
-  const handleRemoveItem = (idToRemove: string) => {
-    setItems(items.filter((item) => item.id !== idToRemove));
+  const handleRemoveItem = (id: string) => {
+    setItems(items.filter((i) => i.id !== id));
   };
 
   const handleProcessMultiPaste = () => {
     if (!multiPasteText.trim()) return;
-
-    const lines = parsePastedTasks(multiPasteText);
-
+    const parsed = parsePastedTasks(multiPasteText);
     const availableSlots = 50 - items.length;
-    const linesToAdd = lines.slice(0, availableSlots);
-
-    const newDrafts: ItemDraft[] = linesToAdd.map((text) => ({
+    const toAdd = parsed.slice(0, availableSlots).map((text) => ({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       text,
-      priority: "normal",
+      priority: "normal" as const,
       assigned_member_id: null,
     }));
 
-    setItems([...items, ...newDrafts]);
+    setItems([...items, ...toAdd]);
     setMultiPasteText("");
     setShowMultiPaste(false);
-    toast.success(`Added ${newDrafts.length} items`);
+    toast.success(`Added ${toAdd.length} items from text`);
   };
 
   const handleAiParseText = async () => {
@@ -233,16 +220,18 @@ function NewTaskForm() {
         body: JSON.stringify({ text: multiPasteText }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "AI parse failed");
+      if (!res.ok || json.success === false) {
+        throw new Error(json?.error?.message || "AI parsing failed");
+      }
 
-      const aiItems: ParsedAITaskItem[] = json.data?.items || [];
-      if (aiItems.length === 0) {
-        toast.info("No actionable tasks identified in text.");
+      const extracted: ParsedAITaskItem[] = json.data?.items || [];
+      if (extracted.length === 0) {
+        toast.info("No actionable tasks detected in text");
         return;
       }
 
       const availableSlots = 50 - items.length;
-      const itemsToAdd = aiItems.slice(0, availableSlots);
+      const itemsToAdd = extracted.slice(0, availableSlots);
       const newDrafts: ItemDraft[] = itemsToAdd.map((it) => ({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         text: it.suggested_category
@@ -252,22 +241,19 @@ function NewTaskForm() {
         assigned_member_id: null,
       }));
 
-      // Apply first clock-like suggested_due to list due time if empty
       if (!dueTime) {
         const dueHint = itemsToAdd.find((it) => it.suggested_due)?.suggested_due;
         const clockMatch = dueHint?.match(/(\d{1,2}):(\d{2})/);
         if (clockMatch) {
           const hh = String(Math.min(23, Number(clockMatch[1]))).padStart(2, "0");
-          const mm = clockMatch[2];
-          setDueTime(`${hh}:${mm}`);
+          setDueTime(`${hh}:${clockMatch[2]}`);
         }
       }
 
       setItems([...items, ...newDrafts]);
       setMultiPasteText("");
       setShowMultiPaste(false);
-      const source = json.data?.source === "fallback" ? "rule-based parser" : "AI";
-      toast.success(`${source} extracted and added ${newDrafts.length} tasks!`);
+      toast.success(`Extracted & added ${newDrafts.length} tasks!`);
     } catch (err: any) {
       toast.error(err.message || "Failed to parse with AI");
     } finally {
@@ -299,22 +285,18 @@ function NewTaskForm() {
   };
 
   const handleSave = async (isShare: boolean) => {
+    const newErrors: Record<string, string> = {};
+    if (!title.trim()) newErrors.title = "Title is required";
+    if (!groupId) newErrors.group = "Please select a group";
+    if (items.length === 0) newErrors.items = "Please add at least one task item";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
     setErrors({});
 
-    if (!title.trim()) {
-      setErrors({ title: "Title is required" });
-      return;
-    }
-    if (!groupId) {
-      setErrors({ group: "Please select a group" });
-      return;
-    }
-    if (items.length === 0) {
-      setErrors({ items: "Please add at least one task item" });
-      return;
-    }
-
-    // Prepare due_at in admin timezone (not raw Zulu)
     let dueAt: string | null = null;
     if (dueTime) {
       dueAt = zonedDateTimeToUtcIso(
@@ -330,34 +312,34 @@ function NewTaskForm() {
         localStorage.setItem("wtt_last_group_id", groupId);
       }
 
-        const recurrencePayload = isRecurring
-          ? {
-              freq: recurrenceFreq,
-              days: recurrenceFreq === "weekly" ? recurrenceDays : undefined,
-              interval_days:
-                recurrenceFreq === "custom" ? recurrenceIntervalDays : undefined,
-              anchor_date: recurrenceFreq === "custom" ? listDate : undefined,
-              end_date: recurrenceEndDate || undefined,
-            }
-          : null;
+      const recurrencePayload = isRecurring
+        ? {
+            freq: recurrenceFreq,
+            days: recurrenceFreq === "weekly" ? recurrenceDays : undefined,
+            interval_days:
+              recurrenceFreq === "custom" ? recurrenceIntervalDays : undefined,
+            anchor_date: recurrenceFreq === "custom" ? listDate : undefined,
+            end_date: recurrenceEndDate || undefined,
+          }
+        : null;
 
-        const res = await fetch("/api/admin/task-lists", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            group_id: groupId,
-            title: title.trim(),
-            list_date: listDate,
-            due_at: dueAt,
-            status: isShare ? "active" : "draft",
-            recurrence: recurrencePayload,
-            items: items.map((i) => ({
-              text: i.text,
-              priority: i.priority,
-              assigned_member_id: i.assigned_member_id || null,
-            })),
-          }),
-        });
+      const res = await fetch("/api/admin/task-lists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          group_id: groupId,
+          title: title.trim(),
+          list_date: listDate,
+          due_at: dueAt,
+          status: isShare ? "active" : "draft",
+          recurrence: recurrencePayload,
+          items: items.map((i) => ({
+            text: i.text,
+            priority: i.priority,
+            assigned_member_id: i.assigned_member_id || null,
+          })),
+        }),
+      });
 
       const json = await res.json();
       if (!res.ok || json.success === false) {
@@ -365,7 +347,7 @@ function NewTaskForm() {
       }
 
       toast.success(
-        isShare ? "Task list created — open Share sheet to send" : "Task list saved as draft!"
+        isShare ? "Task list created — opening Share sheet" : "Task list saved as draft!"
       );
 
       if (isShare) {
@@ -410,7 +392,7 @@ function NewTaskForm() {
   return (
     <AdminLayout
       title="Create Task List"
-      subtitle="Compose task items and dispatch to group members"
+      subtitle="Compose checklist items and dispatch to group members"
       actions={
         <div className="flex items-center gap-2">
           <Link href="/admin/templates">
@@ -429,21 +411,21 @@ function NewTaskForm() {
       <div className="max-w-3xl mx-auto space-y-6 pb-12">
         {/* Template / Clone Banner */}
         {(templateId || cloneFromId) && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+          <div className="p-3.5 rounded-xl bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/20 text-xs text-[var(--color-primary-text)] flex items-center justify-between">
             <span className="flex items-center gap-1.5 font-medium">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <CheckCircle2 className="w-4 h-4 text-[var(--color-primary)]" />
               {templateId ? "Pre-filled from checklist template" : "Cloned from previous checklist"}
             </span>
-            <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
+            <span className="text-[11px] font-semibold">
               {items.length} items loaded
             </span>
           </div>
         )}
 
-        {/* List Info Card */}
-        <Card className="p-6 space-y-5">
-          <h2 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
-            1. Task List Details
+        {/* Section 1: Task List Details (§12.5) */}
+        <Card className="p-5 sm:p-6 space-y-4">
+          <h2 className="text-sm font-bold text-[var(--color-text-primary)] border-b border-[var(--color-border-secondary)] pb-2.5">
+            List Details
           </h2>
 
           <Input
@@ -456,21 +438,19 @@ function NewTaskForm() {
           />
 
           {groups.length === 0 ? (
-            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 space-y-3">
-              <p className="text-sm font-semibold">No groups yet</p>
-              <p className="text-xs text-amber-800/90 leading-relaxed">
-                Task lists belong to a <strong>group</strong> (e.g. Lab Batch A). Create a group,
-                add members with WhatsApp numbers, then come back here. After you save, you&apos;ll
-                get a <strong>wa.me</strong> share link to open WhatsApp — no WhatsApp Business login needed.
+            <div className="p-4 rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning-bg)] space-y-2">
+              <p className="text-xs font-semibold text-[var(--color-text-primary)]">No groups created yet</p>
+              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                Task checklists belong to a student group. Please create a group first before composing lists.
               </p>
               <Link href="/admin/groups/new">
-                <Button size="sm" variant="primary" className="gap-1.5">
+                <Button size="sm" variant="primary" className="gap-1.5 mt-1">
                   <Plus className="w-3.5 h-3.5" /> Create your first group
                 </Button>
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Dropdown
                 label="Group"
                 value={groupId}
@@ -500,18 +480,18 @@ function NewTaskForm() {
           )}
         </Card>
 
-        {/* Recurrence Schedule Card (Phase 12.5) */}
-        <Card className="p-6 space-y-4">
+        {/* Recurrence Schedule Card */}
+        <Card className="p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
-                <Repeat className="w-4 h-4" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center">
+                <Repeat className="w-3.5 h-3.5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Repeat Checklist (Recurring Schedule)
+                <h3 className="text-xs font-bold text-[var(--color-text-primary)]">
+                  Recurring Schedule
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-[11px] text-[var(--color-text-tertiary)]">
                   Auto-create draft task lists on scheduled days
                 </p>
               </div>
@@ -524,59 +504,36 @@ function NewTaskForm() {
                 onChange={(e) => setIsRecurring(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              <div className="w-9 h-5 bg-[var(--color-border-primary)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
             </label>
           </div>
 
           {isRecurring && (
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <div className="pt-3 border-t border-[var(--color-border-secondary)] space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-[var(--color-text-secondary)]">
                   Frequency:
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setRecurrenceFreq("daily")}
-                  className={cn(
-                    "px-3 py-1 rounded-lg text-xs font-semibold transition-all",
-                    recurrenceFreq === "daily"
-                      ? "bg-emerald-600 text-white"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                  )}
-                >
-                  Daily
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRecurrenceFreq("weekly")}
-                  className={cn(
-                    "px-3 py-1 rounded-lg text-xs font-semibold transition-all",
-                    recurrenceFreq === "weekly"
-                      ? "bg-emerald-600 text-white"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                  )}
-                >
-                  Weekly
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRecurrenceFreq("custom")}
-                  className={cn(
-                    "px-3 py-1 rounded-lg text-xs font-semibold transition-all",
-                    recurrenceFreq === "custom"
-                      ? "bg-emerald-600 text-white"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                  )}
-                >
-                  Every N days
-                </button>
+                {(["daily", "weekly", "custom"] as const).map((freq) => (
+                  <button
+                    key={freq}
+                    type="button"
+                    onClick={() => setRecurrenceFreq(freq)}
+                    className={cn(
+                      "px-3 py-1 rounded-md text-xs font-medium transition-all capitalize",
+                      recurrenceFreq === freq
+                        ? "bg-[var(--color-primary)] text-white font-semibold"
+                        : "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
+                    )}
+                  >
+                    {freq === "custom" ? "Every N days" : freq}
+                  </button>
+                ))}
               </div>
 
               {recurrenceFreq === "custom" && (
-                <div className="flex items-center gap-2 max-w-xs">
-                  <label className="text-xs font-medium text-slate-500 whitespace-nowrap">
-                    Every
-                  </label>
+                <div className="flex items-center gap-2 max-w-xs text-xs">
+                  <span className="text-[var(--color-text-secondary)]">Every</span>
                   <input
                     type="number"
                     min={1}
@@ -587,15 +544,15 @@ function NewTaskForm() {
                         Math.max(1, Math.min(90, Number(e.target.value) || 1))
                       )
                     }
-                    className="w-20 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-slate-200"
+                    className="w-16 px-2 py-1 rounded-md border border-[var(--color-border-input)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)]"
                   />
-                  <span className="text-xs text-slate-500">day(s)</span>
+                  <span className="text-[var(--color-text-secondary)]">days</span>
                 </div>
               )}
 
               {recurrenceFreq === "weekly" && (
                 <div className="space-y-1.5">
-                  <span className="text-xs font-medium text-slate-500">Repeat on days:</span>
+                  <span className="text-xs text-[var(--color-text-secondary)]">Days of week:</span>
                   <div className="flex items-center gap-1.5">
                     {[
                       { id: 1, label: "M" },
@@ -619,10 +576,10 @@ function NewTaskForm() {
                             }
                           }}
                           className={cn(
-                            "w-8 h-8 rounded-lg text-xs font-bold transition-all",
+                            "w-7 h-7 rounded-md text-xs font-semibold transition-all",
                             active
-                              ? "bg-emerald-600 text-white"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
+                              ? "bg-[var(--color-primary)] text-white"
+                              : "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
                           )}
                         >
                           {day.label}
@@ -634,29 +591,29 @@ function NewTaskForm() {
               )}
 
               <div className="max-w-xs">
-                <label className="block text-xs font-medium text-slate-500 mb-1">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                   End Repeat Date (Optional)
                 </label>
                 <input
                   type="date"
                   value={recurrenceEndDate}
                   onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-slate-200"
+                  className="w-full px-2.5 py-1.5 rounded-md border border-[var(--color-border-input)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)]"
                 />
               </div>
             </div>
           )}
         </Card>
 
-        {/* Checklist Items Card */}
-        <Card className="p-6 space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        {/* Section 2: Checklist Items (§12.5) */}
+        <Card className="p-5 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-[var(--color-border-secondary)] pb-2.5">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                2. Checklist Items ({items.length}/50)
+              <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
+                Checklist Items ({items.length}/50)
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Tasks for members to check off on their mobile link
+              <p className="text-xs text-[var(--color-text-tertiary)]">
+                Actionable tasks for students to check off
               </p>
             </div>
 
@@ -667,54 +624,54 @@ function NewTaskForm() {
               onClick={() => setShowMultiPaste(!showMultiPaste)}
             >
               <FileText className="w-3.5 h-3.5 mr-1" />
-              {showMultiPaste ? "Single Input" : "Paste Multi-line"}
+              {showMultiPaste ? "Single Input" : "Paste Notes"}
             </Button>
           </div>
 
-          {/* Voice-to-Tasks Dictation Component (Phase 15.3) */}
+          {/* Voice-to-Tasks Dictation Component */}
           <VoiceTaskInput
             onTasksExtracted={handleVoiceTasksExtracted}
-            className="pb-3 border-b border-slate-100 dark:border-slate-800"
+            className="pb-2 border-b border-[var(--color-border-secondary)]"
           />
 
           {errors.items && (
-            <p className="text-xs text-rose-500 font-semibold">{errors.items}</p>
+            <p className="text-xs text-[var(--color-danger)] font-semibold">{errors.items}</p>
           )}
 
           {/* Multi-line Paste Mode */}
           {showMultiPaste ? (
-            <div className="space-y-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 animate-slide-up">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Paste task list (one task per line or unstructured notes):
+            <div className="space-y-3 p-4 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-primary)]">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
+                Paste checklist (numbered lines, bullets, or messy meeting notes):
               </label>
               <textarea
                 rows={5}
                 placeholder={`1. Calibrate photodiode sensor\n2. Run 10 baseline samples\n3. Record temperature readings\n4. Submit data spreadsheet`}
                 value={multiPasteText}
                 onChange={(e) => setMultiPasteText(e.target.value)}
-                className="w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs p-3 font-mono focus:outline-none focus:border-emerald-500 resize-none"
+                className="w-full rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-input)] text-xs p-3 font-mono text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] resize-none"
               />
 
               {parsedLines.length > 0 && (
-                <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/60 text-xs">
-                  <div className="flex items-center justify-between text-emerald-800 dark:text-emerald-300 font-semibold mb-1">
-                    <span>Parsed Preview ({parsedLines.length} items):</span>
+                <div className="p-2.5 rounded-lg bg-[var(--color-primary-subtle)] text-xs">
+                  <div className="flex items-center justify-between text-[var(--color-primary-text)] font-semibold mb-1">
+                    <span>Parsed preview ({parsedLines.length} items):</span>
                     <span className="text-[10px]">
                       {Math.min(50 - items.length, parsedLines.length)} will be added
                     </span>
                   </div>
-                  <div className="max-h-24 overflow-y-auto space-y-0.5 text-[11px] text-slate-700 dark:text-slate-300">
-                    {parsedLines.slice(0, 5).map((l, i) => (
+                  <div className="max-h-20 overflow-y-auto space-y-0.5 text-[11px] text-[var(--color-text-secondary)]">
+                    {parsedLines.slice(0, 4).map((l, i) => (
                       <div key={i} className="truncate">• {l}</div>
                     ))}
-                    {parsedLines.length > 5 && (
-                      <div className="text-slate-400">...and {parsedLines.length - 5} more</div>
+                    {parsedLines.length > 4 && (
+                      <div className="text-[var(--color-text-tertiary)]">…and {parsedLines.length - 4} more</div>
                     )}
                   </div>
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <Button
                   type="button"
                   variant="ghost"
@@ -732,20 +689,20 @@ function NewTaskForm() {
                     onClick={handleProcessMultiPaste}
                     disabled={!multiPasteText.trim() || isAiParsing}
                   >
-                    <ListPlus className="w-4 h-4 mr-1" /> Plain Lines
+                    <ListPlus className="w-3.5 h-3.5 mr-1" /> Plain Lines
                   </Button>
 
                   <Button
                     type="button"
                     size="sm"
+                    variant="primary"
                     onClick={handleAiParseText}
                     disabled={!multiPasteText.trim() || isAiParsing}
-                    className="bg-emerald-700 hover:bg-emerald-600 text-white"
                   >
                     {isAiParsing ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                        AI Parsing...
+                        AI Parsing…
                       </>
                     ) : (
                       <>
@@ -759,11 +716,11 @@ function NewTaskForm() {
             </div>
           ) : (
             /* Single Item Input */
-            <form onSubmit={handleAddItem} className="space-y-3">
+            <form onSubmit={handleAddItem} className="space-y-2.5">
               <div className="flex gap-2">
                 <div className="flex-1">
                   <Input
-                    placeholder="Enter task text... (Press Enter to add)"
+                    placeholder="Enter task item… (Press Enter to add)"
                     value={newItemText}
                     onChange={(e) => setNewItemText(e.target.value)}
                   />
@@ -773,34 +730,35 @@ function NewTaskForm() {
                 </Button>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
+              <div className="flex flex-wrap items-center gap-3 text-xs">
                 {/* Priority Selector */}
                 <div className="flex items-center gap-1.5">
-                  <span className="text-slate-500 font-medium">Priority:</span>
+                  <span className="text-[var(--color-text-tertiary)] font-medium">Priority:</span>
                   {(["low", "normal", "high", "urgent"] as const).map((p) => (
                     <button
                       key={p}
                       type="button"
                       onClick={() => setNewItemPriority(p)}
-                      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-colors uppercase ${
+                      className={cn(
+                        "px-2 py-0.5 rounded text-[11px] font-semibold transition-colors capitalize",
                         newItemPriority === p
-                          ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900"
-                      }`}
+                          ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] border border-[var(--color-primary)]/20 font-bold"
+                          : "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
+                      )}
                     >
                       {p}
                     </button>
                   ))}
                 </div>
 
-                {/* Optional Member Assignee */}
+                {/* Optional Assignee */}
                 {members.length > 0 && (
                   <div className="flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    <User className="w-3 h-3 text-[var(--color-text-tertiary)]" />
                     <select
                       value={newItemAssignee}
                       onChange={(e) => setNewItemAssignee(e.target.value)}
-                      className="bg-transparent border border-slate-200 dark:border-slate-800 rounded-lg text-xs py-1 px-2 text-slate-700 dark:text-slate-300 focus:outline-none"
+                      className="bg-transparent border border-[var(--color-border-input)] rounded-md text-xs py-0.5 px-2 text-[var(--color-text-primary)] focus:outline-none"
                     >
                       <option value="">Unassigned (Any member)</option>
                       {members.map((m: any) => (
@@ -817,38 +775,39 @@ function NewTaskForm() {
 
           {/* Current Items List */}
           {items.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-400">
-              No tasks added yet. Type a task above and press Enter, or use &quot;Paste Multi-line&quot;.
+            <div className="p-6 text-center border border-dashed border-[var(--color-border-primary)] rounded-lg text-xs text-[var(--color-text-tertiary)]">
+              No tasks added yet. Type a task above and press Enter, or use &quot;Paste Notes&quot;.
             </div>
           ) : (
-            <div className="space-y-2 pt-2">
+            <div className="space-y-1.5 pt-1">
               {items.map((item, index) => {
                 const assigned = members.find((m: any) => m.id === item.assigned_member_id);
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs gap-3 group"
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)] text-xs gap-3 group"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <span className="w-5 h-5 rounded-md bg-slate-200 dark:bg-slate-700 font-bold flex items-center justify-center text-[10px] shrink-0">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="w-5 h-5 rounded bg-[var(--color-surface)] border border-[var(--color-border-primary)] font-bold flex items-center justify-center text-[10px] text-[var(--color-text-secondary)] shrink-0">
                         {index + 1}
                       </span>
-                      <span className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                      <span className="font-medium text-[var(--color-text-primary)] truncate">
                         {item.text}
                       </span>
                       {item.priority !== "normal" && (
                         <span
-                          className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${
+                          className={cn(
+                            "text-[10px] font-bold uppercase px-1.5 py-0.2 rounded",
                             item.priority === "urgent" || item.priority === "high"
-                              ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600"
-                              : "bg-slate-200 dark:bg-slate-700 text-slate-600"
-                          }`}
+                              ? "bg-[var(--color-status-overdue-bg)] text-[var(--color-status-overdue)]"
+                              : "bg-[var(--color-surface)] text-[var(--color-text-tertiary)]"
+                          )}
                         >
                           {item.priority}
                         </span>
                       )}
                       {assigned && (
-                        <span className="text-[11px] text-slate-500 bg-slate-200/60 dark:bg-slate-700/60 px-1.5 py-0.2 rounded">
+                        <span className="text-[10px] text-[var(--color-text-tertiary)] bg-[var(--color-surface)] px-1.5 py-0.5 rounded border border-[var(--color-border-secondary)]">
                           @{assigned.name}
                         </span>
                       )}
@@ -857,7 +816,7 @@ function NewTaskForm() {
                     <button
                       type="button"
                       onClick={() => handleRemoveItem(item.id)}
-                      className="text-slate-400 hover:text-rose-500 p-1 rounded transition-colors"
+                      className="text-[var(--color-text-tertiary)] hover:text-[var(--color-danger)] p-1 rounded transition-colors"
                       aria-label="Remove item"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -869,7 +828,7 @@ function NewTaskForm() {
           )}
 
           {items.length >= 45 && (
-            <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 p-3 rounded-xl">
+            <div className="flex items-center gap-2 text-xs text-[var(--color-status-pending)] bg-[var(--color-status-pending-bg)] p-3 rounded-lg">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>Approaching maximum recommended 50 items per list ({items.length}/50).</span>
             </div>
@@ -877,7 +836,7 @@ function NewTaskForm() {
         </Card>
 
         {errors.form && (
-          <p className="text-xs text-rose-500 font-semibold">{errors.form}</p>
+          <p className="text-xs text-[var(--color-danger)] font-semibold">{errors.form}</p>
         )}
 
         {/* Footer Actions */}
@@ -901,12 +860,12 @@ function NewTaskForm() {
 
             <Button
               type="button"
-              variant="primary"
+              variant="whatsapp"
               loading={loading}
               onClick={() => handleSave(true)}
-              className="flex-1 sm:flex-initial bg-[#25D366] hover:bg-[#20ba5a] text-white"
+              className="flex-1 sm:flex-initial"
             >
-              <Send className="w-4 h-4 mr-1.5" /> Save &amp; Share
+              <Send className="w-4 h-4 mr-1.5" /> Save &amp; Dispatch to WhatsApp
             </Button>
           </div>
         </div>

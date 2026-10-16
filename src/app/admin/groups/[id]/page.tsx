@@ -31,6 +31,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  ShieldAlert,
 } from "lucide-react";
 
 interface MemberItem {
@@ -340,14 +341,15 @@ export default function GroupDetailPage({
               <Plus className="w-4 h-4 mr-1" /> New Task List
             </Button>
           </Link>
-          <Button variant="outline" size="sm" onClick={handleOpenEditGroup}>
+          <Button variant="outline" size="sm" onClick={handleOpenEditGroup} aria-label="Edit group">
             <Edit className="w-3.5 h-3.5" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setShowDeleteGroup(true)}
-            className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+            className="text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)]"
+            aria-label="Delete group"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -355,6 +357,42 @@ export default function GroupDetailPage({
       }
     >
       <div className="space-y-6">
+        {/* Verification & Meta Subheader */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-primary)] shadow-sm text-xs">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 font-medium text-[var(--color-text-secondary)]">
+              {group.verify_required ? (
+                <>
+                  <ShieldCheck className="w-4 h-4 text-[var(--color-status-verified)]" />
+                  <span>
+                    <strong className="text-[var(--color-text-primary)]">Professor Verification:</strong> Required
+                  </span>
+                </>
+              ) : (
+                <>
+                  <ShieldAlert className="w-4 h-4 text-[var(--color-text-tertiary)]" />
+                  <span>
+                    <strong className="text-[var(--color-text-primary)]">Professor Verification:</strong> Disabled (Self-checkoff)
+                  </span>
+                </>
+              )}
+            </div>
+            <span className="text-[var(--color-border-primary)]">|</span>
+            <span className="text-[var(--color-text-tertiary)]">
+              Created {formatDate(group.created_at)}
+            </span>
+          </div>
+
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs h-7 px-2 text-[var(--color-primary-text)] hover:bg-[var(--color-primary-subtle)]"
+            onClick={handleOpenEditGroup}
+          >
+            Change Settings
+          </Button>
+        </div>
+
         {/* KPI Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <KpiCard
@@ -379,17 +417,17 @@ export default function GroupDetailPage({
 
         {/* Member Roster Section */}
         <Card className="p-6 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--color-border-primary)] pb-3">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                <h2 className="text-base font-bold text-[var(--color-text-primary)]">
                   Group Members
                 </h2>
                 <Badge variant="verified" className="text-xs">
                   {members.length}
                 </Badge>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-[var(--color-text-secondary)]">
                 Students and assistants who check off tasks
               </p>
             </div>
@@ -409,11 +447,11 @@ export default function GroupDetailPage({
           </div>
 
           {members.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-400">
+            <div className="p-8 text-center border border-dashed border-[var(--color-border-input)] rounded-xl text-xs text-[var(--color-text-tertiary)]">
               No members in this group yet. Click &quot;Add Member&quot; or &quot;Import CSV&quot; to populate your roster.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+            <div className="divide-y divide-[var(--color-border-secondary)]">
               {members.map((member) => (
                 <MemberRow
                   key={member.id}
@@ -440,12 +478,12 @@ export default function GroupDetailPage({
 
         {/* Recent Task Lists Section */}
         <Card className="p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex items-center justify-between border-b border-[var(--color-border-primary)] pb-3">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              <h2 className="text-base font-bold text-[var(--color-text-primary)]">
                 Recent Task Lists
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-[var(--color-text-secondary)]">
                 Dispatches and checklists created for this group
               </p>
             </div>
@@ -458,7 +496,7 @@ export default function GroupDetailPage({
           </div>
 
           {recent_task_lists.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-400">
+            <div className="p-8 text-center border border-dashed border-[var(--color-border-input)] rounded-xl text-xs text-[var(--color-text-tertiary)]">
               No task lists created for this group yet. Click &quot;New Task List&quot; to dispatch your first checklist via WhatsApp.
             </div>
           ) : (
@@ -473,11 +511,11 @@ export default function GroupDetailPage({
                   <Link
                     key={taskList.id}
                     href={`/admin/tasks/${taskList.id}`}
-                    className="block p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500/40 bg-white/50 dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all"
+                    className="block p-4 rounded-xl border border-[var(--color-border-primary)] hover:border-[var(--color-primary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-sunken)] shadow-card transition-all"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-slate-900 dark:text-white hover:text-emerald-600 transition-colors">
+                        <span className="font-semibold text-sm text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors">
                           {taskList.title}
                         </span>
                         <Badge
@@ -494,7 +532,7 @@ export default function GroupDetailPage({
                         </Badge>
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center gap-4 text-xs text-[var(--color-text-tertiary)]">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5" />
                           {formatDate(taskList.list_date)}
@@ -533,28 +571,28 @@ export default function GroupDetailPage({
           />
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            <label className="block text-xs font-semibold text-[var(--color-text-secondary)]">
               Description
             </label>
             <textarea
               rows={2}
               value={editDesc}
               onChange={(e) => setEditDesc(e.target.value)}
-              className="w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm p-3 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 resize-none"
+              className="w-full rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-input)] text-[var(--color-text-primary)] text-sm p-3 focus:outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-primary-subtle)] resize-none"
             />
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer pt-1 text-xs text-slate-700 dark:text-slate-300 font-medium">
+          <label className="flex items-center gap-2 cursor-pointer pt-1 text-xs text-[var(--color-text-primary)] font-medium">
             <input
               type="checkbox"
               checked={editVerify}
               onChange={(e) => setEditVerify(e.target.checked)}
-              className="rounded text-emerald-600 focus:ring-emerald-500"
+              className="rounded text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
             />
             <span>Require Professor Verification for completed items</span>
           </label>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[var(--color-border-secondary)]">
             <Button
               type="button"
               variant="outline"
@@ -606,7 +644,7 @@ export default function GroupDetailPage({
             helperText="Used if you want to dispatch direct WhatsApp messages"
           />
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[var(--color-border-secondary)]">
             <Button
               type="button"
               variant="outline"
@@ -642,7 +680,7 @@ export default function GroupDetailPage({
             onChange={(e) => setEditMemberPhone(e.target.value)}
           />
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[var(--color-border-secondary)]">
             <Button
               type="button"
               variant="outline"
@@ -666,7 +704,7 @@ export default function GroupDetailPage({
       >
         <form onSubmit={handleImportCsv} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            <label className="block text-xs font-semibold text-[var(--color-text-secondary)]">
               CSV Text
             </label>
             <textarea
@@ -674,12 +712,12 @@ export default function GroupDetailPage({
               placeholder={`Alex Smith,9876543210\nSarah Jenkins,9876543211\nMichael Scott`}
               value={csvContent}
               onChange={(e) => setCsvContent(e.target.value)}
-              className="w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-mono text-xs p-3 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 resize-none"
+              className="w-full rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-input)] text-[var(--color-text-primary)] font-mono text-xs p-3 focus:outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-primary-subtle)] resize-none"
               required
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[var(--color-border-secondary)]">
             <Button
               type="button"
               variant="outline"

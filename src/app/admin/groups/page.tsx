@@ -60,12 +60,12 @@ export default function GroupsListPage() {
             />
           </div>
 
-          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium self-end sm:self-center">
+          <div className="text-xs text-[var(--color-text-secondary)] font-medium self-end sm:self-center">
             {isLoading ? (
               <span>Loading groups...</span>
             ) : (
               <span>
-                Showing <strong>{groups.length}</strong> of <strong>{total}</strong> groups
+                Showing <strong className="text-[var(--color-text-primary)]">{groups.length}</strong> of <strong className="text-[var(--color-text-primary)]">{total}</strong> groups
               </span>
             )}
           </div>

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSWRFetch } from "@/hooks/useSWRFetch";
 import { useToast } from "@/components/ui/Toast";
+import { cn } from "@/lib/utils";
 import {
   KeyRound,
   User,
@@ -17,13 +18,15 @@ import {
   Smartphone,
   CheckCircle2,
   Database,
-  ShieldAlert,
   Save,
   Activity,
   Layers,
   Users,
   FileSpreadsheet,
   Mail,
+  ChevronDown,
+  ChevronUp,
+  Info,
 } from "lucide-react";
 
 export default function AdminSettingsPage() {
@@ -36,12 +39,13 @@ export default function AdminSettingsPage() {
     mutate: mutateProfile,
   } = useSWRFetch<any>("/api/admin/settings", { disablePoll: true });
 
-  // System Health fetch
+  // System Health fetch (polled discreetly)
   const { data: healthData } = useSWRFetch<any>("/api/health", {
-    pollInterval: 30000,
+    pollInterval: 60000,
   });
 
   // PIN Form State
+  const [showPinChange, setShowPinChange] = useState(false);
   const [oldPin, setOldPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -79,10 +83,10 @@ export default function AdminSettingsPage() {
   }, [profileData]);
 
   useEffect(() => {
-    // Check if running in standalone mode (already installed)
     if (
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true
+      typeof window !== "undefined" &&
+      (window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as any).standalone === true)
     ) {
       setIsInstalled(true);
     }
@@ -99,7 +103,7 @@ export default function AdminSettingsPage() {
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
       toast.info(
-        "To install, tap the Share or Menu icon in your browser and select 'Add to Home Screen'."
+        "To install, tap Share (or menu) in your browser and select 'Add to Home Screen'."
       );
       return;
     }
@@ -107,28 +111,26 @@ export default function AdminSettingsPage() {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === "accepted") {
       setIsInstalled(true);
-      toast.success("Task Tracker installed to home screen!");
+      toast.success("TaskTracker added to home screen!");
     }
     setDeferredPrompt(null);
   };
 
   const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (oldPin.length !== 6 || newPin.length !== 6) {
-      toast.error("Both current and new PIN must be exactly 6 digits.");
+    if (newPin.length !== 6 || oldPin.length !== 6) {
+      toast.error("Both PINs must be exactly 6 digits");
       return;
     }
-
     if (newPin !== confirmPin) {
-      toast.error("New PIN and Confirm PIN do not match.");
+      toast.error("New PIN and confirmation do not match");
       return;
     }
 
     try {
       setPinLoading(true);
-      const res = await fetch("/api/admin/settings/change-pin", {
-        method: "POST",
+      const res = await fetch("/api/admin/pin", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ old_pin: oldPin, new_pin: newPin }),
       });
@@ -138,14 +140,13 @@ export default function AdminSettingsPage() {
         throw new Error(data?.error?.message || "Failed to update PIN");
       }
 
-      toast.success(
-        "PIN updated successfully! Active sessions on other devices have been revoked."
-      );
+      toast.success("Security PIN updated successfully");
       setOldPin("");
       setNewPin("");
       setConfirmPin("");
+      setShowPinChange(false);
     } catch (err: any) {
-      toast.error(err.message || "Failed to change PIN");
+      toast.error(err.message || "Failed to update PIN");
     } finally {
       setPinLoading(false);
     }
@@ -167,13 +168,13 @@ export default function AdminSettingsPage() {
 
       const data = await res.json();
       if (!res.ok || data.success === false) {
-        throw new Error(data?.error?.message || "Failed to save preferences");
+        throw new Error(data?.error?.message || "Failed to save profile");
       }
 
-      toast.success("Profile preferences saved successfully");
+      toast.success("Profile preferences saved");
       mutateProfile();
     } catch (err: any) {
-      toast.error(err.message || "Failed to save preferences");
+      toast.error(err.message || "Failed to save profile");
     } finally {
       setProfileSaving(false);
     }
@@ -187,6 +188,12 @@ export default function AdminSettingsPage() {
         .split(",")
         .map((e) => e.trim())
         .filter(Boolean);
+
+      if (digestFreq !== "off" && emails.length === 0) {
+        toast.error("Please provide at least one recipient email address");
+        setDigestSaving(false);
+        return;
+      }
 
       const res = await fetch("/api/admin/settings", {
         method: "PATCH",
@@ -205,7 +212,7 @@ export default function AdminSettingsPage() {
         throw new Error(data?.error?.message || "Failed to save digest settings");
       }
 
-      toast.success("Email digest preferences saved successfully");
+      toast.success("Email digest preferences saved");
       mutateProfile();
     } catch (err: any) {
       toast.error(err.message || "Failed to save digest preferences");
@@ -280,134 +287,22 @@ export default function AdminSettingsPage() {
 
   return (
     <AdminLayout
-      title="Settings & System"
-      subtitle="Manage security PIN, preferences, PWA install, and CSV backups"
+      title="Settings"
+      subtitle="Manage your profile, security PIN, notifications, and data backups"
     >
-      <div className="max-w-4xl mx-auto space-y-8 pb-12">
-        {/* System Health Banner */}
-        <div className="p-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <Activity className="w-5 h-5" />
+      <div className="max-w-3xl space-y-6 pb-12">
+        {/* 1. Profile & Preferences */}
+        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-5">
+          <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-border-secondary)]">
+            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center">
+              <User className="w-4 h-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  System Status
-                </span>
-                <Badge
-                  variant={healthData?.db === "connected" ? "verified" : "overdue"}
-                  className="text-[10px] uppercase font-bold"
-                >
-                  {healthData?.db === "connected" ? "Operational" : "Degraded"}
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-500">
-                Supabase Postgres (Mumbai) · Version {healthData?.version || "0.1.0"}
-              </p>
-            </div>
-          </div>
-
-          <a
-            href="/api/health"
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
-          >
-            Health Ping →
-          </a>
-        </div>
-
-        {/* Security & PIN Section */}
-        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm space-y-5">
-          <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <KeyRound className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Security & Access PIN
+              <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
+                Profile & Preferences
               </h2>
-              <p className="text-xs text-slate-500">
-                Change your 6-digit access PIN. Updating your PIN bumps the session version and invalidates all other devices.
-              </p>
-            </div>
-          </div>
-
-          <form onSubmit={handlePinSubmit} className="space-y-4 max-w-md">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Current 6-Digit PIN
-              </label>
-              <Input
-                type="password"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="••••••"
-                value={oldPin}
-                onChange={(e) => setOldPin(e.target.value.replace(/[^0-9]/g, ""))}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                  New 6-Digit PIN
-                </label>
-                <Input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="••••••"
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ""))}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                  Confirm New PIN
-                </label>
-                <Input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="••••••"
-                  value={confirmPin}
-                  onChange={(e) =>
-                    setConfirmPin(e.target.value.replace(/[^0-9]/g, ""))
-                  }
-                  required
-                />
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={pinLoading || oldPin.length !== 6 || newPin.length !== 6}
-              className="mt-2"
-            >
-              <KeyRound className="w-4 h-4 mr-2" />
-              {pinLoading ? "Updating PIN..." : "Update PIN"}
-            </Button>
-          </form>
-        </section>
-
-        {/* Profile & Preferences Section */}
-        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm space-y-5">
-          <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-              <User className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Admin Profile & Preferences
-              </h2>
-              <p className="text-xs text-slate-500">
-                Personalize your greeting name and operational timezone.
+              <p className="text-xs text-[var(--color-text-tertiary)]">
+                Personalize your greeting name, operational timezone, and WhatsApp phone.
               </p>
             </div>
           </div>
@@ -420,7 +315,7 @@ export default function AdminSettingsPage() {
           ) : (
             <form onSubmit={handleProfileSubmit} className="space-y-4 max-w-md">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
                   Professor / Admin Name
                 </label>
                 <Input
@@ -433,13 +328,13 @@ export default function AdminSettingsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
                   Timezone
                 </label>
                 <select
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--color-border-input)] bg-[var(--color-surface)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
                 >
                   <option value="Asia/Kolkata">Asia/Kolkata (IST - UTC+5:30)</option>
                   <option value="UTC">UTC (Universal Time)</option>
@@ -451,8 +346,8 @@ export default function AdminSettingsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                  Default WhatsApp number (testing)
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
+                  Default WhatsApp number (for test sharing)
                 </label>
                 <Input
                   type="tel"
@@ -460,19 +355,8 @@ export default function AdminSettingsPage() {
                   onChange={(e) => setDefaultWaPhone(e.target.value.replace(/[^\d]/g, ""))}
                   placeholder="919324826414"
                 />
-                <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
-                  Country code + number (no +). Used when you tap <strong>Open WhatsApp</strong> on a
-                  share sheet — opens a chat with the checklist message and member link. This is{" "}
-                  <em>wa.me</em> deep-link sharing, not WhatsApp Business API login.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                  Language Preference
-                </label>
-                <p className="text-xs text-slate-500 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-                  English (Default)
+                <p className="text-[11px] text-[var(--color-text-tertiary)] mt-1.5 leading-relaxed">
+                  Used when you tap <strong>Open WhatsApp</strong> on a share sheet — opens a chat with the checklist message and link.
                 </p>
               </div>
 
@@ -481,42 +365,134 @@ export default function AdminSettingsPage() {
                 variant="primary"
                 disabled={profileSaving}
                 className="mt-2"
+                size="sm"
               >
-                <Save className="w-4 h-4 mr-2" />
-                {profileSaving ? "Saving..." : "Save Preferences"}
+                <Save className="w-3.5 h-3.5 mr-1.5" />
+                {profileSaving ? "Saving…" : "Save Preferences"}
               </Button>
             </form>
           )}
         </section>
 
-        {/* Automated Email Digests Section (Phase 13.5) */}
-        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm space-y-5">
-          <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-              <Mail className="w-5 h-5" />
+        {/* 2. Security: Change PIN (Collapsible) */}
+        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-secondary)]">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] flex items-center justify-center">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
+                  Security & Access PIN
+                </h2>
+                <p className="text-xs text-[var(--color-text-tertiary)]">
+                  6-digit passcode used to sign in on your devices.
+                </p>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPinChange(!showPinChange)}
+            >
+              {showPinChange ? "Cancel" : "Change PIN"}
+              {showPinChange ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />}
+            </Button>
+          </div>
+
+          {showPinChange && (
+            <form onSubmit={handlePinSubmit} className="space-y-4 max-w-md pt-2">
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
+                  Current 6-Digit PIN
+                </label>
+                <Input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="••••••"
+                  value={oldPin}
+                  onChange={(e) => setOldPin(e.target.value.replace(/[^0-9]/g, ""))}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
+                    New 6-Digit PIN
+                  </label>
+                  <Input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="••••••"
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ""))}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
+                    Confirm New PIN
+                  </label>
+                  <Input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="••••••"
+                    value={confirmPin}
+                    onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, ""))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={pinLoading || oldPin.length !== 6 || newPin.length !== 6}
+                className="mt-2"
+              >
+                <KeyRound className="w-3.5 h-3.5 mr-1.5" />
+                {pinLoading ? "Updating…" : "Save New PIN"}
+              </Button>
+            </form>
+          )}
+        </section>
+
+        {/* 3. Notifications: Email Digest */}
+        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-5">
+          <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-border-secondary)]">
+            <div className="w-8 h-8 rounded-lg bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] flex items-center justify-center">
+              <Mail className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Automated Email Digest
+              <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
+                Email Digest Notifications
               </h2>
-              <p className="text-xs text-slate-500">
-                Receive periodic email summaries of completion rates, top performers, and overdue tasks.
+              <p className="text-xs text-[var(--color-text-tertiary)]">
+                Receive scheduled email summaries of completion rates and overdue tasks.
               </p>
             </div>
           </div>
 
           <form onSubmit={handleDigestSubmit} className="space-y-4 max-w-lg">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Digest Frequency
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
+                Frequency
               </label>
               <select
                 value={digestFreq}
                 onChange={(e) => setDigestFreq(e.target.value as any)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 rounded-lg border border-[var(--color-border-input)] bg-[var(--color-surface)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
               >
                 <option value="off">Off (Disabled)</option>
-                <option value="daily">Daily (Every morning at 8:30 AM IST)</option>
+                <option value="daily">Daily (Morning at 8:30 AM IST)</option>
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly (1st of each month)</option>
               </select>
@@ -524,13 +500,13 @@ export default function AdminSettingsPage() {
 
             {digestFreq === "weekly" && (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
                   Send on Day
                 </label>
                 <select
                   value={digestDay}
                   onChange={(e) => setDigestDay(Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--color-border-input)] bg-[var(--color-surface)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
                 >
                   <option value={1}>Monday</option>
                   <option value={2}>Tuesday</option>
@@ -545,184 +521,157 @@ export default function AdminSettingsPage() {
 
             {digestFreq !== "off" && (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
                   Recipient Email(s)
                 </label>
                 <input
                   type="text"
-                  placeholder="professor@university.edu, admin@college.edu"
+                  placeholder="professor@university.edu, lab@college.edu"
                   value={digestRecipients}
                   onChange={(e) => setDigestRecipients(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--color-border-input)] bg-[var(--color-surface)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Separate multiple recipients with commas. Requires RESEND_API_KEY environment variable.
+                <p className="text-[11px] text-[var(--color-text-tertiary)] mt-1">
+                  Separate multiple recipients with commas.
                 </p>
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
               <Button
                 type="submit"
                 variant="primary"
+                size="sm"
                 disabled={digestSaving}
               >
-                <Save className="w-4 h-4 mr-2" />
-                {digestSaving ? "Saving..." : "Save Digest Schedule"}
+                <Save className="w-3.5 h-3.5 mr-1.5" />
+                {digestSaving ? "Saving…" : "Save Digest Schedule"}
               </Button>
 
               {digestFreq !== "off" && (
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={handleTestDigestClick}
                   disabled={isTestingDigest}
                 >
-                  <Mail className="w-4 h-4 mr-2 text-purple-600" />
-                  {isTestingDigest ? "Sending Test..." : "Send Test Digest Now"}
+                  <Mail className="w-3.5 h-3.5 mr-1.5 text-[var(--color-primary)]" />
+                  {isTestingDigest ? "Sending…" : "Send Test Digest Now"}
                 </Button>
               )}
             </div>
           </form>
         </section>
 
-        {/* Default WhatsApp message format preview */}
-        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm space-y-4">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              Default WhatsApp Message Format
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Preview of the share message students receive (editable per-list in Share sheet).
-            </p>
-          </div>
-          <pre className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-[11px] font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-{`📋 *Lab Checklist — Week 3*
-👥 Group A  |  📅 2026-10-15
-
-1️⃣ Calibrate photodiode sensor
-2️⃣ Run 10 baseline samples
-3️⃣ Record temperature readings
-
-⏰ *Due:* 2026-10-15T17:00:00Z
-👉 *Tick done here:* https://your-app/t/abc123xyz`}
-          </pre>
-        </section>
-
-        {/* PWA & Mobile Installation Section */}
-        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm space-y-5">
-          <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-              <Smartphone className="w-5 h-5" />
+        {/* 4. Data Storage & CSV Backup */}
+        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-5">
+          <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-border-secondary)]">
+            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center">
+              <Database className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Mobile App & PWA
+              <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
+                Data Storage & Offline Backup
               </h2>
-              <p className="text-xs text-slate-500">
-                Install Task Tracker directly onto your smartphone home screen without using an app store.
+              <p className="text-xs text-[var(--color-text-tertiary)]">
+                Download full data backups of checklists, groups, and student submissions.
               </p>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm text-slate-900 dark:text-white">
-                  Home Screen Install
-                </span>
-                {isInstalled ? (
-                  <Badge variant="verified" className="text-[10px]">
-                    Installed
-                  </Badge>
-                ) : (
-                  <Badge variant="pending" className="text-[10px]">
-                    Available
-                  </Badge>
-                )}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3.5 rounded-lg bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)]">
+              <span className="text-[11px] text-[var(--color-text-tertiary)] block">Groups</span>
+              <span className="text-base font-bold text-[var(--color-text-primary)]">
+                {stats.total_groups}
+              </span>
+            </div>
+            <div className="p-3.5 rounded-lg bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)]">
+              <span className="text-[11px] text-[var(--color-text-tertiary)] block">Lists</span>
+              <span className="text-base font-bold text-[var(--color-text-primary)]">
+                {stats.total_lists}
+              </span>
+            </div>
+            <div className="p-3.5 rounded-lg bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)]">
+              <span className="text-[11px] text-[var(--color-text-tertiary)] block">Students</span>
+              <span className="text-base font-bold text-[var(--color-text-primary)]">
+                {stats.total_members}
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-1 flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleExportBackup}
+              disabled={exportingCsv}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-[var(--color-primary)]" />
+              {exportingCsv ? "Preparing backup…" : "Download Full CSV Backup"}
+            </Button>
+            <span className="text-xs text-[var(--color-text-tertiary)]">
+              Complete historical archive including timestamps and verify notes.
+            </span>
+          </div>
+        </section>
+
+        {/* 5. Mobile App & PWA */}
+        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] flex items-center justify-center">
+                <Smartphone className="w-4 h-4" />
               </div>
-              <p className="text-xs text-slate-500 max-w-md">
-                Fast standalone launch, offline caching, and responsive full-screen experience.
-              </p>
+              <div>
+                <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
+                  Mobile App & PWA
+                </h2>
+                <p className="text-xs text-[var(--color-text-tertiary)]">
+                  Install TaskTracker to your home screen for instant full-screen access.
+                </p>
+              </div>
             </div>
 
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={handleInstallClick}
               disabled={isInstalled}
-              className="shrink-0"
             >
-              <Smartphone className="w-4 h-4 mr-1.5" />
+              <Smartphone className="w-3.5 h-3.5 mr-1.5" />
               {isInstalled ? "App Installed" : "Install App"}
             </Button>
           </div>
         </section>
 
-        {/* Data Export & Backup Section */}
-        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm space-y-5">
-          <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <Database className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Data Storage & CSV Backup
-              </h2>
-              <p className="text-xs text-slate-500">
-                Download offline backups of your checklists, member rosters, and completion records.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 flex items-center gap-3">
-              <Users className="w-5 h-5 text-emerald-600" />
-              <div>
-                <span className="text-xs text-slate-500 block">Total Groups</span>
-                <span className="text-lg font-bold text-slate-900 dark:text-white">
-                  {stats.total_groups}
-                </span>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 flex items-center gap-3">
-              <Layers className="w-5 h-5 text-blue-600" />
-              <div>
-                <span className="text-xs text-slate-500 block">Task Lists</span>
-                <span className="text-lg font-bold text-slate-900 dark:text-white">
-                  {stats.total_lists}
-                </span>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 flex items-center gap-3">
-              <Users className="w-5 h-5 text-purple-600" />
-              <div>
-                <span className="text-xs text-slate-500 block">Total Students</span>
-                <span className="text-lg font-bold text-slate-900 dark:text-white">
-                  {stats.total_members}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-2 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handleExportBackup}
-              disabled={exportingCsv}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-medium text-sm shadow-sm transition-all"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              {exportingCsv ? "Preparing backup…" : "Export Full CSV Backup"}
-            </button>
-
-            <span className="text-xs text-slate-500">
-              Includes full audit log, timestamps, notes, and verify statuses.
+        {/* 6. About & System Health (Discreet footer) */}
+        <div className="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface-sunken)]/60 flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
+          <div className="flex items-center gap-2">
+            <Info className="w-3.5 h-3.5" />
+            <span>TaskTracker v{healthData?.version || "1.0.0"}</span>
+            <span>·</span>
+            <span className="inline-flex items-center gap-1">
+              <span className={cn(
+                "w-2 h-2 rounded-full",
+                healthData?.db === "connected" ? "bg-[var(--color-status-verified)]" : "bg-[var(--color-status-overdue)]"
+              )} />
+              {healthData?.db === "connected" ? "Database Connected" : "Connecting…"}
             </span>
           </div>
-        </section>
+
+          <a
+            href="/api/health"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-medium text-[var(--color-primary-text)] hover:underline"
+          >
+            Health Ping →
+          </a>
+        </div>
       </div>
     </AdminLayout>
   );

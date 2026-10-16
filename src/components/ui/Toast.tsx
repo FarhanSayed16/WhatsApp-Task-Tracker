@@ -100,40 +100,40 @@ function ToastCard({
   }, [item, onDismiss]);
 
   const icons = {
-    success: <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />,
-    error: <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />,
-    info: <Info className="w-5 h-5 text-blue-500 shrink-0" />,
+    success: <CheckCircle2 className="w-5 h-5 text-[var(--color-status-verified-fg)] shrink-0" />,
+    error: <AlertCircle className="w-5 h-5 text-[var(--color-danger)] shrink-0" />,
+    info: <Info className="w-5 h-5 text-[var(--color-info)] shrink-0" />,
   }[item.type];
 
-  const borderStyles = {
-    success: "border-emerald-500/30 bg-emerald-50/90 dark:bg-emerald-950/40",
-    error: "border-rose-500/30 bg-rose-50/90 dark:bg-rose-950/40",
-    info: "border-blue-500/30 bg-blue-50/90 dark:bg-blue-950/40",
+  const borderColor = {
+    success: "border-l-[var(--color-status-verified-fg)]",
+    error: "border-l-[var(--color-danger)]",
+    info: "border-l-[var(--color-info)]",
   }[item.type];
 
   return (
     <div
       className={cn(
-        "pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-lg backdrop-blur-md transition-all animate-slide-up",
-        borderStyles
+        "pointer-events-auto flex items-start gap-3 p-4 rounded-lg border border-[var(--color-border-primary)] border-l-[3px] bg-[var(--color-surface)] shadow-[var(--shadow-float)] transition-all animate-slide-up",
+        borderColor
       )}
       role="alert"
     >
       <div className="pt-0.5">{icons}</div>
       <div className="flex-1 min-w-0">
         {item.title && (
-          <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-0.5">
+          <h4 className="text-sm font-semibold text-[var(--color-text-primary)] mb-0.5">
             {item.title}
           </h4>
         )}
-        <p className="text-xs text-slate-700 dark:text-slate-300 leading-snug break-words">
+        <p className="text-xs text-[var(--color-text-secondary)] leading-snug break-words">
           {item.message}
         </p>
       </div>
       <button
         type="button"
         onClick={() => onDismiss(item.id)}
-        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 -mr-1 -mt-1 rounded transition-colors"
+        className="text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] p-1 -mr-1 -mt-1 rounded transition-colors"
         aria-label="Dismiss toast"
       >
         <X className="w-4 h-4" />

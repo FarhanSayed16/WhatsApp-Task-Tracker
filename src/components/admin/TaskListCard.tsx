@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { ShareSheet } from "./ShareSheet";
+import { WhatsAppIcon } from "@/components/icons/WhatsApp";
 
 export type TaskListCardStatus =
   | "draft"
@@ -262,7 +263,7 @@ export function TaskListCard({
               onClick={handleShare}
               disabled={shareLoading}
             >
-              <Share2 className="w-3.5 h-3.5" />{" "}
+              <WhatsAppIcon className="w-3.5 h-3.5 mr-1" />{" "}
               {shareLoading ? "Loading…" : "Share WA"}
             </Button>
           </div>

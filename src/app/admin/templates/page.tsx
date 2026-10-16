@@ -23,11 +23,6 @@ import {
   Trash2,
   ArrowRight,
   Copy,
-  CheckCircle2,
-  Clock,
-  Sparkles,
-  ListPlus,
-  Send,
   Repeat,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
@@ -100,13 +95,13 @@ export default function TemplatesPage() {
 
   const openCreateModal = (type: "checklist" | "message") => {
     setEditingTemplate(null);
-    setTemplateName("");
     setTemplateType(type);
+    setTemplateName("");
     setChecklistItems([]);
     setNewItemText("");
     setMessageText(
       type === "message"
-        ? "📋 *{title}*\n👥 {group} | 📅 {date}\n\n{items}\n\n👉 *Tick done here:* {link}"
+        ? "📋 *{title}*\n👥 {group}  |  📅 {date}\n\n{items}\n\n⏰ *Due:* {due}\n👉 *Tick done:* {link}"
         : ""
     );
     setModalOpen(true);
@@ -114,8 +109,8 @@ export default function TemplatesPage() {
 
   const openEditModal = (t: Template) => {
     setEditingTemplate(t);
-    setTemplateName(t.name);
     setTemplateType(t.type);
+    setTemplateName(t.name);
     if (t.type === "checklist") {
       setChecklistItems(t.body?.items || []);
     } else {
@@ -124,53 +119,39 @@ export default function TemplatesPage() {
     setModalOpen(true);
   };
 
-  const handleAddChecklistItem = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const text = newItemText.trim();
-    if (!text) return;
-    setChecklistItems([...checklistItems, text]);
+  const handleAddChecklistItem = () => {
+    const trimmed = newItemText.trim();
+    if (!trimmed) return;
+    setChecklistItems([...checklistItems, trimmed]);
     setNewItemText("");
   };
 
-  const handleRemoveChecklistItem = (index: number) => {
-    setChecklistItems(checklistItems.filter((_, i) => i !== index));
+  const handleRemoveChecklistItem = (idx: number) => {
+    setChecklistItems(checklistItems.filter((_, i) => i !== idx));
   };
 
   const insertPlaceholder = (ph: string) => {
-    setMessageText((prev) => `${prev} {${ph}} `);
+    setMessageText((prev) => `${prev}{${ph}}`);
   };
 
   const handleSaveTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!templateName.trim()) {
-      toast.error("Please enter a template name");
+      toast.error("Template name is required");
       return;
     }
 
-    if (templateType === "checklist" && checklistItems.length === 0) {
-      toast.error("Please add at least one item to the checklist template");
-      return;
-    }
-
-    if (templateType === "message" && !messageText.trim()) {
-      toast.error("Please enter the message template text");
-      return;
-    }
+    const payload = {
+      name: templateName.trim(),
+      type: templateType,
+      body:
+        templateType === "checklist"
+          ? { items: checklistItems }
+          : { text: messageText },
+    };
 
     try {
       setSaving(true);
-      const payload = {
-        name: templateName.trim(),
-        type: templateType,
-        body:
-          templateType === "checklist"
-            ? { items: checklistItems }
-            : {
-                text: messageText,
-                placeholders: ["title", "group", "date", "due", "items", "link"],
-              },
-      };
-
       const url = editingTemplate
         ? `/api/admin/templates/${editingTemplate.id}`
         : "/api/admin/templates";
@@ -188,7 +169,9 @@ export default function TemplatesPage() {
       }
 
       toast.success(
-        editingTemplate ? "Template updated successfully" : "Template created successfully"
+        editingTemplate
+          ? "Template updated successfully"
+          : "Template created successfully"
       );
       setModalOpen(false);
       mutate();
@@ -206,6 +189,7 @@ export default function TemplatesPage() {
       const res = await fetch(`/api/admin/templates/${deletingTemplate.id}`, {
         method: "DELETE",
       });
+
       if (!res.ok) throw new Error("Failed to delete template");
 
       toast.success("Template deleted");
@@ -220,8 +204,8 @@ export default function TemplatesPage() {
 
   return (
     <AdminLayout
-      title="Checklist & Message Templates"
-      subtitle="Create reusable checklists and WhatsApp dispatch formats"
+      title="Templates"
+      subtitle="Reusable checklists and custom WhatsApp message formats"
       actions={
         <Button
           size="sm"
@@ -235,28 +219,22 @@ export default function TemplatesPage() {
       }
     >
       <div className="space-y-6 pb-12">
-        {/* Active Recurring Schedules */}
-        <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-3">
-          <div className="flex items-center gap-2">
-            <Repeat className="w-4 h-4 text-purple-600" />
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-              Active Recurring Schedules
-            </h2>
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">
-              {recurringLists.length}
-            </span>
-          </div>
-          <p className="text-xs text-slate-500">
-            Parent lists that auto-create drafts on schedule. Stop recurrence anytime without deleting the list.
-          </p>
-          {listsLoading ? (
-            <Skeleton className="h-12 w-full" />
-          ) : recurringLists.length === 0 ? (
-            <p className="text-xs text-slate-400 py-2">
-              No active schedules. Enable recurrence when creating a task list.
+        {/* Active Recurring Schedules (Only shown if schedules exist) */}
+        {recurringLists.length > 0 && (
+          <section className="rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] p-5 shadow-sm space-y-3">
+            <div className="flex items-center gap-2">
+              <Repeat className="w-4 h-4 text-[var(--color-primary)]" />
+              <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
+                Active Recurring Schedules
+              </h2>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)]">
+                {recurringLists.length}
+              </span>
+            </div>
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              Parent checklists that auto-create drafts on schedule. Stop recurrence anytime without deleting the list.
             </p>
-          ) : (
-            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            <ul className="divide-y divide-[var(--color-border-secondary)]">
               {recurringLists.map((l: any) => {
                 const rec = l.recurrence || {};
                 const freqLabel =
@@ -273,11 +251,11 @@ export default function TemplatesPage() {
                     <div className="min-w-0">
                       <Link
                         href={`/admin/tasks/${l.id}`}
-                        className="font-semibold text-slate-800 dark:text-slate-200 hover:text-emerald-600 truncate block"
+                        className="font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-primary)] truncate block"
                       >
                         {l.title}
                       </Link>
-                      <span className="text-slate-500">
+                      <span className="text-[var(--color-text-tertiary)]">
                         {l.group_name || "Group"} · {freqLabel}
                         {rec.end_date ? ` · ends ${formatDate(rec.end_date)}` : ""}
                         {" · since "}
@@ -292,8 +270,8 @@ export default function TemplatesPage() {
                       </Link>
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="text-xs h-7 text-rose-600 border-rose-200 hover:bg-rose-50"
+                        variant="danger"
+                        className="text-xs h-7"
                         disabled={stoppingId === l.id}
                         onClick={() => handleStopRecurrence(l.id)}
                       >
@@ -304,11 +282,11 @@ export default function TemplatesPage() {
                 );
               })}
             </ul>
-          )}
-        </section>
+          </section>
+        )}
 
         {/* Tab Controls */}
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+        <div className="flex items-center justify-between border-b border-[var(--color-border-secondary)] pb-2">
           <Tabs
             tabs={[
               {
@@ -329,31 +307,17 @@ export default function TemplatesPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3"
-              >
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="h-8 w-full" />
-              </div>
+              <Skeleton key={i} variant="card" className="h-44" />
             ))}
           </div>
         ) : activeTab === "checklist" ? (
           checklistTemplates.length === 0 ? (
             <EmptyState
-              icon={<FileText className="w-10 h-10 text-slate-400" />}
+              icon={<FileText className="w-8 h-8 text-[var(--color-text-tertiary)]" />}
               title="No checklist templates yet"
-              description="Create a recurring checklist template (e.g. Lab Session, Assignment Submission, Exam Prep) to spin up checklists in one tap."
-              actionNode={
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={() => openCreateModal("checklist")}
-                >
-                  <Plus className="w-4 h-4 mr-1.5" /> Create Checklist Template
-                </Button>
-              }
+              description="Create reusable checklist templates (e.g. Lab Experiment, Assignment Review, Exam Prep) to spin up task lists in one tap."
+              actionLabel="+ Create Checklist Template"
+              onAction={() => openCreateModal("checklist")}
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -362,7 +326,7 @@ export default function TemplatesPage() {
                 return (
                   <div
                     key={t.id}
-                    className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-emerald-500/50 hover:shadow-md transition-all flex flex-col justify-between"
+                    className="p-5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-primary)] shadow-sm hover:border-[var(--color-primary)]/40 transition-all flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2 mb-2">
@@ -373,7 +337,7 @@ export default function TemplatesPage() {
                           <button
                             type="button"
                             onClick={() => openEditModal(t)}
-                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
+                            className="p-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] rounded"
                             title="Edit"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -381,7 +345,7 @@ export default function TemplatesPage() {
                           <button
                             type="button"
                             onClick={() => setDeletingTemplate(t)}
-                            className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded"
+                            className="p-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-danger)] rounded"
                             title="Delete"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -389,36 +353,36 @@ export default function TemplatesPage() {
                         </div>
                       </div>
 
-                      <h3 className="font-bold text-base text-slate-900 dark:text-white mb-2 line-clamp-1">
+                      <h3 className="font-bold text-sm text-[var(--color-text-primary)] mb-2 line-clamp-1">
                         {t.name}
                       </h3>
 
-                      <div className="space-y-1 mb-4">
+                      <div className="space-y-1.5 mb-4">
                         {(t.body?.items || []).slice(0, 3).map((item, idx) => (
                           <div
                             key={idx}
-                            className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5 truncate"
+                            className="text-xs text-[var(--color-text-secondary)] flex items-center gap-1.5 truncate"
                           >
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] shrink-0" />
                             <span className="truncate">{item}</span>
                           </div>
                         ))}
                         {itemsCount > 3 && (
-                          <p className="text-[11px] text-slate-400 pl-3">
+                          <p className="text-[11px] text-[var(--color-text-tertiary)] pl-3">
                             +{itemsCount - 3} more items
                           </p>
                         )}
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                      <span className="text-xs text-slate-500 font-medium">
+                    <div className="pt-3 border-t border-[var(--color-border-secondary)] flex items-center justify-between gap-2">
+                      <span className="text-xs text-[var(--color-text-tertiary)] font-medium">
                         {itemsCount} {itemsCount === 1 ? "task" : "tasks"}
                       </span>
 
                       <Link
                         href={`/admin/tasks/new?template_id=${t.id}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium text-xs transition-all"
                       >
                         Use Template <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
@@ -430,25 +394,18 @@ export default function TemplatesPage() {
           )
         ) : messageTemplates.length === 0 ? (
           <EmptyState
-            icon={<MessageSquare className="w-10 h-10 text-slate-400" />}
+            icon={<MessageSquare className="w-8 h-8 text-[var(--color-text-tertiary)]" />}
             title="No WhatsApp message formats yet"
-            description="Customize the message structure dispatched to your WhatsApp groups."
-            actionNode={
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={() => openCreateModal("message")}
-              >
-                <Plus className="w-4 h-4 mr-1.5" /> Create Message Format
-              </Button>
-            }
+            description="Customize the message structure dispatched to your WhatsApp student groups."
+            actionLabel="+ Create Message Format"
+            onAction={() => openCreateModal("message")}
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {messageTemplates.map((t) => (
               <div
                 key={t.id}
-                className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-emerald-500/50 transition-all flex flex-col justify-between"
+                className="p-5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-primary)] shadow-sm hover:border-[var(--color-primary)]/40 transition-all flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -459,7 +416,7 @@ export default function TemplatesPage() {
                       <button
                         type="button"
                         onClick={() => openEditModal(t)}
-                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
+                        className="p-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] rounded"
                         title="Edit"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -467,7 +424,7 @@ export default function TemplatesPage() {
                       <button
                         type="button"
                         onClick={() => setDeletingTemplate(t)}
-                        className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded"
+                        className="p-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-danger)] rounded"
                         title="Delete"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -475,21 +432,21 @@ export default function TemplatesPage() {
                     </div>
                   </div>
 
-                  <h3 className="font-bold text-base text-slate-900 dark:text-white mb-2">
+                  <h3 className="font-bold text-sm text-[var(--color-text-primary)] mb-2">
                     {t.name}
                   </h3>
 
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 font-mono text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap line-clamp-5 mb-4 border border-slate-200/50 dark:border-slate-700/50">
+                  <div className="p-3 rounded-lg bg-[var(--color-surface-sunken)] font-mono text-xs text-[var(--color-text-primary)] whitespace-pre-wrap line-clamp-5 mb-4 border border-[var(--color-border-secondary)]">
                     {t.body?.text || ""}
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+                <div className="pt-3 border-t border-[var(--color-border-secondary)] flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
                   <span>Variables: title, group, date, due, link</span>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="text-xs py-1"
+                    className="text-xs h-7"
                     onClick={() => {
                       navigator.clipboard.writeText(t.body?.text || "");
                       toast.success("Template text copied to clipboard");
@@ -516,7 +473,7 @@ export default function TemplatesPage() {
       >
         <form onSubmit={handleSaveTemplate} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
               Template Name
             </label>
             <Input
@@ -534,7 +491,7 @@ export default function TemplatesPage() {
 
           {templateType === "checklist" ? (
             <div className="space-y-3">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 Checklist Items ({checklistItems.length})
               </label>
 
@@ -565,15 +522,15 @@ export default function TemplatesPage() {
                 {checklistItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs gap-2"
+                    className="p-2.5 rounded-lg bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)] flex items-center justify-between text-xs gap-2"
                   >
-                    <span className="text-slate-800 dark:text-slate-200 truncate">
+                    <span className="text-[var(--color-text-primary)] truncate">
                       {idx + 1}. {item}
                     </span>
                     <button
                       type="button"
                       onClick={() => handleRemoveChecklistItem(idx)}
-                      className="text-slate-400 hover:text-rose-500"
+                      className="text-[var(--color-text-tertiary)] hover:text-[var(--color-danger)]"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -584,10 +541,10 @@ export default function TemplatesPage() {
           ) : (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   Message Format
                 </label>
-                <span className="text-[11px] text-slate-400">WhatsApp markdown supported</span>
+                <span className="text-[11px] text-[var(--color-text-tertiary)]">WhatsApp markdown supported</span>
               </div>
 
               {/* Placeholder helper chips */}
@@ -597,7 +554,7 @@ export default function TemplatesPage() {
                     key={ph}
                     type="button"
                     onClick={() => insertPlaceholder(ph)}
-                    className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-300 transition-colors"
+                    className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-[var(--color-surface-sunken)] hover:bg-[var(--color-primary-subtle)] hover:text-[var(--color-primary-text)] text-[var(--color-text-secondary)] transition-colors border border-[var(--color-border-secondary)]"
                   >
                     +{ph}
                   </button>
@@ -609,13 +566,13 @@ export default function TemplatesPage() {
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
                 placeholder="Compose your WhatsApp dispatch template format..."
-                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full p-3 rounded-lg border border-[var(--color-border-input)] bg-[var(--color-surface)] text-xs font-mono text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
                 required
               />
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--color-border-secondary)]">
             <Button
               type="button"
               variant="outline"
@@ -624,7 +581,7 @@ export default function TemplatesPage() {
               Cancel
             </Button>
             <Button type="submit" variant="primary" disabled={saving}>
-              {saving ? "Saving..." : editingTemplate ? "Update Template" : "Create Template"}
+              {saving ? "Saving…" : editingTemplate ? "Update Template" : "Create Template"}
             </Button>
           </div>
         </form>
