@@ -36,6 +36,7 @@ import {
   Bell,
 } from "lucide-react";
 import { ShareSheet } from "@/components/admin/ShareSheet";
+import { WhatsAppIcon } from "@/components/icons/WhatsApp";
 
 interface TaskDetailResponse {
   task_list: {
@@ -81,6 +82,7 @@ interface TaskDetailResponse {
     id: string;
     name: string;
     phone?: string | null;
+    active?: boolean;
   }>;
   opens: Array<{
     id: number;
@@ -352,7 +354,7 @@ export default function TaskDetailPage({
             variant="whatsapp"
             onClick={() => setShareSheetMode("share")}
           >
-            <Share2 className="w-3.5 h-3.5 mr-1" /> Share WA
+            <WhatsAppIcon className="w-3.5 h-3.5 mr-1" /> Share WA
           </Button>
           <Button
             variant="outline"
@@ -630,7 +632,7 @@ export default function TaskDetailPage({
           {/* Share Log */}
           <Card className="p-4 space-y-2.5">
             <div className="flex items-center gap-2 border-b border-[var(--color-border-secondary)] pb-2">
-              <Share2 className="w-3.5 h-3.5 text-blue-600" />
+              <Share2 className="w-3.5 h-3.5 text-[var(--color-primary)]" />
               <h3 className="text-xs font-bold text-[var(--color-text-primary)]">
                 Share Dispatch Log ({share_logs.length})
               </h3>

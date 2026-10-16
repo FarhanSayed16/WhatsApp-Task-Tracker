@@ -53,7 +53,7 @@ export interface ShareSheetProps {
     id: string;
     name: string;
     phone?: string | null;
-    active: boolean;
+    active?: boolean;
   }>;
   initialMode?: "share" | "reminder";
   onShareLogged?: () => void;
@@ -587,13 +587,13 @@ export function ShareSheet({
               onClick={handleManualMarkSent}
               className={
                 markedSent
-                  ? "col-span-2 sm:col-span-1 text-emerald-600 font-semibold"
-                  : "col-span-2 sm:col-span-1 text-slate-500"
+                  ? "col-span-2 sm:col-span-1 text-[var(--color-primary)] font-semibold"
+                  : "col-span-2 sm:col-span-1 text-[var(--color-text-secondary)]"
               }
             >
               {markedSent ? (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-[var(--color-primary)]" />
                   Marked Sent
                 </>
               ) : (

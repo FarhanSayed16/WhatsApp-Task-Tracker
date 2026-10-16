@@ -96,7 +96,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
       role="dialog"
       aria-modal="true"
     >
@@ -107,17 +107,20 @@ export function Modal({
         aria-hidden="true"
       />
 
-      {/* Panel */}
+      {/* Panel (Bottom sheet on mobile, centered card on desktop) */}
       <div
         ref={modalRef}
         className={cn(
-          "relative w-full rounded-xl bg-[var(--color-surface-overlay)] border border-[var(--color-border-primary)] shadow-[var(--shadow-float)] overflow-hidden z-10 transition-all transform animate-scale-in my-8",
+          "relative w-full rounded-t-2xl sm:rounded-xl bg-[var(--color-surface-overlay)] border-t sm:border border-[var(--color-border-primary)] shadow-[var(--shadow-float)] overflow-hidden z-10 transition-all transform animate-slide-up sm:animate-scale-in my-0 sm:my-8 max-h-[92vh] flex flex-col",
           sizeClasses
         )}
       >
+        {/* Mobile grab handle */}
+        <div className="w-10 h-1 rounded-full bg-[var(--color-border-input)] mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3 border-b border-[var(--color-border-secondary)]">
+          <div className="flex items-start justify-between gap-4 px-5 pt-3 sm:pt-5 pb-3 border-b border-[var(--color-border-secondary)] shrink-0">
             <div className="min-w-0 space-y-1">
               {title && (
                 <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
