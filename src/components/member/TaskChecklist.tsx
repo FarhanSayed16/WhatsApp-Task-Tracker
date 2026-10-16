@@ -53,7 +53,7 @@ export function TaskChecklist({
   };
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2">
       {sortedItems.map((item, index) => {
         const completion = getCompletion(item.id);
         const isDone =
@@ -69,29 +69,29 @@ export function TaskChecklist({
             key={item.id}
             onClick={() => !readOnly && currentMemberId && handleToggle(item)}
             className={cn(
-              "p-4 rounded-2xl border transition-all duration-200 select-none",
+              "p-3.5 rounded-xl border transition-all duration-200 select-none",
               isDone
-                ? "bg-slate-50/70 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800/60"
-                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm hover:border-emerald-500/30",
+                ? "bg-[var(--color-surface-sunken)] border-[var(--color-border-secondary)]"
+                : "bg-[var(--color-surface)] border-[var(--color-border-primary)] shadow-[var(--shadow-sm)] hover:border-[var(--color-primary)]/30",
               !readOnly && currentMemberId
                 ? "cursor-pointer active:scale-[0.99]"
                 : "cursor-default",
               isToggling && "opacity-60"
             )}
           >
-            <div className="flex items-start gap-3.5">
+            <div className="flex items-start gap-3">
               {/* Custom Checkbox */}
               <button
                 type="button"
                 disabled={readOnly || !currentMemberId || isToggling}
                 aria-label={`Mark task ${item.text}`}
                 className={cn(
-                  "w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 transition-all duration-200",
+                  "w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 transition-all duration-200",
                   isVerified
-                    ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/30 ring-2 ring-emerald-500/20"
+                    ? "bg-[var(--color-status-verified-fg)] text-white"
                     : isDone
-                    ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 ring-2 ring-blue-500/20"
-                    : "border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 bg-transparent"
+                    ? "bg-[var(--color-status-done-fg)] text-white"
+                    : "border-2 border-[var(--color-border-input)] hover:border-[var(--color-primary)] bg-transparent"
                 )}
               >
                 {isVerified ? (
@@ -104,15 +104,15 @@ export function TaskChecklist({
               {/* Task Text & Details */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-400 select-none">
+                  <span className="text-xs font-bold text-[var(--color-text-disabled)] select-none">
                     #{index + 1}
                   </span>
                   <p
                     className={cn(
                       "text-sm font-medium transition-all leading-relaxed",
                       isDone
-                        ? "line-through text-slate-400 dark:text-slate-500"
-                        : "text-slate-900 dark:text-slate-100"
+                        ? "line-through text-[var(--color-text-tertiary)]"
+                        : "text-[var(--color-text-primary)]"
                     )}
                   >
                     {item.text}
@@ -122,14 +122,14 @@ export function TaskChecklist({
                 {/* Badges / Metadata */}
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                   {assignedMember && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-[11px]">
-                      <User className="w-3 h-3 text-slate-400" />
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)] font-medium text-[11px]">
+                      <User className="w-3 h-3 text-[var(--color-text-tertiary)]" />
                       Assigned: {assignedMember.name}
                     </span>
                   )}
 
                   {completion && (
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    <span className="text-[11px] text-[var(--color-text-tertiary)] flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       Completed by {getMemberName(completion.member_id)}{" "}
                       · {formatRelativeTime(completion.completed_at)}
@@ -137,7 +137,7 @@ export function TaskChecklist({
                   )}
 
                   {isVerified && !completion && (
-                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                    <span className="text-[11px] text-[var(--color-status-verified-fg)] font-medium flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3" />
                       Verified by Professor
                     </span>
@@ -146,8 +146,8 @@ export function TaskChecklist({
 
                 {/* Optional note display */}
                 {completion?.note && (
-                  <div className="mt-2 text-xs text-slate-600 dark:text-slate-400 italic bg-slate-100/70 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 px-2.5 py-1.5 rounded-lg">
-                    “{completion.note}”
+                  <div className="mt-2 text-xs text-[var(--color-text-secondary)] italic bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)] px-2.5 py-1.5 rounded-lg">
+                    &ldquo;{completion.note}&rdquo;
                   </div>
                 )}
               </div>
@@ -160,7 +160,7 @@ export function TaskChecklist({
                     e.stopPropagation();
                     onAddNote(item);
                   }}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+                  className="p-1.5 rounded-lg text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] transition-colors shrink-0"
                   title="Add completion note"
                 >
                   <MessageSquare className="w-4 h-4" />
@@ -172,7 +172,7 @@ export function TaskChecklist({
       })}
 
       {!currentMemberId && !readOnly && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-medium">
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-fg)] text-xs font-medium">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>Pick your name above to check off items.</span>
         </div>

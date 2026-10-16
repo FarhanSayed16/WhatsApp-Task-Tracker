@@ -39,10 +39,10 @@ export function ConfirmDialog({
     >
       <div className="flex flex-col items-center text-center pt-2 pb-2">
         <div
-          className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
+          className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${
             isDanger
-              ? "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400"
-              : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+              ? "bg-[var(--color-danger-bg)] text-[var(--color-danger)]"
+              : "bg-[var(--color-primary-subtle)] text-[var(--color-primary)]"
           }`}
         >
           {isDanger ? (
@@ -51,16 +51,16 @@ export function ConfirmDialog({
             <Info className="w-6 h-6" />
           )}
         </div>
-        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
           {title}
         </h3>
-        <div className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+        <div className="text-sm text-[var(--color-text-secondary)] leading-relaxed mb-6">
           {message}
         </div>
         <div className="flex items-center gap-3 w-full">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             className="flex-1"
             disabled={loading}
             onClick={onClose}

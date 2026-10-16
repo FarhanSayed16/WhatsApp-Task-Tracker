@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, AlertCircle } from "lucide-react";
 
 export interface DropdownOption {
   value: string;
@@ -40,7 +40,7 @@ export const Dropdown = React.forwardRef<HTMLSelectElement, DropdownProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300"
+            className="block text-xs font-semibold text-[var(--color-text-secondary)]"
           >
             {label}
           </label>
@@ -51,10 +51,11 @@ export const Dropdown = React.forwardRef<HTMLSelectElement, DropdownProps>(
             ref={ref}
             disabled={disabled}
             className={cn(
-              "w-full appearance-none rounded-xl bg-white dark:bg-slate-900 border text-slate-900 dark:text-slate-100 text-sm transition-all duration-150 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed pl-3.5 pr-10 py-2.5 cursor-pointer",
+              "w-full appearance-none rounded-lg bg-[var(--color-surface)] border text-[var(--color-text-primary)] text-sm transition-all duration-150 h-11",
+              "focus:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed pl-3.5 pr-10 cursor-pointer",
               error
-                ? "border-rose-400 dark:border-rose-600 focus:border-rose-500 focus:ring-rose-500/20"
-                : "border-slate-200 dark:border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/20",
+                ? "border-[var(--color-danger)] focus-visible:ring-[var(--color-danger)]/20"
+                : "border-[var(--color-border-input)] focus-visible:border-[var(--color-border-focus)] focus-visible:ring-[var(--color-primary)]/20",
               className
             )}
             {...props}
@@ -70,16 +71,17 @@ export const Dropdown = React.forwardRef<HTMLSelectElement, DropdownProps>(
               </option>
             ))}
           </select>
-          <div className="absolute right-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+          <div className="absolute right-3.5 flex items-center pointer-events-none text-[var(--color-text-tertiary)]">
             <ChevronDown className="w-4 h-4" />
           </div>
         </div>
         {error ? (
-          <p className="text-xs text-rose-500 dark:text-rose-400 font-medium animate-slide-up">
+          <p className="flex items-center gap-1 text-xs text-[var(--color-danger)] font-medium animate-slide-up">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             {error}
           </p>
         ) : helperText ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-[var(--color-text-tertiary)]">
             {helperText}
           </p>
         ) : null}

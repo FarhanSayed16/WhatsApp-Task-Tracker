@@ -36,13 +36,13 @@ export function MemberRow({
   };
 
   return (
-    <div className="flex items-center justify-between py-3.5 px-4 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-800 gap-4">
+    <div className="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-[var(--color-surface-sunken)] transition-colors gap-4">
       <div className="flex items-center gap-3.5 min-w-0 flex-1">
         <div
           className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs uppercase shrink-0 ${
             active
-              ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20"
-              : "bg-slate-200 dark:bg-slate-800 text-slate-500"
+              ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)]"
+              : "bg-[var(--color-surface-sunken)] text-[var(--color-text-disabled)]"
           }`}
         >
           {name.slice(0, 2)}
@@ -50,20 +50,20 @@ export function MemberRow({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+            <span className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
               {name}
             </span>
             <Badge
-              variant={active ? "verified" : "neutral"}
-              className="text-[10px] py-0 px-2"
+              variant={active ? "active" : "neutral"}
+              className="text-[10px] py-0 px-1.5"
             >
               {active ? "Active" : "Inactive"}
             </Badge>
           </div>
 
-          <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <div className="flex items-center gap-4 text-xs text-[var(--color-text-tertiary)] mt-0.5">
             <span className="flex items-center gap-1">
-              <Phone className="w-3 h-3 text-slate-400" />
+              <Phone className="w-3 h-3" />
               {maskPhone(phone)}
             </span>
             <span>·</span>
@@ -77,15 +77,15 @@ export function MemberRow({
           <Button
             size="sm"
             variant="ghost"
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            className="p-1.5"
             onClick={() => onToggleActive(id, active)}
             title={active ? "Deactivate member" : "Activate member"}
             aria-label={active ? "Deactivate member" : "Activate member"}
           >
             {active ? (
-              <UserX className="w-4 h-4 text-amber-500" />
+              <UserX className="w-4 h-4 text-[var(--color-status-pending-fg)]" />
             ) : (
-              <UserCheck className="w-4 h-4 text-emerald-500" />
+              <UserCheck className="w-4 h-4 text-[var(--color-primary)]" />
             )}
           </Button>
         )}
@@ -94,7 +94,7 @@ export function MemberRow({
           <Button
             size="sm"
             variant="ghost"
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            className="p-1.5"
             onClick={() => onEdit(id)}
             title="Edit member"
             aria-label="Edit member"
@@ -107,7 +107,7 @@ export function MemberRow({
           <Button
             size="sm"
             variant="ghost"
-            className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"
+            className="p-1.5 hover:text-[var(--color-danger)]"
             onClick={() => onDelete(id)}
             title="Delete member"
             aria-label="Delete member"

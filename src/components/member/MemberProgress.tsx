@@ -39,26 +39,26 @@ export function MemberProgress({
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5">
           {isAllComplete ? (
-            <Sparkles className="w-4 h-4 text-emerald-500 animate-bounce" />
+            <Sparkles className="w-4 h-4 text-[var(--color-status-verified-fg)] animate-bounce" />
           ) : (
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <CheckCircle2 className="w-4 h-4 text-[var(--color-primary)]" />
           )}
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            {isAllComplete ? "All Tasks Completed!" : "List Progress"}
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">
+            {isAllComplete ? "All Tasks Completed!" : "Progress"}
           </span>
         </div>
-        <div className="text-xs font-bold text-slate-900 dark:text-white">
+        <div className="text-xs font-bold text-[var(--color-text-primary)]">
           <span>
-            {completedCount} of {totalCount} completed ({percentage}%)
+            {completedCount} of {totalCount} done
           </span>
         </div>
       </div>
 
-      <ProgressBar value={percentage} size="md" animateColor={true} />
+      <ProgressBar value={completedCount} max={totalCount} size="md" animateColor={true} />
 
       {isAllComplete && (
-        <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/20 text-center animate-slide-up">
-          <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+        <div className="mt-3 p-3 rounded-lg bg-[var(--color-status-verified-bg)] border border-[var(--color-status-verified-fg)]/20 text-center animate-slide-up">
+          <p className="text-xs font-semibold text-[var(--color-status-verified-fg)]">
             🎉 Great work! All tasks have been completed.
           </p>
         </div>

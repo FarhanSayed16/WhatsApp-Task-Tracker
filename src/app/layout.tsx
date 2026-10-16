@@ -55,7 +55,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className="min-h-full flex flex-col font-sans bg-[var(--background)] text-[var(--foreground)] selection:bg-emerald-500/20 selection:text-emerald-700"
+        className="min-h-full flex flex-col font-sans bg-[var(--color-canvas)] text-[var(--color-text-primary)] selection:bg-[var(--color-primary-subtle)] selection:text-[var(--color-primary-text)]"
         suppressHydrationWarning
       >
         <ThemeProvider>

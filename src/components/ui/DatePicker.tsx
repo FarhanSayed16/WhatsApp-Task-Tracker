@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { Calendar } from "lucide-react";
+import { Calendar, AlertCircle } from "lucide-react";
 
 export interface DatePickerProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange"> {
@@ -49,7 +49,7 @@ export function DatePicker({
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300"
+            className="block text-xs font-semibold text-[var(--color-text-secondary)]"
           >
             {label}
           </label>
@@ -59,15 +59,15 @@ export function DatePicker({
             <button
               type="button"
               onClick={setToday}
-              className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium text-[11px]"
+              className="text-[var(--color-primary-text)] hover:underline font-medium text-[11px]"
             >
               Today
             </button>
-            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-[var(--color-text-disabled)]">·</span>
             <button
               type="button"
               onClick={setTomorrow}
-              className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium text-[11px]"
+              className="text-[var(--color-primary-text)] hover:underline font-medium text-[11px]"
             >
               Tomorrow
             </button>
@@ -76,7 +76,7 @@ export function DatePicker({
       </div>
 
       <div className="relative flex items-center">
-        <div className="absolute left-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+        <div className="absolute left-3.5 flex items-center pointer-events-none text-[var(--color-text-tertiary)]">
           <Calendar className="w-4 h-4" />
         </div>
         <input
@@ -88,10 +88,11 @@ export function DatePicker({
           max={max}
           onChange={(e) => onChange(e.target.value)}
           className={cn(
-            "w-full rounded-xl bg-white dark:bg-slate-900 border text-slate-900 dark:text-slate-100 text-sm transition-all duration-150 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed pl-10 pr-3.5 py-2.5",
+            "w-full rounded-lg bg-[var(--color-surface)] border text-[var(--color-text-primary)] text-sm transition-all duration-150 h-11",
+            "focus:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed pl-10 pr-3.5",
             error
-              ? "border-rose-400 dark:border-rose-600 focus:border-rose-500 focus:ring-rose-500/20"
-              : "border-slate-200 dark:border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/20",
+              ? "border-[var(--color-danger)] focus-visible:ring-[var(--color-danger)]/20"
+              : "border-[var(--color-border-input)] focus-visible:border-[var(--color-border-focus)] focus-visible:ring-[var(--color-primary)]/20",
             className
           )}
           {...props}
@@ -99,11 +100,12 @@ export function DatePicker({
       </div>
 
       {error ? (
-        <p className="text-xs text-rose-500 dark:text-rose-400 font-medium animate-slide-up">
+        <p className="flex items-center gap-1 text-xs text-[var(--color-danger)] font-medium animate-slide-up">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           {error}
         </p>
       ) : helperText ? (
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-[var(--color-text-tertiary)]">
           {helperText}
         </p>
       ) : null}

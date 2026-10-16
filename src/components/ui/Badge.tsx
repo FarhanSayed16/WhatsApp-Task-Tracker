@@ -2,7 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: "pending" | "done" | "verified" | "overdue" | "neutral" | "draft";
+  variant?: "pending" | "done" | "verified" | "overdue" | "neutral" | "draft" | "active";
 }
 
 export function Badge({
@@ -13,23 +13,25 @@ export function Badge({
 }: BadgeProps) {
   const variantStyles = {
     pending:
-      "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20",
-    // Plan: done = green, verified = blue
-    done: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
+      "bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-fg)] border border-[var(--color-status-pending-fg)]/20",
+    done:
+      "bg-[var(--color-status-done-bg)] text-[var(--color-status-done-fg)] border border-[var(--color-status-done-fg)]/20",
     verified:
-      "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20",
+      "bg-[var(--color-status-verified-bg)] text-[var(--color-status-verified-fg)] border border-[var(--color-status-verified-fg)]/20",
     overdue:
-      "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20",
+      "bg-[var(--color-status-overdue-bg)] text-[var(--color-status-overdue-fg)] border border-[var(--color-status-overdue-fg)]/20",
+    active:
+      "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] border border-[var(--color-primary)]/20",
     neutral:
-      "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700",
+      "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)] border border-[var(--color-border-primary)]",
     draft:
-      "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-dashed border-slate-300 dark:border-slate-600",
+      "bg-[var(--color-status-draft-bg)] text-[var(--color-status-draft-fg)] border border-dashed border-[var(--color-status-draft-fg)]/30",
   }[variant];
 
   return (
     <span
       className={cn(
-        "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium tracking-wide",
+        "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold tracking-wide",
         variantStyles,
         className
       )}

@@ -35,29 +35,29 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
 
   return (
     <>
-      <header className="h-16 px-4 sm:px-8 border-b border-slate-200/80 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between gap-4">
+      <header className="h-16 px-4 sm:px-6 border-b border-[var(--color-border-primary)] bg-[var(--color-surface)]/80 backdrop-blur-sm sticky top-0 z-30 flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate">
+          <h1 className="text-lg font-bold text-[var(--color-text-primary)] truncate tracking-tight">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+            <p className="text-xs text-[var(--color-text-tertiary)] truncate">
               {subtitle}
             </p>
           )}
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {actions && <div className="flex items-center gap-2">{actions}</div>}
 
-          <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+          <div className="h-5 w-px bg-[var(--color-border-primary)] hidden sm:block" />
 
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={toggleTheme}
-            className="text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 p-2"
+            className="p-2 text-[var(--color-text-tertiary)]"
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             aria-label="Toggle light/dark theme"
           >
@@ -69,9 +69,9 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
           </Button>
 
           {/* User profile / Logout */}
-          <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-xs font-medium text-slate-700 dark:text-slate-300">
-              <User className="w-3.5 h-3.5 text-slate-500" />
+          <div className="flex items-center gap-1.5">
+            <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--color-surface-sunken)] text-xs font-medium text-[var(--color-text-secondary)]">
+              <User className="w-3.5 h-3.5" />
               <span>Admin</span>
             </div>
 
@@ -80,7 +80,7 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
               variant="ghost"
               size="sm"
               onClick={() => setShowLogoutConfirm(true)}
-              className="text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 p-2"
+              className="p-2 text-[var(--color-text-tertiary)] hover:text-[var(--color-danger)]"
               title="Logout"
               aria-label="Logout"
             >
