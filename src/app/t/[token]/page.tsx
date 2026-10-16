@@ -322,7 +322,7 @@ export default function PublicMemberPage({
           <div className="flex items-center justify-between border-b border-[var(--color-border-secondary)] pb-3">
             <div className="flex items-center gap-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-primary)]">
-                Checklist ({items.length})
+                Checklist · {items.length} items
               </h2>
               {data.verify_required && (
                 <Badge variant="verified" className="text-[10px] py-0.5">

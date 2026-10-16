@@ -10,18 +10,17 @@ import {
   buildReminderMessage,
   waLink,
   inspectWaUrl,
+  sanitizeWhatsAppText,
   ReminderType,
 } from "@/lib/whatsapp";
 import {
   Share2,
   Copy,
-  ExternalLink,
   AlertTriangle,
   Send,
   Bell,
   Check,
   CheckCircle2,
-  Phone,
   User,
   Smartphone,
   Sparkles,
@@ -82,6 +81,10 @@ export function ShareSheet({
     Array<{ id: string; name: string; body: { text?: string } }>
   >([]);
   const [defaultWaPhone, setDefaultWaPhone] = useState<string | null>(null);
+  /** How to deliver: pick any WA chat/group (default), or a saved personal number */
+  const [sendTarget, setSendTarget] = useState<"pick_chat" | "saved_number">(
+    "pick_chat"
+  );
 
   const publicLink =
     taskList.member_link ||
@@ -109,7 +112,10 @@ export function ShareSheet({
           setMessageTemplates(Array.isArray(tplJson.data) ? tplJson.data : []);
         }
         if (!cancelled && settingsRes.ok) {
-          setDefaultWaPhone(settingsJson.data?.default_wa_phone || null);
+          const phone = settingsJson.data?.default_wa_phone || null;
+          setDefaultWaPhone(phone);
+          // Always default to chat picker (groups). Saved number is optional secondary.
+          setSendTarget("pick_chat");
         }
       } catch {
         /* optional enrichment */
@@ -169,7 +175,13 @@ export function ShareSheet({
     publicLink,
   ]);
 
-  const urlStats = inspectWaUrl(messageText);
+  const targetPhone =
+    sendTarget === "saved_number" && defaultWaPhone ? defaultWaPhone : null;
+  const urlStats = inspectWaUrl(messageText, targetPhone);
+  const isLocalhostLink =
+    /localhost|127\.0\.0\.1/i.test(publicLink) ||
+    publicLink.startsWith("http://192.") ||
+    publicLink.startsWith("http://10.");
 
   const logShareEvent = async (
     channel: "whatsapp_group" | "whatsapp_individual" | "copy" | "native_share",
@@ -229,18 +241,26 @@ export function ShareSheet({
   };
 
   const handleOpenWhatsApp = async (phone?: string | null, memberId?: string | null) => {
-    const link = waLink(messageText, phone);
+    const clean = sanitizeWhatsAppText(messageText);
+    if (clean !== messageText) setMessageText(clean);
+    const link = waLink(clean, phone);
     window.open(link, "_blank");
     const channel = phone ? "whatsapp_individual" : "whatsapp_group";
     await logShareEvent(channel, memberId);
-    toast.success("Opened WhatsApp & logged share event!");
+    toast.success(
+      phone
+        ? "Opened WhatsApp chat"
+        : "Opened WhatsApp — pick your group, then Send"
+    );
   };
 
   const handleCopyMessage = async () => {
     try {
-      await navigator.clipboard.writeText(messageText);
+      const clean = sanitizeWhatsAppText(messageText);
+      if (clean !== messageText) setMessageText(clean);
+      await navigator.clipboard.writeText(clean);
       await logShareEvent("copy");
-      toast.success("Message copied to clipboard!");
+      toast.success("Message copied — paste it into your WhatsApp group");
     } catch {
       toast.error("Failed to copy message");
     }
@@ -378,10 +398,10 @@ export function ShareSheet({
 
         {/* Gemini AI Reminder Assistant (Phase 15.4) */}
         {activeTab === "reminder" && (
-          <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-900/60 space-y-2.5 animate-slide-up">
+          <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/60 space-y-2.5 animate-slide-up">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-purple-900 dark:text-purple-300">
-                <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900 dark:text-emerald-300">
+                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Gemini AI Reminder Assistant</span>
               </div>
               <Button
@@ -389,7 +409,7 @@ export function ShareSheet({
                 size="sm"
                 onClick={handleAiDraftReminder}
                 disabled={isDraftingAi}
-                className="bg-purple-600 hover:bg-purple-500 text-white text-xs h-7 px-2.5 shadow-sm"
+                className="bg-emerald-700 hover:bg-emerald-600 text-white text-xs h-7 px-2.5 shadow-sm"
               >
                 {isDraftingAi ? (
                   <>
@@ -413,8 +433,8 @@ export function ShareSheet({
                   onClick={() => setAiLang("en")}
                   className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
                     aiLang === "en"
-                      ? "bg-purple-600 text-white shadow-sm"
-                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-purple-200/60 dark:border-purple-900/40"
+                      ? "bg-emerald-700 text-white shadow-sm"
+                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-emerald-200/60 dark:border-emerald-900/40"
                   }`}
                 >
                   English
@@ -424,8 +444,8 @@ export function ShareSheet({
                   onClick={() => setAiLang("hi")}
                   className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
                     aiLang === "hi"
-                      ? "bg-purple-600 text-white shadow-sm"
-                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-purple-200/60 dark:border-purple-900/40"
+                      ? "bg-emerald-700 text-white shadow-sm"
+                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-emerald-200/60 dark:border-emerald-900/40"
                   }`}
                 >
                   हिंदी
@@ -435,8 +455,8 @@ export function ShareSheet({
                   onClick={() => setAiLang("mr")}
                   className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
                     aiLang === "mr"
-                      ? "bg-purple-600 text-white shadow-sm"
-                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-purple-200/60 dark:border-purple-900/40"
+                      ? "bg-emerald-700 text-white shadow-sm"
+                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-emerald-200/60 dark:border-emerald-900/40"
                   }`}
                 >
                   मराठी
@@ -448,7 +468,7 @@ export function ShareSheet({
                 <select
                   value={aiTone}
                   onChange={(e) => setAiTone(e.target.value as any)}
-                  className="px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-[11px] font-medium focus:outline-none"
+                  className="px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-[11px] font-medium focus:outline-none"
                 >
                   <option value="polite">Polite &amp; Encouraging</option>
                   <option value="urgent">Urgent (Overdue)</option>
@@ -525,6 +545,21 @@ export function ShareSheet({
           )}
         </div>
 
+        {/* Localhost warning — students cannot open this link */}
+        {isLocalhostLink && (
+          <div className="p-3 rounded-xl bg-[var(--color-warning-bg)] border border-[var(--color-warning)]/30 text-xs text-[var(--color-warning)] space-y-1">
+            <p className="font-semibold flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              Link is localhost — students&apos; phones cannot open it
+            </p>
+            <p className="text-[11px] leading-relaxed opacity-90">
+              For real sharing, deploy the app (Vercel) and set{" "}
+              <code className="font-mono">APP_URL</code> to your HTTPS URL in env.
+              Until then, use this only for your own testing.
+            </p>
+          </div>
+        )}
+
         {/* Member Link Quick Copy */}
         <div className="p-3 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-primary)] flex items-center justify-between gap-2 text-xs">
           <div className="min-w-0 flex-1 truncate font-mono text-[var(--color-text-secondary)] text-[11px]">
@@ -539,26 +574,68 @@ export function ShareSheet({
           </button>
         </div>
 
+        {/* Where to send — WhatsApp cannot deep-link into a group; picker or copy is required */}
+        <div className="space-y-2 p-3 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-primary)]">
+          <p className="text-xs font-semibold text-[var(--color-text-primary)]">
+            Where should this go?
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setSendTarget("pick_chat")}
+              className={`text-left p-2.5 rounded-lg border text-xs transition-all ${
+                sendTarget === "pick_chat"
+                  ? "border-[var(--color-whatsapp)] bg-[var(--color-whatsapp-bg)] text-[var(--color-text-primary)]"
+                  : "border-[var(--color-border-primary)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-focus)]"
+              }`}
+            >
+              <span className="font-semibold block">WhatsApp group / any chat</span>
+              <span className="text-[11px] text-[var(--color-text-tertiary)] leading-snug block mt-0.5">
+                Opens WhatsApp — you pick the group you&apos;re in (recommended)
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSendTarget("saved_number")}
+              disabled={!defaultWaPhone}
+              className={`text-left p-2.5 rounded-lg border text-xs transition-all disabled:opacity-45 disabled:cursor-not-allowed ${
+                sendTarget === "saved_number"
+                  ? "border-[var(--color-whatsapp)] bg-[var(--color-whatsapp-bg)] text-[var(--color-text-primary)]"
+                  : "border-[var(--color-border-primary)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-focus)]"
+              }`}
+            >
+              <span className="font-semibold block">
+                Saved personal number
+                {defaultWaPhone ? ` (+${defaultWaPhone})` : ""}
+              </span>
+              <span className="text-[11px] text-[var(--color-text-tertiary)] leading-snug block mt-0.5">
+                {defaultWaPhone
+                  ? "1:1 chat only — not a group. Change under Settings."
+                  : "Optional — set a number in Settings for personal testing."}
+              </span>
+            </button>
+          </div>
+          <p className="text-[11px] text-[var(--color-text-tertiary)] leading-relaxed">
+            Tip: <strong className="font-semibold text-[var(--color-text-secondary)]">Copy message</strong>{" "}
+            then paste into any WhatsApp group — works even if the picker is awkward on desktop.
+          </p>
+        </div>
+
         {/* Primary Action Buttons */}
-        <div className="space-y-2 pt-2">
+        <div className="space-y-2 pt-1">
           <Button
             type="button"
             variant="whatsapp"
             size="lg"
-            onClick={() => handleOpenWhatsApp(defaultWaPhone)}
+            onClick={() => handleOpenWhatsApp(targetPhone)}
+            disabled={urlStats.isExceeded}
             className="w-full text-sm font-bold py-3 flex items-center justify-center gap-2"
           >
             <WhatsAppIcon className="w-5 h-5 mr-1" />
-            {defaultWaPhone
+            {sendTarget === "saved_number" && defaultWaPhone
               ? `Open WhatsApp (+${defaultWaPhone})`
-              : "Open in WhatsApp"}
+              : "Open WhatsApp — choose group"}
           </Button>
-          {defaultWaPhone && (
-            <p className="text-[11px] text-center text-[var(--color-text-tertiary)]">
-              Opens a chat with your saved test number and the checklist + member link pre-filled.
-              Change this under Settings.
-            </p>
-          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <Button
@@ -607,23 +684,23 @@ export function ShareSheet({
 
         {/* Direct Individual Member Links if available */}
         {members.length > 0 && (
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-              Send to Member Directly ({members.filter((m) => m.phone).length} with phones):
+          <div className="pt-2 border-t border-[var(--color-border-secondary)] space-y-2">
+            <span className="text-xs font-semibold text-[var(--color-text-tertiary)] block">
+              Or message one student ({members.filter((m) => m.phone).length} with phones)
             </span>
             <div className="max-h-36 overflow-y-auto space-y-1.5">
               {members.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between py-1.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 text-xs"
+                  className="flex items-center justify-between py-1.5 px-3 rounded-xl bg-[var(--color-surface-sunken)] text-xs"
                 >
-                  <div className="flex items-center gap-2">
-                    <User className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <User className="w-3.5 h-3.5 text-[var(--color-text-tertiary)] shrink-0" />
+                    <span className="font-semibold text-[var(--color-text-primary)] truncate">
                       {member.name}
                     </span>
                     {member.phone && (
-                      <span className="text-slate-400 text-[11px]">
+                      <span className="text-[var(--color-text-tertiary)] text-[11px] shrink-0">
                         ({member.phone})
                       </span>
                     )}
@@ -632,12 +709,12 @@ export function ShareSheet({
                     <button
                       type="button"
                       onClick={() => handleOpenWhatsApp(member.phone, member.id)}
-                      className="text-emerald-600 hover:underline font-semibold flex items-center gap-1 text-[11px]"
+                      className="text-[var(--color-primary)] hover:underline font-semibold flex items-center gap-1 text-[11px] shrink-0"
                     >
                       <Send className="w-3 h-3" /> WhatsApp
                     </button>
                   ) : (
-                    <span className="text-slate-400 text-[10px]">No phone</span>
+                    <span className="text-[var(--color-text-disabled)] text-[10px]">No phone</span>
                   )}
                 </div>
               ))}

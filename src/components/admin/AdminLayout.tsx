@@ -4,6 +4,7 @@ import React from "react";
 import { Sidebar, MobileBottomNav } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { PWAInstallBanner } from "@/components/ui/PWAInstallPrompt";
+import { OfflineBanner } from "@/components/ui/OfflineBanner";
 
 export interface AdminLayoutProps {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ export function AdminLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
+        <OfflineBanner />
         <TopBar title={title} subtitle={subtitle} actions={actions} />
         <main className="flex-1 p-4 sm:p-6 max-w-[960px] w-full mx-auto">
           {children}

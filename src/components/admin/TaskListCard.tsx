@@ -52,12 +52,12 @@ export interface TaskListCardProps {
 
 const STATUS_BADGE: Record<
   string,
-  { variant: "draft" | "done" | "verified" | "neutral" | "pending"; label: string }
+  { variant: "draft" | "active" | "verified" | "neutral" | "pending"; label: string }
 > = {
-  draft: { variant: "draft", label: "draft" },
-  active: { variant: "done", label: "active" },
-  completed: { variant: "verified", label: "completed" },
-  archived: { variant: "neutral", label: "archived" },
+  draft: { variant: "draft", label: "Draft" },
+  active: { variant: "active", label: "Active" },
+  completed: { variant: "verified", label: "Completed" },
+  archived: { variant: "neutral", label: "Archived" },
 };
 
 export function TaskListCard({
@@ -146,7 +146,7 @@ export function TaskListCard({
               <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]">
                 {groupName}
               </span>
-              <Badge variant={badge.variant} className="text-[10px]">
+              <Badge variant={badge.variant} showGlyph className="text-[10px]">
                 {badge.label}
               </Badge>
               {recurrence?.auto_generated && (

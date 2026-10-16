@@ -24,6 +24,8 @@ import {
   ArrowRight,
   Copy,
   Repeat,
+  ListPlus,
+  Send,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -101,7 +103,7 @@ export default function TemplatesPage() {
     setNewItemText("");
     setMessageText(
       type === "message"
-        ? "📋 *{title}*\n👥 {group}  |  📅 {date}\n\n{items}\n\n⏰ *Due:* {due}\n👉 *Tick done:* {link}"
+        ? "*{title}*\n{group}  ·  {date}\n\n{items}\n\n*Due:* {due}\n\nTick done here:\n{link}"
         : ""
     );
     setModalOpen(true);
@@ -315,7 +317,24 @@ export default function TemplatesPage() {
             <EmptyState
               icon={<FileText className="w-8 h-8 text-[var(--color-text-tertiary)]" />}
               title="No checklist templates yet"
-              description="Create reusable checklist templates (e.g. Lab Experiment, Assignment Review, Exam Prep) to spin up task lists in one tap."
+              description="Templates save you time. Reuse a lab or assignment checklist in one tap."
+              steps={[
+                {
+                  icon: <ListPlus className="w-4 h-4" />,
+                  label: "Save a checklist once",
+                  description: "Name it (e.g. Lab Session)",
+                },
+                {
+                  icon: <FileText className="w-4 h-4" />,
+                  label: "Reuse anytime",
+                  description: "Create list → pick template",
+                },
+                {
+                  icon: <Send className="w-4 h-4" />,
+                  label: "Share to WhatsApp",
+                  description: "Same flow as a normal list",
+                },
+              ]}
               actionLabel="+ Create Checklist Template"
               onAction={() => openCreateModal("checklist")}
             />
@@ -396,7 +415,24 @@ export default function TemplatesPage() {
           <EmptyState
             icon={<MessageSquare className="w-8 h-8 text-[var(--color-text-tertiary)]" />}
             title="No WhatsApp message formats yet"
-            description="Customize the message structure dispatched to your WhatsApp student groups."
+            description="Customize how checklists look when shared to WhatsApp."
+            steps={[
+              {
+                icon: <MessageSquare className="w-4 h-4" />,
+                label: "Write a format once",
+                description: "Title, bullets, due line placeholders",
+              },
+              {
+                icon: <Copy className="w-4 h-4" />,
+                label: "Reuse on share",
+                description: "ShareSheet picks your format",
+              },
+              {
+                icon: <Send className="w-4 h-4" />,
+                label: "Send via wa.me",
+                description: "Students open the checklist link",
+              },
+            ]}
             actionLabel="+ Create Message Format"
             onAction={() => openCreateModal("message")}
           />

@@ -11,14 +11,17 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useSWRFetch } from "@/hooks/useSWRFetch";
 import { useToast } from "@/components/ui/Toast";
-import { Plus, CheckSquare, Layers } from "lucide-react";
+import { Plus, CheckSquare, ClipboardList, Share2, ListChecks } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function TaskListsPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("all");
   const [groupId, setGroupId] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<"newest" | "due" | "progress">("newest");
 
   // Fetch groups for filter dropdown
   const { data: groupsData } = useSWRFetch<any>("/api/admin/groups?limit=100");
@@ -37,8 +40,23 @@ export default function TaskListsPage() {
     `/api/admin/task-lists?${queryParams.toString()}`
   );
 
-  const taskLists = Array.isArray(response) ? response : response?.data || [];
-  const total = response?.meta?.total || taskLists.length;
+  const rawLists = Array.isArray(response) ? response : response?.data || [];
+  const total = response?.meta?.total || rawLists.length;
+
+  const taskLists = [...rawLists].sort((a: any, b: any) => {
+    if (sortBy === "due") {
+      const ad = a.due_at || a.list_date || "";
+      const bd = b.due_at || b.list_date || "";
+      return ad.localeCompare(bd);
+    }
+    if (sortBy === "progress") {
+      const ap = a.total_items > 0 ? a.completed_items / a.total_items : 0;
+      const bp = b.total_items > 0 ? b.completed_items / b.total_items : 0;
+      return bp - ap;
+    }
+    // newest: list_date then created
+    return String(b.list_date || "").localeCompare(String(a.list_date || ""));
+  });
 
   const handleDelete = async (id: string) => {
     try {
@@ -115,6 +133,17 @@ export default function TaskListsPage() {
               </select>
             )}
 
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-input)] text-xs px-3 py-2 text-[var(--color-text-secondary)] focus:outline-none focus:border-[var(--color-border-focus)]"
+              aria-label="Sort lists"
+            >
+              <option value="newest">Newest first</option>
+              <option value="due">Due date</option>
+              <option value="progress">Progress</option>
+            </select>
+
             <div className="text-xs text-[var(--color-text-secondary)] font-medium ml-auto hidden sm:block">
               {isLoading ? (
                 <span>Loading...</span>
@@ -137,13 +166,34 @@ export default function TaskListsPage() {
         ) : taskLists.length === 0 ? (
           <EmptyState
             icon={<CheckSquare className="w-8 h-8" />}
-            title={search ? "No matching task lists" : "No task lists found"}
+            title={search ? "No matching task lists" : "No task lists yet"}
             description={
               search
                 ? `No checklists found matching "${search}". Try adjusting your filters.`
                 : activeTab === "all"
-                ? "You haven't created any task lists yet. Click \"New Task List\" to create and dispatch your first checklist via WhatsApp."
+                ? "Create a checklist, share it to WhatsApp, and track completions here."
                 : `No task lists with status "${activeTab}".`
+            }
+            steps={
+              !search && activeTab === "all"
+                ? [
+                    {
+                      icon: <ClipboardList className="w-4 h-4" />,
+                      label: "Step 1 — Create",
+                      description: "Build a checklist for a group",
+                    },
+                    {
+                      icon: <Share2 className="w-4 h-4" />,
+                      label: "Step 2 — Share",
+                      description: "Send the wa.me link to WhatsApp",
+                    },
+                    {
+                      icon: <ListChecks className="w-4 h-4" />,
+                      label: "Step 3 — Track",
+                      description: "Members tick items; you verify here",
+                    },
+                  ]
+                : undefined
             }
             actionLabel={
               search
@@ -157,9 +207,7 @@ export default function TaskListsPage() {
                 ? () => setSearch("")
                 : activeTab !== "all"
                 ? () => setActiveTab("all")
-                : () => {
-                    window.location.href = "/admin/tasks/new";
-                  }
+                : () => router.push("/admin/tasks/new")
             }
           />
         ) : (

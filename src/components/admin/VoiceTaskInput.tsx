@@ -127,8 +127,8 @@ export function VoiceTaskInput({ onTasksExtracted, className }: VoiceTaskInputPr
 
   if (!isSupported) {
     return (
-      <div className={cn("text-[11px] text-slate-400 flex items-center gap-1.5 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-800", className)}>
-        <MicOff className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+      <div className={cn("text-[11px] text-[var(--color-text-tertiary)] flex items-center gap-1.5 p-2 rounded-lg bg-[var(--color-surface-sunken)] border border-[var(--color-border-primary)]", className)}>
+        <MicOff className="w-3.5 h-3.5 shrink-0" />
         <span>Voice dictation is not supported by your current browser.</span>
       </div>
     );
@@ -144,19 +144,19 @@ export function VoiceTaskInput({ onTasksExtracted, className }: VoiceTaskInputPr
           className={cn(
             "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm",
             isListening
-              ? "bg-rose-600 hover:bg-rose-500 text-white animate-pulse"
-              : "bg-emerald-700 hover:bg-emerald-600 text-white"
+              ? "bg-rose-600 hover:bg-rose-500 text-white animate-pulse border-transparent"
+              : "bg-transparent border border-[var(--color-border-primary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)]"
           )}
         >
           {isListening ? (
             <>
               <MicOff className="w-3.5 h-3.5" />
-              <span>Stop &amp; Extract Tasks</span>
+              <span>Stop &amp; Extract</span>
             </>
           ) : (
             <>
               <Mic className="w-3.5 h-3.5" />
-              <span>Speak Tasks</span>
+              <span>Voice dictation</span>
             </>
           )}
         </button>

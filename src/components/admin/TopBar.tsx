@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { LogOut, User, Moon, Sun } from "lucide-react";
+import { LogOut, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
+import { useSession } from "@/hooks/useSession";
 
 export interface TopBarProps {
   title: string;
@@ -16,8 +17,11 @@ export interface TopBarProps {
 export function TopBar({ title, subtitle, actions }: TopBarProps) {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const { session } = useSession();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const displayName = session?.name?.trim() || "Admin";
+  const initial = displayName.slice(0, 1).toUpperCase();
 
   const handleLogout = async () => {
     try {
@@ -71,8 +75,10 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
           {/* User profile / Logout */}
           <div className="flex items-center gap-1.5">
             <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--color-surface-sunken)] text-xs font-medium text-[var(--color-text-secondary)]">
-              <User className="w-3.5 h-3.5" />
-              <span>Admin</span>
+              <span className="w-5 h-5 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center text-[10px] font-bold">
+                {initial}
+              </span>
+              <span className="max-w-[120px] truncate">{displayName}</span>
             </div>
 
             <Button

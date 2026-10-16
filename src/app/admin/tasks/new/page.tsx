@@ -479,134 +479,131 @@ function NewTaskForm() {
               />
             </div>
           )}
-        </Card>
 
-        {/* Recurrence Schedule Card */}
-        <Card className="p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center">
-                <Repeat className="w-3.5 h-3.5" />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-[var(--color-text-primary)]">
-                  Recurring Schedule
-                </h3>
-                <p className="text-[11px] text-[var(--color-text-tertiary)]">
-                  Auto-create draft task lists on scheduled days
-                </p>
-              </div>
-            </div>
-
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isRecurring}
-                onChange={(e) => setIsRecurring(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-[var(--color-border-primary)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
-            </label>
-          </div>
-
-          {isRecurring && (
-            <div className="pt-3 border-t border-[var(--color-border-secondary)] space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-medium text-[var(--color-text-secondary)]">
-                  Frequency:
-                </span>
-                {(["daily", "weekly", "custom"] as const).map((freq) => (
-                  <button
-                    key={freq}
-                    type="button"
-                    onClick={() => setRecurrenceFreq(freq)}
-                    className={cn(
-                      "px-3 py-1 rounded-md text-xs font-medium transition-all capitalize",
-                      recurrenceFreq === freq
-                        ? "bg-[var(--color-primary)] text-white font-semibold"
-                        : "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
-                    )}
-                  >
-                    {freq === "custom" ? "Every N days" : freq}
-                  </button>
-                ))}
-              </div>
-
-              {recurrenceFreq === "custom" && (
-                <div className="flex items-center gap-2 max-w-xs text-xs">
-                  <span className="text-[var(--color-text-secondary)]">Every</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={90}
-                    value={recurrenceIntervalDays}
-                    onChange={(e) =>
-                      setRecurrenceIntervalDays(
-                        Math.max(1, Math.min(90, Number(e.target.value) || 1))
-                      )
-                    }
-                    className="w-16 px-2 py-1 rounded-md border border-[var(--color-border-input)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)]"
-                  />
-                  <span className="text-[var(--color-text-secondary)]">days</span>
+          {/* Recurrence — collapsed into List Details to shorten scroll */}
+          <div className="pt-3 border-t border-[var(--color-border-secondary)] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Repeat className="w-3.5 h-3.5 text-[var(--color-text-tertiary)]" />
+                <div>
+                  <h3 className="text-xs font-semibold text-[var(--color-text-primary)]">
+                    Repeat this list
+                  </h3>
+                  <p className="text-[11px] text-[var(--color-text-tertiary)]">
+                    Optional — auto-draft on a schedule
+                  </p>
                 </div>
-              )}
-
-              {recurrenceFreq === "weekly" && (
-                <div className="space-y-1.5">
-                  <span className="text-xs text-[var(--color-text-secondary)]">Days of week:</span>
-                  <div className="flex items-center gap-1.5">
-                    {[
-                      { id: 1, label: "M" },
-                      { id: 2, label: "T" },
-                      { id: 3, label: "W" },
-                      { id: 4, label: "T" },
-                      { id: 5, label: "F" },
-                      { id: 6, label: "S" },
-                      { id: 0, label: "S" },
-                    ].map((day) => {
-                      const active = recurrenceDays.includes(day.id);
-                      return (
-                        <button
-                          key={day.id}
-                          type="button"
-                          onClick={() => {
-                            if (active) {
-                              setRecurrenceDays(recurrenceDays.filter((d) => d !== day.id));
-                            } else {
-                              setRecurrenceDays([...recurrenceDays, day.id]);
-                            }
-                          }}
-                          className={cn(
-                            "w-7 h-7 rounded-md text-xs font-semibold transition-all",
-                            active
-                              ? "bg-[var(--color-primary)] text-white"
-                              : "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
-                          )}
-                        >
-                          {day.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="max-w-xs">
-                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                  End Repeat Date (Optional)
-                </label>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
                 <input
-                  type="date"
-                  value={recurrenceEndDate}
-                  onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-md border border-[var(--color-border-input)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)]"
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  className="sr-only peer"
                 />
-              </div>
+                <div className="w-9 h-5 bg-[var(--color-border-primary)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
+              </label>
             </div>
-          )}
+
+            {isRecurring && (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-medium text-[var(--color-text-secondary)]">
+                    Frequency:
+                  </span>
+                  {(["daily", "weekly", "custom"] as const).map((freq) => (
+                    <button
+                      key={freq}
+                      type="button"
+                      onClick={() => setRecurrenceFreq(freq)}
+                      className={cn(
+                        "px-3 py-1 rounded-md text-xs font-medium transition-all capitalize",
+                        recurrenceFreq === freq
+                          ? "bg-[var(--color-primary)] text-white font-semibold"
+                          : "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
+                      )}
+                    >
+                      {freq === "custom" ? "Every N days" : freq}
+                    </button>
+                  ))}
+                </div>
+
+                {recurrenceFreq === "custom" && (
+                  <div className="flex items-center gap-2 max-w-xs text-xs">
+                    <span className="text-[var(--color-text-secondary)]">Every</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={90}
+                      value={recurrenceIntervalDays}
+                      onChange={(e) =>
+                        setRecurrenceIntervalDays(
+                          Math.max(1, Math.min(90, Number(e.target.value) || 1))
+                        )
+                      }
+                      className="w-16 px-2 py-1 rounded-md border border-[var(--color-border-input)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)]"
+                    />
+                    <span className="text-[var(--color-text-secondary)]">days</span>
+                  </div>
+                )}
+
+                {recurrenceFreq === "weekly" && (
+                  <div className="space-y-1.5">
+                    <span className="text-xs text-[var(--color-text-secondary)]">Days of week:</span>
+                    <div className="flex items-center gap-1.5">
+                      {[
+                        { id: 1, label: "M" },
+                        { id: 2, label: "T" },
+                        { id: 3, label: "W" },
+                        { id: 4, label: "T" },
+                        { id: 5, label: "F" },
+                        { id: 6, label: "S" },
+                        { id: 0, label: "S" },
+                      ].map((day) => {
+                        const active = recurrenceDays.includes(day.id);
+                        return (
+                          <button
+                            key={day.id}
+                            type="button"
+                            onClick={() => {
+                              if (active) {
+                                setRecurrenceDays(recurrenceDays.filter((d) => d !== day.id));
+                              } else {
+                                setRecurrenceDays([...recurrenceDays, day.id]);
+                              }
+                            }}
+                            className={cn(
+                              "w-7 h-7 rounded-md text-xs font-semibold transition-all",
+                              active
+                                ? "bg-[var(--color-primary)] text-white"
+                                : "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
+                            )}
+                          >
+                            {day.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="max-w-xs">
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
+                    End Repeat Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={recurrenceEndDate}
+                    onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-md border border-[var(--color-border-input)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)]"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </Card>
 
-        {/* Section 2: Checklist Items (§12.5) */}
+        {/* Section 2: Checklist Items */}
         <Card className="p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border-secondary)] pb-2.5">
             <div>
@@ -618,21 +615,22 @@ function NewTaskForm() {
               </p>
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowMultiPaste(!showMultiPaste)}
-            >
-              <FileText className="w-3.5 h-3.5 mr-1" />
-              {showMultiPaste ? "Single Input" : "Paste Notes"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowMultiPaste(!showMultiPaste)}
+              >
+                <FileText className="w-3.5 h-3.5 mr-1" />
+                {showMultiPaste ? "Single" : "Paste"}
+              </Button>
+            </div>
           </div>
 
-          {/* Voice-to-Tasks Dictation Component */}
           <VoiceTaskInput
             onTasksExtracted={handleVoiceTasksExtracted}
-            className="pb-2 border-b border-[var(--color-border-secondary)]"
+            className="pb-2"
           />
 
           {errors.items && (

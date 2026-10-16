@@ -3,9 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
+import { useTheme } from "@/components/ThemeProvider";
+import { Moon, Sun } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -114,6 +117,16 @@ export default function LoginPage() {
       {/* Subtle gradient overlay for visual interest */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,var(--color-primary-subtle),transparent_70%)] pointer-events-none" />
 
+      <button
+        type="button"
+        onClick={toggleTheme}
+        className="fixed top-4 right-4 z-10 p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-primary)] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] shadow-sm"
+        title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        aria-label="Toggle theme"
+      >
+        {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      </button>
+
       <div className="relative w-full max-w-[360px] p-6 sm:p-8 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-primary)] shadow-[var(--shadow-lg)] flex flex-col items-center">
         {/* Brand Mark */}
         <div className="mb-4">
@@ -124,7 +137,7 @@ export default function LoginPage() {
           Task<span className="text-[var(--color-primary)]">Tracker</span>
         </h1>
         <p className="text-xs text-[var(--color-text-tertiary)] mt-1 mb-6 text-center">
-          Enter your 6-digit PIN to continue
+          Task dispatch for WhatsApp · Enter your 6-digit PIN
         </p>
 
         {/* PIN Indicators */}
