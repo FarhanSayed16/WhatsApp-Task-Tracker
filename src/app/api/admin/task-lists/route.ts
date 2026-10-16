@@ -67,7 +67,13 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const baseUrl = process.env.APP_URL || APP_URL || "http://localhost:3000";
+    const { data: orgData } = await supabase
+      .from("organizations")
+      .select("settings")
+      .eq("id", admin.orgId)
+      .single();
+    const orgSettings = (orgData?.settings as Record<string, any>) || {};
+    const baseUrl = orgSettings.public_base_url || process.env.APP_URL || APP_URL || "http://localhost:3000";
 
     const enrichedLists = taskLists.map((list) => {
       const items = itemsByList[list.id] || [];

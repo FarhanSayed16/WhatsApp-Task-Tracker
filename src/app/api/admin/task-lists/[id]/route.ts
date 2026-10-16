@@ -84,7 +84,13 @@ export async function GET(
       opened_at: open.last_opened_at || open.first_opened_at,
     }));
 
-    const baseUrl = process.env.APP_URL || APP_URL || "http://localhost:3000";
+    const { data: orgData } = await supabase
+      .from("organizations")
+      .select("settings")
+      .eq("id", admin.orgId)
+      .single();
+    const orgSettings = (orgData?.settings as Record<string, any>) || {};
+    const baseUrl = orgSettings.public_base_url || process.env.APP_URL || APP_URL || "http://localhost:3000";
     const memberLink = `${baseUrl}/t/${list.token}`;
     const groupName = (list.group as any)?.name || "Group";
 

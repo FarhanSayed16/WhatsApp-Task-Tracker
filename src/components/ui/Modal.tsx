@@ -147,11 +147,13 @@ export function Modal({
         )}
 
         {/* Content */}
-        <div className="px-5 py-4">{children}</div>
+        <div className="px-4 sm:px-5 py-3 sm:py-4 overflow-y-auto flex-1 min-h-0 overscroll-contain">
+          {children}
+        </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-5 py-4 border-t border-[var(--color-border-secondary)] bg-[var(--color-surface-sunken)]/50">
+          <div className="px-4 sm:px-5 py-3 border-t border-[var(--color-border-secondary)] bg-[var(--color-surface-sunken)]/80 backdrop-blur-xs shrink-0">
             {footer}
           </div>
         )}

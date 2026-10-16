@@ -29,6 +29,8 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  Wifi,
+  Globe,
 } from "lucide-react";
 
 export default function AdminSettingsPage() {
@@ -69,14 +71,39 @@ export default function AdminSettingsPage() {
   const [digestSaving, setDigestSaving] = useState(false);
   const [isTestingDigest, setIsTestingDigest] = useState(false);
 
+  // Public Link & Network Host State
+  const [publicBaseUrl, setPublicBaseUrl] = useState("");
+  const [detectedWifiUrl, setDetectedWifiUrl] = useState<string | null>(null);
+  const [detectedIp, setDetectedIp] = useState<string | null>(null);
+  const [networkSaving, setNetworkSaving] = useState(false);
+
   // PWA Install State from shared hook
   const { isInstalled, isIOS, promptInstall } = usePWAInstall();
+
+  // Load server detected network IP on mount
+  useEffect(() => {
+    fetch("/api/admin/network-ip")
+      .then((r) => r.json())
+      .then((res) => {
+        if (res?.success && res?.data) {
+          setDetectedWifiUrl(res.data.detectedUrl);
+          setDetectedIp(res.data.detectedIp);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (profileData) {
       setName(profileData.name || "");
       setTimezone(profileData.timezone || "Asia/Kolkata");
       setDefaultWaPhone(profileData.default_wa_phone || "");
+      if (profileData.public_base_url) {
+        setPublicBaseUrl(profileData.public_base_url);
+      } else if (typeof window !== "undefined") {
+        const savedLocal = localStorage.getItem("wtt_custom_base_url");
+        if (savedLocal) setPublicBaseUrl(savedLocal);
+      }
       if (profileData.reminders) {
         setRemindersEnabled(profileData.reminders.enabled !== false);
         setDueSoonHours(profileData.reminders.due_soon_hours || 24);
@@ -212,6 +239,41 @@ export default function AdminSettingsPage() {
       toast.error(err.message || "Failed to save digest preferences");
     } finally {
       setDigestSaving(false);
+    }
+  };
+
+  const handleNetworkSubmit = async (e?: React.FormEvent, overrideUrl?: string) => {
+    if (e) e.preventDefault();
+    try {
+      setNetworkSaving(true);
+      const targetUrl = (overrideUrl !== undefined ? overrideUrl : publicBaseUrl).trim().replace(/\/$/, "");
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ public_base_url: targetUrl || null }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        throw new Error(data?.error?.message || "Failed to update link host");
+      }
+      if (typeof window !== "undefined") {
+        if (targetUrl) {
+          localStorage.setItem("wtt_custom_base_url", targetUrl);
+        } else {
+          localStorage.removeItem("wtt_custom_base_url");
+        }
+      }
+      setPublicBaseUrl(targetUrl);
+      toast.success(
+        targetUrl
+          ? `Public link host updated to ${targetUrl}!`
+          : "Reset to default origin."
+      );
+      mutateProfile();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save link configuration");
+    } finally {
+      setNetworkSaving(false);
     }
   };
 
@@ -408,7 +470,102 @@ export default function AdminSettingsPage() {
           )}
         </section>
 
-        {/* 2. Security: Change PIN (Collapsible) */}
+        {/* 2. Public Checklist Link & Mobile Access */}
+        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-5">
+          <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-border-secondary)]">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <Wifi className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
+                  Public Checklist Link &amp; Mobile Access
+                </h2>
+                {publicBaseUrl && !/localhost|127\.0\.0\.1/i.test(publicBaseUrl) ? (
+                  <Badge variant="verified">
+                    Mobile Ready
+                  </Badge>
+                ) : (
+                  <Badge variant="overdue">
+                    Localhost Only
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-[var(--color-text-tertiary)]">
+                The web address embedded in WhatsApp messages so students and team members can open interactive checklists on their phones.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleNetworkSubmit} className="space-y-4 max-w-lg">
+            {/* Auto-detected Wi-Fi helper banner */}
+            {detectedWifiUrl && (
+              <div className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
+                    <Wifi className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Detected Server Wi-Fi Address:</span>
+                    <code className="font-mono text-emerald-700 dark:text-emerald-300 font-bold">{detectedWifiUrl}</code>
+                  </p>
+                  <p className="text-[11px] text-emerald-800/85 dark:text-emerald-300/85">
+                    Students on your lab/home Wi-Fi can open this link directly on their mobile phones.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={() => handleNetworkSubmit(undefined, detectedWifiUrl)}
+                  disabled={networkSaving || publicBaseUrl === detectedWifiUrl}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shrink-0 shadow-xs"
+                >
+                  {publicBaseUrl === detectedWifiUrl ? "Active Wi-Fi Link" : "Set to Wi-Fi IP"}
+                </Button>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
+                Active Public Base URL
+              </label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  value={publicBaseUrl}
+                  onChange={(e) => setPublicBaseUrl(e.target.value)}
+                  placeholder="e.g. http://192.168.0.105:3000 or https://tasks.yourlab.org"
+                  className="font-mono text-xs"
+                />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={networkSaving}
+                  className="shrink-0"
+                >
+                  <Save className="w-3.5 h-3.5 mr-1.5" />
+                  {networkSaving ? "Saving…" : "Save URL"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-lg bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)] space-y-2 text-xs">
+              <p className="font-semibold text-[var(--color-text-primary)]">
+                How students/members connect:
+              </p>
+              <ul className="space-y-1.5 text-[11px] text-[var(--color-text-secondary)] leading-relaxed list-disc list-inside">
+                <li>
+                  <strong>Same Wi-Fi (Classroom / Lab):</strong> Use your Wi-Fi IP (e.g. <code>http://192.168.0.105:3000</code>). Students connected to the same Wi-Fi can open checklists immediately without external hosting.
+                </li>
+                <li>
+                  <strong>Remote Students (Mobile Data / At Home):</strong> Enter your public domain, deployed Vercel URL, or free tunnel (e.g. Cloudflare Tunnel or <code>npx localtunnel --port 3000</code>).
+                </li>
+              </ul>
+            </div>
+          </form>
+        </section>
+
+        {/* 3. Security: Change PIN (Collapsible) */}
         <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-secondary)]">
             <div className="flex items-center gap-3">

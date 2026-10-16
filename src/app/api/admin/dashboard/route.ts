@@ -456,7 +456,7 @@ export async function GET(req: NextRequest) {
         .limit(40);
       if (groupId) fallbackQ = fallbackQ.eq("group_id", groupId);
       const fallback = await fallbackQ;
-      reminderListsRaw = fallback.data;
+      reminderListsRaw = (fallback.data as any) || [];
     }
 
     const remindersReady = (reminderListsRaw || [])

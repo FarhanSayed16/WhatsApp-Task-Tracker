@@ -15,6 +15,7 @@ import {
   Settings,
   MoreHorizontal,
   X,
+  Plus,
 } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 
@@ -59,24 +60,35 @@ export function Sidebar({ className }: { className?: string }) {
   return (
     <aside
       className={cn(
-        "hidden md:flex flex-col w-[220px] border-r border-[var(--color-border-primary)] bg-[var(--color-surface)] h-screen sticky top-0 shrink-0",
+        "hidden md:flex flex-col w-[230px] border-r border-[var(--color-border-primary)] bg-[var(--color-surface)] h-screen sticky top-0 shrink-0 select-none",
         className
       )}
     >
       {/* Brand / Logo */}
       <Link
         href="/admin"
-        className="h-16 flex items-center px-5 border-b border-[var(--color-border-secondary)] hover:opacity-90 transition-opacity"
+        className="h-16 flex items-center px-5 border-b border-[var(--color-border-secondary)] hover:opacity-95 transition-opacity"
         title="TaskTracker Dashboard"
       >
         <Logo size="sm" showWordmark subtitle="Dispatch" />
       </Link>
 
+      {/* Primary Quick Action Button */}
+      <div className="px-3.5 pt-3.5 pb-1">
+        <Link
+          href="/admin/tasks/new"
+          className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs shadow-sm hover:shadow transition-all duration-150 active:scale-[0.98]"
+        >
+          <Plus className="w-4 h-4" />
+          <span>New Task List</span>
+        </Link>
+      </div>
+
       {/* Grouped Nav Items */}
-      <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
+      <nav className="flex-1 px-3 py-3 space-y-5 overflow-y-auto">
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
-            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">
+            <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
               {group.label}
             </p>
             <div className="space-y-0.5">
@@ -92,13 +104,18 @@ export function Sidebar({ className }: { className?: string }) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+                      "flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150",
                       isActive
-                        ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] font-semibold border-l-[3px] border-[var(--color-primary)] rounded-l-none"
+                        ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] shadow-xs"
                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)]"
                     )}
                   >
-                    <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-[var(--color-primary)]" : "")} />
+                    <Icon
+                      className={cn(
+                        "w-4 h-4 shrink-0 transition-colors",
+                        isActive ? "text-[var(--color-primary)]" : "text-[var(--color-text-tertiary)]"
+                      )}
+                    />
                     <span>{item.label}</span>
                   </Link>
                 );
@@ -110,37 +127,54 @@ export function Sidebar({ className }: { className?: string }) {
 
       {/* Bottom: active context, Settings, Professor */}
       <div className="px-3 pb-3 border-t border-[var(--color-border-secondary)] pt-3 space-y-2">
+        {/* Active checklists counter pill */}
         <Link
           href="/admin/tasks"
-          className="px-3 py-1.5 rounded-lg text-[11px] text-[var(--color-text-tertiary)] hover:text-[var(--color-primary-text)] hover:bg-[var(--color-primary-subtle)] transition-colors block"
+          className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)] text-xs hover:border-[var(--color-primary)]/40 transition-colors"
         >
-          <span className="font-semibold text-[var(--color-text-secondary)]">
-            {activeListCount}
-          </span>{" "}
-          active {activeListCount === 1 ? "list" : "lists"}
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              {activeListCount > 0 && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              )}
+              <span className={cn("relative inline-flex rounded-full h-2 w-2", activeListCount > 0 ? "bg-emerald-500" : "bg-slate-400")}></span>
+            </span>
+            <span className="font-semibold text-[var(--color-text-primary)]">
+              {activeListCount}
+            </span>
+            <span className="text-[var(--color-text-tertiary)] text-[11px]">
+              active {activeListCount === 1 ? "checklist" : "checklists"}
+            </span>
+          </div>
         </Link>
 
         <Link
           href="/admin/settings"
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+            "flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150",
             pathname.startsWith("/admin/settings")
-              ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] font-semibold border-l-[3px] border-[var(--color-primary)] rounded-l-none"
+              ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)]"
               : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)]"
           )}
         >
-          <Settings className={cn("w-4 h-4 shrink-0", pathname.startsWith("/admin/settings") ? "text-[var(--color-primary)]" : "")} />
+          <Settings className={cn("w-4 h-4 shrink-0", pathname.startsWith("/admin/settings") ? "text-[var(--color-primary)]" : "text-[var(--color-text-tertiary)]")} />
           <span>Settings</span>
         </Link>
 
         {session?.name && (
-          <div className="px-3 py-1.5 rounded-lg bg-[var(--color-surface-sunken)] flex items-center gap-2 text-xs">
-            <div className="w-5 h-5 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] font-bold flex items-center justify-center text-[10px] shrink-0">
+          <div className="px-3 py-2 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)] flex items-center gap-2.5 text-xs">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold flex items-center justify-center text-[10px] shadow-xs shrink-0">
               {session.name.slice(0, 1).toUpperCase()}
             </div>
-            <span className="truncate font-medium text-[var(--color-text-secondary)]">
-              {session.name}
-            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-[var(--color-text-primary)] text-[11px] leading-tight">
+                {session.name}
+              </p>
+              <p className="text-[10px] text-[var(--color-text-tertiary)] leading-tight flex items-center gap-1 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+                Professor
+              </p>
+            </div>
           </div>
         )}
       </div>

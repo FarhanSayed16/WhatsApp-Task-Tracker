@@ -11,6 +11,7 @@ import {
   buildReminderMessage,
   formatWaDueTime,
   waLink,
+  waWebLink,
   inspectWaUrl,
   sanitizeWhatsAppText,
   ReminderType,
@@ -27,6 +28,12 @@ import {
   Smartphone,
   Sparkles,
   Loader2,
+  Globe,
+  ExternalLink,
+  Edit3,
+  Eye,
+  ShieldCheck,
+  Wifi,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/icons/WhatsApp";
 
@@ -70,6 +77,147 @@ export interface ShareSheetProps {
   }) => void;
 }
 
+/**
+ * Interactive WhatsApp Message Bubble Simulator
+ * Renders an authentic WhatsApp outgoing chat bubble with live formatted markdown
+ */
+function WhatsAppBubblePreview({
+  text,
+  groupName,
+  onCopy,
+  copied,
+}: {
+  text: string;
+  groupName: string;
+  onCopy: () => void;
+  copied: boolean;
+}) {
+  const lines = text.split("\n");
+  const [timeStr, setTimeStr] = useState("Just now");
+
+  useEffect(() => {
+    setTimeStr(
+      new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    );
+  }, []);
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-emerald-900/15 dark:border-emerald-700/30 shadow-sm bg-[var(--color-surface)]">
+      {/* WhatsApp Chat Top Bar Mockup */}
+      <div className="bg-[#005c4b] dark:bg-[#1f2c34] text-white px-4 py-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-emerald-600/80 flex items-center justify-center font-bold text-xs shrink-0 shadow-xs border border-white/20">
+            <WhatsAppIcon className="w-4 h-4 text-white" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold leading-tight truncate">{groupName || "WhatsApp Group"}</p>
+            <p className="text-[10px] text-emerald-100/75 leading-tight truncate">tap here for group info</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-800/60 dark:bg-emerald-900/60 text-emerald-100 border border-emerald-700/40">
+            <ShieldCheck className="w-3 h-3 text-emerald-300" /> Anti-Glitch Verified
+          </span>
+          <button
+            type="button"
+            onClick={onCopy}
+            className="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-[11px] font-semibold text-white transition-all flex items-center gap-1"
+          >
+            {copied ? <Check className="w-3 h-3 text-emerald-300" /> : <Copy className="w-3 h-3" />}
+            <span>{copied ? "Copied" : "Copy"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* WhatsApp Wallpaper Canvas */}
+      <div className="p-3 bg-[#efeae2] dark:bg-[#0b141a] max-h-[190px] overflow-y-auto flex flex-col">
+        {/* Outgoing WhatsApp Bubble */}
+        <div className="self-end max-w-[95%] sm:max-w-[88%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] p-3.5 shadow-sm border border-[#c2e7be] dark:border-[#026b57] text-xs leading-relaxed space-y-1 relative">
+          {lines.map((line, idx) => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+              return <div key={idx} className="h-1.5" />;
+            }
+
+            // Divider dashes
+            if (trimmed.startsWith("----") || trimmed.startsWith("====")) {
+              return (
+                <div
+                  key={idx}
+                  className="my-1.5 border-t border-emerald-900/15 dark:border-emerald-300/20"
+                />
+              );
+            }
+
+            // Entirely Bold Header: *TITLE*
+            const isEntirelyBold = /^\*([^*]+)\*$/.test(trimmed);
+            if (isEntirelyBold) {
+              const content = trimmed.replace(/^\*|\*$/g, "");
+              return (
+                <p key={idx} className="font-bold tracking-tight text-[#0f291e] dark:text-emerald-100 text-[13px]">
+                  {content}
+                </p>
+              );
+            }
+
+            // Label bold prefix: *Label:* value
+            const labelMatch = trimmed.match(/^\*([^*]+):\*\s*(.*)$/);
+            if (labelMatch) {
+              return (
+                <p key={idx} className="text-[#111b21] dark:text-[#e9edef]">
+                  <strong className="font-bold text-[#0f291e] dark:text-white">{labelMatch[1]}:</strong>{" "}
+                  <span>{labelMatch[2]}</span>
+                </p>
+              );
+            }
+
+            // Url line
+            const isUrl = /(https?:\/\/[^\s]+)/.test(line);
+            if (isUrl) {
+              const parts = line.split(/(https?:\/\/[^\s]+)/g);
+              return (
+                <p key={idx} className="break-all pt-0.5">
+                  {parts.map((p, pIdx) =>
+                    /(https?:\/\/[^\s]+)/.test(p) ? (
+                      <span key={pIdx} className="text-[#027eb5] dark:text-[#53bdeb] font-semibold underline">
+                        {p}
+                      </span>
+                    ) : (
+                      <span key={pIdx}>{p}</span>
+                    )
+                  )}
+                </p>
+              );
+            }
+
+            // Numbered or bullet list item
+            const isListItem = /^(\d+\.|\-)\s+(.*)$/.test(trimmed);
+            if (isListItem) {
+              return (
+                <p key={idx} className="text-[#111b21] dark:text-[#e9edef] pl-1 font-medium">
+                  {line}
+                </p>
+              );
+            }
+
+            return (
+              <p key={idx} className="text-[#111b21] dark:text-[#e9edef]">
+                {line}
+              </p>
+            );
+          })}
+
+          {/* Timestamp and Double Blue Read Ticks */}
+          <div className="flex items-center justify-end gap-1 text-[10px] text-slate-500 dark:text-emerald-200/70 pt-1 select-none">
+            <span>{timeStr}</span>
+            <span className="text-sky-500 dark:text-sky-400 font-bold tracking-tighter">✓✓</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ShareSheet({
   isOpen,
   onClose,
@@ -92,45 +240,119 @@ export function ShareSheet({
   const [isDraftingAi, setIsDraftingAi] = useState(false);
   const [aiLang, setAiLang] = useState<"en" | "hi" | "mr">("en");
   const [aiTone, setAiTone] = useState<"polite" | "urgent" | "firm">("polite");
+  const [previewView, setPreviewView] = useState<"bubble" | "raw">("bubble");
+  const [messageStyle, setMessageStyle] = useState<"numbered" | "bullets">("numbered");
+  const [copiedClean, setCopiedClean] = useState(false);
+  const [showHostConfig, setShowHostConfig] = useState(false);
   const [messageTemplates, setMessageTemplates] = useState<
     Array<{ id: string; name: string; body: { text?: string } }>
   >([]);
   const [defaultWaPhone, setDefaultWaPhone] = useState<string | null>(null);
-  /** How to deliver: pick any WA chat/group (default), or a saved personal number */
-  const [sendTarget, setSendTarget] = useState<"pick_chat" | "saved_number">(
-    "pick_chat"
-  );
 
-  const publicLink =
-    taskList.member_link ||
-    (typeof window !== "undefined"
-      ? `${window.location.origin}/t/${taskList.token}`
-      : `/t/${taskList.token}`);
+  // Network IP auto-detection state
+  const [detectedWifiUrl, setDetectedWifiUrl] = useState<string | null>(null);
+  const [detectedIp, setDetectedIp] = useState<string | null>(null);
+  const [networkInterfaces, setNetworkInterfaces] = useState<
+    Array<{ name: string; ip: string; url: string; isWifi: boolean }>
+  >([]);
+
+  // Persistent custom base URL (e.g. Wi-Fi IP or Vercel URL)
+  const [customHost, setCustomHost] = useState("");
+  const [browserOrigin, setBrowserOrigin] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("wtt_custom_base_url");
+      if (saved) setCustomHost(saved);
+      setBrowserOrigin(window.location.origin);
+    }
+  }, []);
+
+  /** How to deliver: pick any WA chat/group (default), or a saved personal number */
+  const [sendTarget, setSendTarget] = useState<"pick_chat" | "saved_number">("pick_chat");
+
+  // Determine effective base URL
+  const effectiveBaseUrl = customHost.trim()
+    ? customHost.trim().replace(/\/$/, "")
+    : browserOrigin;
+
+  const publicLink = effectiveBaseUrl
+    ? `${effectiveBaseUrl}/t/${taskList.token}`
+    : taskList.member_link || `/t/${taskList.token}`;
+
+  const isLocalhostLink = /localhost|127\.0\.0\.1/i.test(effectiveBaseUrl);
+
+  const handleApplyBaseUrl = async (newBaseUrl: string) => {
+    const clean = newBaseUrl.trim().replace(/\/$/, "");
+    setCustomHost(clean);
+    if (typeof window !== "undefined") {
+      if (clean) {
+        localStorage.setItem("wtt_custom_base_url", clean);
+      } else {
+        localStorage.removeItem("wtt_custom_base_url");
+      }
+    }
+    // Also sync to server settings in background
+    try {
+      await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ public_base_url: clean || null }),
+      });
+    } catch {
+      // Non-blocking
+    }
+    toast.success(
+      clean.includes("localhost") || !clean
+        ? "Applied Localhost link"
+        : `Switched link to ${clean}! Students can now open it on mobile.`
+    );
+  };
 
   const pendingItems = items.filter(
     (i) => i.status === "pending" || i.status === "done"
   );
 
-  // Load message templates + default WhatsApp number when sheet opens
+  // Load message templates + default WhatsApp number + network IP when sheet opens
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
     (async () => {
       try {
-        const [tplRes, settingsRes] = await Promise.all([
+        const [tplRes, settingsRes, netRes] = await Promise.all([
           fetch("/api/admin/templates?type=message"),
           fetch("/api/admin/settings"),
+          fetch("/api/admin/network-ip"),
         ]);
         const tplJson = await tplRes.json();
         const settingsJson = await settingsRes.json();
+        const netJson = await netRes.json().catch(() => ({}));
+
         if (!cancelled && tplRes.ok) {
           setMessageTemplates(Array.isArray(tplJson.data) ? tplJson.data : []);
         }
         if (!cancelled && settingsRes.ok) {
           const phone = settingsJson.data?.default_wa_phone || null;
           setDefaultWaPhone(phone);
-          // Always default to chat picker (groups). Saved number is optional secondary.
           setSendTarget("pick_chat");
+
+          // If server has a saved public_base_url and localStorage doesn't have one, adopt it
+          if (
+            settingsJson.data?.public_base_url &&
+            typeof window !== "undefined" &&
+            !localStorage.getItem("wtt_custom_base_url")
+          ) {
+            setCustomHost(settingsJson.data.public_base_url);
+          }
+        }
+        if (!cancelled && netRes.ok && netJson?.data) {
+          if (netJson.data.detectedUrl) {
+            setDetectedWifiUrl(netJson.data.detectedUrl);
+            setDetectedIp(netJson.data.detectedIp);
+          }
+          if (Array.isArray(netJson.data.interfaces)) {
+            setNetworkInterfaces(netJson.data.interfaces);
+          }
         }
       } catch {
         /* optional enrichment */
@@ -148,7 +370,7 @@ export function ShareSheet({
     setReminderType(initialReminderType);
   }, [isOpen, initialMode, initialReminderType]);
 
-  // Generate initial message according to active tab and reminder type
+  // Generate initial message according to active tab, reminder type, style, and current publicLink
   useEffect(() => {
     if (!isOpen) return;
 
@@ -163,8 +385,9 @@ export function ShareSheet({
         dueTimeStr: dueLabel,
         items: items.map((i) => i.text),
         link: publicLink,
+        style: messageStyle,
       });
-      setMessageText(msg);
+      setMessageText(sanitizeWhatsAppText(msg));
     } else {
       const selectedMember = members.find((m) => m.id === selectedMemberId);
       const memberPending = selectedMemberId
@@ -188,8 +411,9 @@ export function ShareSheet({
         link: publicLink,
         memberName: selectedMember?.name,
         dueTimeStr: dueLabel,
+        style: messageStyle,
       });
-      setMessageText(msg);
+      setMessageText(sanitizeWhatsAppText(msg));
     }
     setMarkedSent(false);
   }, [
@@ -202,15 +426,12 @@ export function ShareSheet({
     members,
     publicLink,
     isAssignment,
+    messageStyle,
   ]);
 
   const targetPhone =
     sendTarget === "saved_number" && defaultWaPhone ? defaultWaPhone : null;
   const urlStats = inspectWaUrl(messageText, targetPhone);
-  const isLocalhostLink =
-    /localhost|127\.0\.0\.1/i.test(publicLink) ||
-    publicLink.startsWith("http://192.") ||
-    publicLink.startsWith("http://10.");
 
   const logShareEvent = async (
     channel: "whatsapp_group" | "whatsapp_individual" | "copy" | "native_share",
@@ -274,27 +495,48 @@ export function ShareSheet({
     }
   };
 
-  const handleOpenWhatsApp = async (phone?: string | null, memberId?: string | null) => {
+  /**
+   * Dispatches to WhatsApp (App or Web)
+   * Also automatically copies sanitized text to clipboard so user can instantly paste
+   * if the desktop URL handler misbehaves or collapses linebreaks.
+   */
+  const handleOpenWhatsApp = async (
+    phone?: string | null,
+    memberId?: string | null,
+    useWeb = false
+  ) => {
     const clean = sanitizeWhatsAppText(messageText);
     if (clean !== messageText) setMessageText(clean);
-    const link = waLink(clean, phone);
+
+    // Auto-copy clean message to clipboard as foolproof fallback
+    try {
+      await navigator.clipboard.writeText(clean);
+    } catch {
+      /* clipboard write may fail if document focus lost */
+    }
+
+    const link = useWeb ? waWebLink(clean, phone) : waLink(clean, phone);
     window.open(link, "_blank");
+
     const channel = phone ? "whatsapp_individual" : "whatsapp_group";
     await logShareEvent(channel, memberId);
+
     toast.success(
-      phone
-        ? "Opened WhatsApp chat"
-        : "Opened WhatsApp — pick your group, then Send"
+      useWeb
+        ? "WhatsApp Web opened! Clean message copied to clipboard."
+        : "WhatsApp opened! Clean message copied to clipboard (press Ctrl+V if app skips newlines)."
     );
   };
 
-  const handleCopyMessage = async () => {
+  const handleCopyClean = async () => {
     try {
       const clean = sanitizeWhatsAppText(messageText);
       if (clean !== messageText) setMessageText(clean);
       await navigator.clipboard.writeText(clean);
+      setCopiedClean(true);
+      setTimeout(() => setCopiedClean(false), 2500);
       await logShareEvent("copy");
-      toast.success("Message copied — paste it into your WhatsApp group");
+      toast.success("✓ Clean message copied! Paste directly into WhatsApp group.");
     } catch {
       toast.error("Failed to copy message");
     }
@@ -303,7 +545,7 @@ export function ShareSheet({
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(publicLink);
-      toast.success("Member link copied!");
+      toast.success("Student checklist link copied!");
     } catch {
       toast.error("Failed to copy link");
     }
@@ -312,9 +554,10 @@ export function ShareSheet({
   const handleNativeShare = async () => {
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
+        const clean = sanitizeWhatsAppText(messageText);
         await navigator.share({
           title: taskList.title,
-          text: messageText,
+          text: clean,
           url: publicLink,
         });
         await logShareEvent("native_share");
@@ -323,7 +566,7 @@ export function ShareSheet({
         // User cancelled share
       }
     } else {
-      handleCopyMessage();
+      handleCopyClean();
     }
   };
 
@@ -341,19 +584,155 @@ export function ShareSheet({
       size="lg"
       title={
         <div className="flex items-center gap-2">
-          <Share2 className="w-5 h-5 text-emerald-600" />
+          <Share2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           <span>Dispatch to WhatsApp</span>
         </div>
       }
       description={`Share "${taskList.title}" with ${taskList.group_name}`}
+      footer={
+        <div className="w-full space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="whatsapp"
+              size="lg"
+              onClick={() => handleOpenWhatsApp(targetPhone, undefined, false)}
+              disabled={urlStats.isExceeded}
+              className="w-full text-xs sm:text-sm font-bold py-2.5 flex items-center justify-center gap-2 shadow-sm"
+            >
+              <WhatsAppIcon className="w-4 h-4 mr-1 shrink-0" />
+              {sendTarget === "saved_number" && defaultWaPhone
+                ? `WhatsApp (+${defaultWaPhone})`
+                : "Open WhatsApp"}
+            </Button>
+
+            <Button
+              type="button"
+              variant={copiedClean ? "primary" : "outline"}
+              size="lg"
+              onClick={handleCopyClean}
+              className={`w-full text-xs sm:text-sm font-bold py-2.5 flex items-center justify-center gap-2 ${
+                copiedClean ? "bg-emerald-600 hover:bg-emerald-500 text-white" : ""
+              }`}
+            >
+              {copiedClean ? (
+                <>
+                  <Check className="w-4 h-4 mr-1.5 text-white" />
+                  Copied Clean!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 mr-1.5" />
+                  Copy Clean Message
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => handleOpenWhatsApp(targetPhone, undefined, true)}
+              className="text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 font-semibold text-[11px]"
+            >
+              <Globe className="w-3.5 h-3.5" /> Open WhatsApp Web
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="text-[var(--color-primary)] hover:underline flex items-center gap-1 font-semibold text-[11px]"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Copy Link Only
+            </button>
+
+            <button
+              type="button"
+              onClick={handleManualMarkSent}
+              className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] flex items-center gap-1 text-[11px]"
+            >
+              {markedSent ? (
+                <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Sent
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" /> Mark Sent
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      }
     >
-      <div className="space-y-4 pt-1">
+      <div className="space-y-3.5 pt-0.5">
+        {/* Mobile Phone Accessibility Callout */}
+        {isLocalhostLink ? (
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-950 dark:text-amber-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-xs animate-in fade-in">
+            <div className="flex items-start gap-2.5">
+              <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 font-bold text-xs text-amber-950 dark:text-amber-100">
+                  <span>Make Link Accessible to Students</span>
+                  <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-extrabold">
+                    Action Needed
+                  </span>
+                </div>
+                <p className="text-[11px] text-amber-900/90 dark:text-amber-300/90 leading-snug mt-0.5">
+                  Your link uses <code>localhost</code>. Students on mobile phones cannot open localhost.
+                </p>
+              </div>
+            </div>
+            {detectedWifiUrl ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleApplyBaseUrl(detectedWifiUrl)}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold shrink-0 text-xs shadow-xs w-full sm:w-auto flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Wifi className="w-3.5 h-3.5" />
+                Switch to Wi-Fi ({detectedIp})
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowHostConfig(true)}
+                className="text-xs shrink-0 w-full sm:w-auto"
+              >
+                Set Mobile Host
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-emerald-800 dark:text-emerald-200 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-xl">
+            <div className="flex items-center gap-2 truncate">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="text-[11px] truncate">
+                Mobile Link Ready: <code className="font-mono font-bold text-emerald-950 dark:text-emerald-100">{publicLink}</code>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowHostConfig(!showHostConfig)}
+              className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0"
+            >
+              {showHostConfig ? "Hide Config" : "Change Host"}
+            </button>
+          </div>
+        )}
+
         {isAssignment && activeTab === "share" && (
-          <div className="p-3 rounded-xl bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/25 text-xs text-[var(--color-primary-text)] space-y-1">
-            <p className="font-semibold">Assignment ready to notify the group</p>
+          <div className="p-3.5 rounded-xl bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/25 text-xs text-[var(--color-primary-text)] space-y-1">
+            <p className="font-bold flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-[var(--color-primary)]" />
+              Checklist ready to notify group
+            </p>
             <p className="text-[11px] leading-relaxed opacity-90">
-              Open WhatsApp, pick your class group, and send. Students get the tasks, due time, and checklist link.
-              WhatsApp cannot auto-post to groups — this one tap is the free reliable way.
+              Pick your class group and send. Students receive the tasks, due date, and interactive checklist link with zero formatting glitches.
             </p>
           </div>
         )}
@@ -376,9 +755,9 @@ export function ShareSheet({
                   key={r}
                   type="button"
                   onClick={() => setReminderType(r)}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors capitalize ${
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors capitalize ${
                     reminderType === r
-                      ? "bg-[var(--color-text-primary)] text-[var(--color-text-inverse)]"
+                      ? "bg-[var(--color-text-primary)] text-[var(--color-text-inverse)] shadow-xs"
                       : "bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                   }`}
                 >
@@ -396,7 +775,7 @@ export function ShareSheet({
           <div className="space-y-2 p-3 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-primary)]">
             <label className="block text-xs font-semibold text-[var(--color-text-secondary)]">
               {reminderType === "overdue"
-                 ? "Remind a member (pending items):"
+                ? "Remind a member (pending items):"
                 : "Select Member to Remind:"}
             </label>
             <select
@@ -417,32 +796,17 @@ export function ShareSheet({
                     <option key={m.id} value={m.id}>
                       {m.name}
                       {m.phone ? ` (${m.phone})` : ""}
-                      {pendingForMember > 0
-                        ? ` — ${pendingForMember} pending`
-                        : ""}
+                      {pendingForMember > 0 ? ` — ${pendingForMember} pending` : ""}
                     </option>
                   );
                 })}
             </select>
-            {selectedMemberId && (
-              <button
-                type="button"
-                className="text-[11px] font-semibold text-[var(--color-primary)] hover:underline"
-                onClick={() => {
-                  const m = members.find((x) => x.id === selectedMemberId);
-                  if (m?.phone) handleOpenWhatsApp(m.phone, m.id);
-                  else handleOpenWhatsApp(undefined, selectedMemberId);
-                }}
-              >
-                Open WhatsApp for selected member →
-              </button>
-            )}
           </div>
         )}
 
-        {/* Gemini AI Reminder Assistant (Phase 15.4) */}
+        {/* Gemini AI Reminder Assistant */}
         {activeTab === "reminder" && (
-          <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/60 space-y-2.5 animate-slide-up">
+          <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/60 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900 dark:text-emerald-300">
                 <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -523,50 +887,76 @@ export function ShareSheet({
           </div>
         )}
 
-        {/* Message Preview Textarea */}
-        <div className="space-y-1.5">
-          {messageTemplates.length > 0 && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="font-medium text-slate-500 shrink-0">Use template:</span>
-              <select
-                className="flex-1 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs"
-                defaultValue=""
-                onChange={(e) => {
-                  const tpl = messageTemplates.find((t) => t.id === e.target.value);
-                  if (tpl?.body?.text) {
-                    const filled = tpl.body.text
-                      .replace(/\{\{title\}\}/gi, taskList.title)
-                      .replace(/\{\{group\}\}/gi, taskList.group_name)
-                      .replace(/\{\{link\}\}/gi, publicLink);
-                    setMessageText(filled);
-                  }
-                  e.target.value = "";
-                }}
-              >
-                <option value="">Select a message template…</option>
-                {messageTemplates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+        {/* View Switcher: WhatsApp Live Bubble vs Raw Textarea & Format Switcher */}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1 bg-[var(--color-surface-sunken)] p-1 rounded-xl border border-[var(--color-border-primary)]">
+                <button
+                  type="button"
+                  onClick={() => setPreviewView("bubble")}
+                  className={`px-3 py-1 rounded-lg font-semibold text-xs transition-all flex items-center gap-1.5 ${
+                    previewView === "bubble"
+                      ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-xs"
+                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>WhatsApp Preview</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewView("raw")}
+                  className={`px-3 py-1 rounded-lg font-semibold text-xs transition-all flex items-center gap-1.5 ${
+                    previewView === "raw"
+                      ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-xs"
+                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                  }`}
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                  <span>Edit Text</span>
+                </button>
+              </div>
+
+              {/* Format Style Switcher: Numbered vs Bullets */}
+              <div className="flex items-center gap-1 bg-[var(--color-surface-sunken)] p-1 rounded-xl border border-[var(--color-border-primary)]">
+                <span className="text-[10px] font-bold text-[var(--color-text-tertiary)] px-1.5">Format:</span>
+                <button
+                  type="button"
+                  onClick={() => setMessageStyle("numbered")}
+                  className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold transition-all ${
+                    messageStyle === "numbered"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                  }`}
+                >
+                  1. 2. 3. Numbered
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMessageStyle("bullets")}
+                  className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold transition-all ${
+                    messageStyle === "bullets"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                  }`}
+                >
+                  - Bullets
+                </button>
+              </div>
             </div>
-          )}
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-[var(--color-text-primary)]">
-              Message Preview (Editable):
-            </span>
+
             <div className="flex items-center gap-2">
-              <span className="text-[var(--color-text-tertiary)]">
+              <span className="text-[var(--color-text-tertiary)] text-[11px]">
                 {messageText.length} chars
               </span>
               <span
-                className={`text-[11px] px-1.5 py-0.2 rounded font-semibold ${
+                className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
                   urlStats.isExceeded
                     ? "bg-[var(--color-danger-bg)] text-[var(--color-danger)]"
                     : urlStats.isWarning
                     ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
-                    : "text-[var(--color-text-tertiary)]"
+                    : "bg-[var(--color-surface-sunken)] text-[var(--color-text-tertiary)]"
                 }`}
               >
                 URL: {urlStats.length} / 2048
@@ -574,51 +964,192 @@ export function ShareSheet({
             </div>
           </div>
 
-          <textarea
-            rows={7}
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            className="w-full rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-input)] text-[var(--color-text-primary)] font-mono text-xs p-3.5 focus:outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-primary-subtle)] leading-relaxed resize-none"
-          />
+          {/* Conditional rendering based on preview tab */}
+          {previewView === "bubble" ? (
+            <WhatsAppBubblePreview
+              text={messageText}
+              groupName={taskList.group_name}
+              onCopy={handleCopyClean}
+              copied={copiedClean}
+            />
+          ) : (
+            <div className="space-y-2">
+              {messageTemplates.length > 0 && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-medium text-[var(--color-text-tertiary)] shrink-0">Template:</span>
+                  <select
+                    className="flex-1 px-2.5 py-1.5 rounded-xl border border-[var(--color-border-input)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)]"
+                    defaultValue=""
+                    onChange={(e) => {
+                      const tpl = messageTemplates.find((t) => t.id === e.target.value);
+                      if (tpl?.body?.text) {
+                        const filled = tpl.body.text
+                          .replace(/\{\{title\}\}/gi, taskList.title)
+                          .replace(/\{\{group\}\}/gi, taskList.group_name)
+                          .replace(/\{\{link\}\}/gi, publicLink);
+                        setMessageText(sanitizeWhatsAppText(filled));
+                      }
+                      e.target.value = "";
+                    }}
+                  >
+                    <option value="">Select a message template…</option>
+                    {messageTemplates.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <textarea
+                rows={7}
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                className="w-full rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-input)] text-[var(--color-text-primary)] font-mono text-xs p-3.5 focus:outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-primary-subtle)] leading-relaxed resize-none"
+              />
+            </div>
+          )}
 
           {urlStats.isExceeded && (
             <p className="text-xs text-[var(--color-danger)] flex items-center gap-1 font-semibold">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              URL length exceeds 2048 characters. Please shorten title or items before sending.
+              URL length exceeds 2048 characters. Shorten title or items before dispatching.
             </p>
           )}
         </div>
 
-        {/* Localhost warning — students cannot open this link */}
-        {isLocalhostLink && (
-          <div className="p-3 rounded-xl bg-[var(--color-warning-bg)] border border-[var(--color-warning)]/30 text-xs text-[var(--color-warning)] space-y-1">
-            <p className="font-semibold flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              Link is localhost — students&apos; phones cannot open it
-            </p>
-            <p className="text-[11px] leading-relaxed opacity-90">
-              For real sharing, deploy the app (Vercel) and set{" "}
-              <code className="font-mono">APP_URL</code> to your HTTPS URL in env.
-              Until then, use this only for your own testing.
-            </p>
+        {/* Mobile Network Link / Wi-Fi IP Helper */}
+        <div className="p-3.5 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-primary)] space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-text-primary)]">
+              <Wifi className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Mobile Phone Access &amp; Link Host</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowHostConfig(!showHostConfig)}
+              className="text-[11px] font-semibold text-[var(--color-primary)] hover:underline"
+            >
+              {showHostConfig ? "Hide Config" : "Change Host / IP"}
+            </button>
           </div>
-        )}
 
-        {/* Member Link Quick Copy */}
-        <div className="p-3 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-primary)] flex items-center justify-between gap-2 text-xs">
-          <div className="min-w-0 flex-1 truncate font-mono text-[var(--color-text-secondary)] text-[11px]">
-            {publicLink}
+          <div className="text-[11px] text-[var(--color-text-secondary)] leading-relaxed">
+            {isLocalhostLink ? (
+              <span className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                Link uses <code>localhost</code>. Students on mobile phones cannot open localhost.
+              </span>
+            ) : (
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5 truncate">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                Member link: <code className="font-mono text-[10px] ml-1">{publicLink}</code>
+              </span>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="text-[var(--color-primary)] hover:underline font-semibold flex items-center gap-1 shrink-0"
-          >
-            <Copy className="w-3.5 h-3.5" /> Copy Link
-          </button>
+
+          {showHostConfig && (
+            <div className="pt-2.5 border-t border-[var(--color-border-secondary)] space-y-3">
+              <p className="text-[11px] text-[var(--color-text-secondary)] leading-relaxed">
+                Pick the link address included in your WhatsApp message so mobile phones can connect:
+              </p>
+
+              {/* 1-Tap Presets */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] text-[var(--color-text-tertiary)] font-bold uppercase tracking-wider block">
+                  Quick Presets:
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {detectedWifiUrl && (
+                    <button
+                      type="button"
+                      onClick={() => handleApplyBaseUrl(detectedWifiUrl)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                        effectiveBaseUrl === detectedWifiUrl
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "bg-[var(--color-surface)] border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                      }`}
+                    >
+                      <Wifi className="w-3.5 h-3.5" />
+                      📶 Wi-Fi IP ({detectedIp})
+                    </button>
+                  )}
+
+                  {networkInterfaces
+                    .filter((ni) => ni.ip !== detectedIp)
+                    .map((ni) => (
+                      <button
+                        key={ni.ip}
+                        type="button"
+                        onClick={() => handleApplyBaseUrl(ni.url)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--color-surface)] border border-[var(--color-border-primary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] ${
+                          effectiveBaseUrl === ni.url ? "border-emerald-500 font-bold" : ""
+                        }`}
+                      >
+                        {ni.name}: {ni.ip}
+                      </button>
+                    ))}
+
+                  <button
+                    type="button"
+                    onClick={() => handleApplyBaseUrl("http://localhost:3000")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--color-surface)] border border-[var(--color-border-primary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] ${
+                      effectiveBaseUrl === "http://localhost:3000" ? "border-amber-500 font-bold" : ""
+                    }`}
+                  >
+                    💻 Localhost (This PC only)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        handleApplyBaseUrl(window.location.origin);
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--color-surface)] border border-[var(--color-border-primary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] ${
+                      typeof window !== "undefined" && effectiveBaseUrl === window.location.origin
+                        ? "border-emerald-500 font-bold"
+                        : ""
+                    }`}
+                  >
+                    🌐 Browser Origin
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom Domain or Tunnel URL input */}
+              <div className="space-y-1.5 pt-1 border-t border-[var(--color-border-secondary)]">
+                <label className="block text-[11px] font-semibold text-[var(--color-text-secondary)]">
+                  Or enter public domain / tunnel URL (For sharing outside local Wi-Fi):
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={customHost}
+                    onChange={(e) => setCustomHost(e.target.value)}
+                    placeholder="https://tasks.yourlab.org or http://192.168.X.X:3000"
+                    className="flex-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-input)] px-3 py-1.5 text-xs font-mono text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-border-focus)]"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    onClick={() => handleApplyBaseUrl(customHost)}
+                  >
+                    Apply
+                  </Button>
+                </div>
+                <p className="text-[10px] text-[var(--color-text-tertiary)] leading-normal">
+                  💡 <strong>Same Wi-Fi (Lab / Classroom):</strong> Choose your Wi-Fi IP (e.g. <code>http://192.168.0.105:3000</code>). Students connected to the same Wi-Fi can open it immediately.<br />
+                  🌐 <strong>Outside Wi-Fi:</strong> Enter your public domain, Vercel URL, or free tunnel URL (e.g. Cloudflare / ngrok).
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Where to send — WhatsApp cannot deep-link into a group; picker or copy is required */}
+        {/* Where to send */}
         <div className="space-y-2 p-3 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-primary)]">
           <p className="text-xs font-semibold text-[var(--color-text-primary)]">
             Where should this go?
@@ -659,71 +1190,14 @@ export function ShareSheet({
               </span>
             </button>
           </div>
-          <p className="text-[11px] text-[var(--color-text-tertiary)] leading-relaxed">
-            Tip: <strong className="font-semibold text-[var(--color-text-secondary)]">Copy message</strong>{" "}
-            then paste into any WhatsApp group — works even if the picker is awkward on desktop.
-          </p>
         </div>
 
-        {/* Primary Action Buttons */}
-        <div className="space-y-2 pt-1">
-          <Button
-            type="button"
-            variant="whatsapp"
-            size="lg"
-            onClick={() => handleOpenWhatsApp(targetPhone)}
-            disabled={urlStats.isExceeded}
-            className="w-full text-sm font-bold py-3 flex items-center justify-center gap-2"
-          >
-            <WhatsAppIcon className="w-5 h-5 mr-1" />
-            {sendTarget === "saved_number" && defaultWaPhone
-              ? `Open WhatsApp (+${defaultWaPhone})`
-              : "Open WhatsApp — choose group"}
-          </Button>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCopyMessage}
-            >
-              <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy Message
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleNativeShare}
-            >
-              <Smartphone className="w-3.5 h-3.5 mr-1.5" /> Share Device
-            </Button>
-
-            <Button
-              type="button"
-              variant={markedSent ? "secondary" : "ghost"}
-              size="sm"
-              loading={loggingShare}
-              onClick={handleManualMarkSent}
-              className={
-                markedSent
-                  ? "col-span-2 sm:col-span-1 text-[var(--color-primary)] font-semibold"
-                  : "col-span-2 sm:col-span-1 text-[var(--color-text-secondary)]"
-              }
-            >
-              {markedSent ? (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-[var(--color-primary)]" />
-                  Marked Sent
-                </>
-              ) : (
-                <>
-                  <Check className="w-3.5 h-3.5 mr-1" /> Mark as Sent
-                </>
-              )}
-            </Button>
-          </div>
+        {/* Pro-Tip Reassurance Banner */}
+        <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] text-[var(--color-text-secondary)] flex items-start gap-2.5">
+          <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          <p className="leading-relaxed">
+            <strong className="text-[var(--color-text-primary)]">Pro Tip:</strong> When you tap <em className="font-semibold text-emerald-700 dark:text-emerald-400">Open WhatsApp</em>, we automatically copy the formatted checklist to your clipboard. If Windows WhatsApp Desktop strips linebreaks in its text preview, just press <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[10px]">Ctrl+V</kbd> to paste the clean multi-line checklist with zero glitches!
+          </p>
         </div>
 
         {/* Direct Individual Member Links if available */}
@@ -752,7 +1226,7 @@ export function ShareSheet({
                   {member.phone ? (
                     <button
                       type="button"
-                      onClick={() => handleOpenWhatsApp(member.phone, member.id)}
+                      onClick={() => handleOpenWhatsApp(member.phone, member.id, false)}
                       className="text-[var(--color-primary)] hover:underline font-semibold flex items-center gap-1 text-[11px] shrink-0"
                     >
                       <Send className="w-3 h-3" /> WhatsApp

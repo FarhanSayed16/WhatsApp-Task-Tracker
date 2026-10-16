@@ -63,6 +63,7 @@ export async function GET(_req: NextRequest) {
         day_of_week: 1,
       },
       default_wa_phone: orgSettings.default_wa_phone || null,
+      public_base_url: orgSettings.public_base_url || null,
       reminders: orgSettings.reminders || {
         enabled: true,
         due_soon_hours: 24,
@@ -84,7 +85,7 @@ export async function PATCH(req: NextRequest) {
     if (!admin) return apiError("Unauthorized", "UNAUTHORIZED", 401);
 
     const body = await req.json();
-    const { name, timezone, report_digest, default_wa_phone, reminders } = body;
+    const { name, timezone, report_digest, default_wa_phone, reminders, public_base_url } = body;
 
     const updates: Record<string, any> = {
       updated_at: new Date().toISOString(),
@@ -109,11 +110,12 @@ export async function PATCH(req: NextRequest) {
       return apiError("Failed to update profile", "DB_ERROR", 500);
     }
 
-    // Organization settings (digest + WA number + reminder prefs)
+    // Organization settings (digest + WA number + reminder prefs + public base URL)
     if (
       (report_digest && typeof report_digest === "object") ||
       default_wa_phone !== undefined ||
-      (reminders && typeof reminders === "object")
+      (reminders && typeof reminders === "object") ||
+      public_base_url !== undefined
     ) {
       const { data: currentOrg } = await supabase
         .from("organizations")
@@ -134,6 +136,11 @@ export async function PATCH(req: NextRequest) {
       if (default_wa_phone !== undefined) {
         const cleaned = String(default_wa_phone || "").replace(/[^0-9]/g, "");
         nextSettings.default_wa_phone = cleaned || null;
+      }
+
+      if (public_base_url !== undefined) {
+        const cleaned = typeof public_base_url === "string" ? public_base_url.trim().replace(/\/$/, "") : null;
+        nextSettings.public_base_url = cleaned || null;
       }
 
       if (reminders && typeof reminders === "object") {
