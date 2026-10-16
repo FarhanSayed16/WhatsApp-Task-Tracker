@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -10,10 +10,16 @@ const inter = Inter({
   display: "swap",
 });
 
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#059669" },
-    { media: "(prefers-color-scheme: dark)", color: "#090d16" },
+    { media: "(prefers-color-scheme: light)", color: "#0D9E5F" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F0F0F" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -47,7 +53,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         {/* Prevent dark flash: default light unless user saved dark */}

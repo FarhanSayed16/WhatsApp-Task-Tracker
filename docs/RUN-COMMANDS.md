@@ -3,8 +3,8 @@
 Use these from the project root: `d:\WhatsApp-Task-Tracker`  
 Shell: **PowerShell** (Windows).
 
-> **Status:** Application code through Phase 15 is ready to test.  
-> You still need `.env.local` + Supabase schema before login works.
+> **Status:** App is demo-ready locally (UI/UX gap plan closed).  
+> `.env.local` + Supabase are configured. Remaining for phone PWA: deploy to Vercel HTTPS.
 
 ---
 

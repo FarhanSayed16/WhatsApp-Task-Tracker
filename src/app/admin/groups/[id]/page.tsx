@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { MemberRow } from "@/components/admin/MemberRow";
-import { KpiCard } from "@/components/admin/KpiCard";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -19,8 +18,6 @@ import { useSWRFetch } from "@/hooks/useSWRFetch";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate } from "@/lib/utils";
 import {
-  Users,
-  CheckSquare,
   ShieldCheck,
   Edit,
   Trash2,
@@ -30,7 +27,6 @@ import {
   ArrowLeft,
   Calendar,
   CheckCircle2,
-  Clock,
   ShieldAlert,
 } from "lucide-react";
 
@@ -393,26 +389,26 @@ export default function GroupDetailPage({
           </Button>
         </div>
 
-        {/* KPI Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <KpiCard
-            label="Total Members"
-            value={stats.total_members}
-            icon={<Users className="w-5 h-5" />}
-            color="emerald"
-          />
-          <KpiCard
-            label="Task Lists"
-            value={stats.total_lists}
-            icon={<CheckSquare className="w-5 h-5" />}
-            color="blue"
-          />
-          <KpiCard
-            label="Completion Rate"
-            value={`${stats.completion_rate}%`}
-            icon={<ShieldCheck className="w-5 h-5" />}
-            color={stats.completion_rate >= 80 ? "emerald" : "amber"}
-          />
+        {/* Compact group snapshot (replaces KPI cards) */}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-primary)] text-sm">
+          <span className="text-[var(--color-text-secondary)]">
+            <strong className="text-[var(--color-text-primary)]">{stats.total_members}</strong> members
+          </span>
+          <span className="text-[var(--color-border-primary)]">·</span>
+          <span className="text-[var(--color-text-secondary)]">
+            <strong className="text-[var(--color-text-primary)]">{stats.total_lists}</strong> lists
+          </span>
+          <span className="text-[var(--color-border-primary)]">·</span>
+          <span className="text-[var(--color-text-secondary)] flex items-center gap-2">
+            This group:{" "}
+            <strong className="text-[var(--color-text-primary)]">{stats.completion_rate}%</strong>
+            <span className="inline-block w-24 h-1.5 rounded-full bg-[var(--color-surface-sunken)] overflow-hidden">
+              <span
+                className="block h-full rounded-full bg-[var(--color-primary)]"
+                style={{ width: `${Math.min(100, stats.completion_rate)}%` }}
+              />
+            </span>
+          </span>
         </div>
 
         {/* Member Roster Section */}

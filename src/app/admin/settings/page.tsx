@@ -57,7 +57,7 @@ export default function AdminSettingsPage() {
   // Profile Form State
   const [name, setName] = useState("");
   const [timezone, setTimezone] = useState("Asia/Kolkata");
-  const [defaultWaPhone, setDefaultWaPhone] = useState("919324826414");
+  const [defaultWaPhone, setDefaultWaPhone] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
 
   // Email Digest State
@@ -74,7 +74,7 @@ export default function AdminSettingsPage() {
     if (profileData) {
       setName(profileData.name || "");
       setTimezone(profileData.timezone || "Asia/Kolkata");
-      setDefaultWaPhone(profileData.default_wa_phone || "919324826414");
+      setDefaultWaPhone(profileData.default_wa_phone || "");
       if (profileData.report_digest) {
         setDigestFreq(profileData.report_digest.frequency || "off");
         setDigestRecipients((profileData.report_digest.recipients || []).join(", "));
@@ -331,16 +331,18 @@ export default function AdminSettingsPage() {
 
               <div>
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
-                  Default WhatsApp number (for test sharing)
+                  Optional personal WhatsApp number
                 </label>
                 <Input
                   type="tel"
                   value={defaultWaPhone}
                   onChange={(e) => setDefaultWaPhone(e.target.value.replace(/[^\d]/g, ""))}
-                  placeholder="919324826414"
+                  placeholder="Leave empty for group sharing (recommended)"
                 />
                 <p className="text-[11px] text-[var(--color-text-tertiary)] mt-1.5 leading-relaxed">
-                  Used when you tap <strong>Open WhatsApp</strong> on a share sheet — opens a chat with the checklist message and link.
+                  Leave blank for normal use. Sharing always lets you{" "}
+                  <strong className="font-medium">pick any WhatsApp group</strong> you&apos;re in.
+                  A number here is only for optional 1:1 personal testing — WhatsApp cannot open a group by phone number.
                 </p>
               </div>
 

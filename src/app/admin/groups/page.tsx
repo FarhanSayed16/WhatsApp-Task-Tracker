@@ -9,7 +9,8 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useSWRFetch } from "@/hooks/useSWRFetch";
-import { Users, Plus, FolderPlus } from "lucide-react";
+import { Plus, FolderPlus, UserPlus, CheckSquare } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface EnrichedGroup {
   id: string;
@@ -23,6 +24,7 @@ interface EnrichedGroup {
 }
 
 export default function GroupsListPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
@@ -85,15 +87,34 @@ export default function GroupsListPage() {
             description={
               search
                 ? `No groups found matching "${search}". Try a different keyword.`
-                : "Create your first WhatsApp group to organize your students or lab members and start assigning tasks."
+                : "Groups hold your members. Create one, add students with WhatsApp numbers, then assign task lists."
+            }
+            steps={
+              !search
+                ? [
+                    {
+                      icon: <FolderPlus className="w-4 h-4" />,
+                      label: "Step 1 — Create a group",
+                      description: "e.g. Lab Batch A or MSc Chemistry",
+                    },
+                    {
+                      icon: <UserPlus className="w-4 h-4" />,
+                      label: "Step 2 — Add members",
+                      description: "Names + optional phone for direct WA share",
+                    },
+                    {
+                      icon: <CheckSquare className="w-4 h-4" />,
+                      label: "Step 3 — Assign tasks",
+                      description: "Create a list and share via WhatsApp",
+                    },
+                  ]
+                : undefined
             }
             actionLabel={search ? "Clear Search" : "+ Create Your First Group"}
             onAction={
               search
                 ? () => setSearch("")
-                : () => {
-                    window.location.href = "/admin/groups/new";
-                  }
+                : () => router.push("/admin/groups/new")
             }
           />
         ) : (

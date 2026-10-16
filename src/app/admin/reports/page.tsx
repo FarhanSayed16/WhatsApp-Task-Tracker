@@ -436,16 +436,22 @@ export default function ReportsPage() {
                 </div>
               </div>
 
+              {isLoading ? (
+                <div className="py-10 text-center text-xs text-[var(--color-text-tertiary)]">
+                  Loading trend data…
+                </div>
+              ) : !data?.completionTrends || data.completionTrends.length === 0 ? (
+                <div className="py-8 px-4 text-center rounded-xl bg-[var(--color-surface-sunken)] border border-dashed border-[var(--color-border-primary)]">
+                  <p className="text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                    No activity in this period
+                  </p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">
+                    Complete some task lists first, then return here for trends.
+                  </p>
+                </div>
+              ) : (
               <div className="h-[280px] w-full pt-2">
-                {isLoading ? (
-                  <div className="h-full flex items-center justify-center text-xs text-[var(--color-text-tertiary)]">
-                    Loading trend data…
-                  </div>
-                ) : !data?.completionTrends || data.completionTrends.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-xs text-[var(--color-text-tertiary)]">
-                    No task activity recorded in this period.
-                  </div>
-                ) : trendView === "count" ? (
+                {trendView === "count" ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={data.completionTrends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-secondary)" opacity={0.6} />
@@ -509,6 +515,7 @@ export default function ReportsPage() {
                   </ResponsiveContainer>
                 )}
               </div>
+              )}
             </Card>
           </div>
         )}

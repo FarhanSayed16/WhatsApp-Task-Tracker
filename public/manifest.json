@@ -7,8 +7,8 @@
   "id": "/admin",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#090d16",
-  "theme_color": "#059669",
+  "background_color": "#F8F7F4",
+  "theme_color": "#0D9E5F",
   "categories": ["education", "productivity", "utilities"],
   "icons": [
     {

@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Badge } from "@/components/ui/Badge";
 import { useSWRFetch } from "@/hooks/useSWRFetch";
 import { useSession } from "@/hooks/useSession";
 import { useToast } from "@/components/ui/Toast";
@@ -24,21 +23,17 @@ import type {
 import {
   AlertTriangle,
   Check,
-  CheckCircle2,
   Clock,
   CopyPlus,
   Download,
-  Filter,
   Plus,
   RefreshCw,
-  Send,
   ShieldCheck,
   Users,
   ChevronRight,
   ChevronDown,
   ChevronUp,
   BarChart3,
-  Calendar,
   ClipboardList,
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/icons/WhatsApp";
@@ -294,8 +289,8 @@ export default function AdminDashboardPage() {
             <div className="px-5 py-3.5 border-b border-[var(--color-border-primary)] flex items-center justify-between bg-[var(--color-surface-sunken)]">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-status-overdue)] animate-pulse" />
-                <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-primary)]">
-                  Action Required
+                <h2 className="text-sm font-semibold tracking-tight text-[var(--color-text-primary)]">
+                  Action required
                 </h2>
               </div>
               <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-secondary)]">
@@ -651,8 +646,8 @@ export default function AdminDashboardPage() {
 
         {/* QUICK ACTIONS ROW (Bottom) */}
         <section className="space-y-3 pt-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-tertiary)]">
-            Quick Actions
+          <h2 className="text-sm font-semibold tracking-tight text-[var(--color-text-tertiary)]">
+            Quick actions
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Duplicate Yesterday */}
@@ -688,7 +683,7 @@ export default function AdminDashboardPage() {
                   View Reports
                 </h3>
                 <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
-                  Completion analytics, heatmaps & PDF export
+                  Completion analytics & PDF export
                 </p>
               </div>
             </Link>

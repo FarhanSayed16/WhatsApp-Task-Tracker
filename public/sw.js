@@ -1,4 +1,4 @@
-const CACHE_NAME = "task-tracker-v3";
+const CACHE_NAME = "task-tracker-v4";
 const STATIC_ASSETS = [
   "/",
   "/login",
@@ -76,11 +76,11 @@ self.addEventListener("fetch", (event) => {
                   <meta name="viewport" content="width=device-width, initial-scale=1">
                   <title>Offline — WhatsApp Task Tracker</title>
                   <style>
-                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #090d16; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; padding: 20px; }
-                    .card { background: #131b2e; border: 1px solid #1e293b; padding: 32px; border-radius: 20px; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-                    h1 { color: #10b981; font-size: 20px; margin-bottom: 8px; }
-                    p { font-size: 14px; color: #94a3b8; line-height: 1.5; margin-bottom: 24px; }
-                    button { background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F8F7F4; color: #1A1A1A; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; padding: 20px; }
+                    .card { background: #FFFFFF; border: 1px solid #E5E3DF; padding: 32px; border-radius: 16px; max-width: 400px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+                    h1 { color: #0D9E5F; font-size: 20px; margin-bottom: 8px; }
+                    p { font-size: 14px; color: #5C5C5C; line-height: 1.5; margin-bottom: 24px; }
+                    button { background: #0D9E5F; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; }
                   </style>
                 </head>
                 <body>
