@@ -41,6 +41,7 @@ import {
   Calendar,
   ClipboardList,
 } from "lucide-react";
+import { WhatsAppIcon } from "@/components/icons/WhatsApp";
 
 function getGreeting(name?: string) {
   const hour = new Date().getHours();
@@ -378,7 +379,7 @@ export default function AdminDashboardPage() {
                             className="flex-1 text-[11px] h-7"
                             onClick={() => handleQuickRemind(item)}
                           >
-                            <Send className="w-3 h-3 mr-1" />
+                            <WhatsAppIcon className="w-3.5 h-3.5 mr-1" />
                             Remind
                           </Button>
                         </div>

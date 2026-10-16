@@ -32,6 +32,7 @@ import {
   Sparkles,
   Loader2,
 } from "lucide-react";
+import { WhatsAppIcon } from "@/components/icons/WhatsApp";
 
 interface ItemDraft {
   id: string;
@@ -865,7 +866,7 @@ function NewTaskForm() {
               onClick={() => handleSave(true)}
               className="flex-1 sm:flex-initial"
             >
-              <Send className="w-4 h-4 mr-1.5" /> Save &amp; Dispatch to WhatsApp
+              <WhatsAppIcon className="w-4 h-4 mr-1.5" /> Save &amp; Dispatch to WhatsApp
             </Button>
           </div>
         </div>

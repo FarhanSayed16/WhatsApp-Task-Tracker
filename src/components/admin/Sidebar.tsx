@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/hooks/useSession";
 import {
   LayoutDashboard,
   Users,
@@ -39,6 +40,7 @@ export const NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 
 export function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
+  const { session } = useSession();
 
   return (
     <aside
@@ -84,7 +86,7 @@ export function Sidebar({ className }: { className?: string }) {
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
                       isActive
-                        ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] font-semibold"
+                        ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] font-semibold border-l-[3px] border-[var(--color-primary)] rounded-l-none"
                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)]"
                     )}
                   >
@@ -98,20 +100,31 @@ export function Sidebar({ className }: { className?: string }) {
         ))}
       </nav>
 
-      {/* Bottom: Settings (separated) */}
-      <div className="px-3 pb-3 border-t border-[var(--color-border-secondary)] pt-3">
+      {/* Bottom: Settings & Professor Profile */}
+      <div className="px-3 pb-3 border-t border-[var(--color-border-secondary)] pt-3 space-y-2">
         <Link
           href="/admin/settings"
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
             pathname.startsWith("/admin/settings")
-              ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] font-semibold"
+              ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] font-semibold border-l-[3px] border-[var(--color-primary)] rounded-l-none"
               : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)]"
           )}
         >
           <Settings className={cn("w-4 h-4 shrink-0", pathname.startsWith("/admin/settings") ? "text-[var(--color-primary)]" : "")} />
           <span>Settings</span>
         </Link>
+
+        {session?.name && (
+          <div className="px-3 py-1.5 rounded-lg bg-[var(--color-surface-sunken)] flex items-center gap-2 text-xs">
+            <div className="w-5 h-5 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] font-bold flex items-center justify-center text-[10px] shrink-0">
+              {session.name.slice(0, 1).toUpperCase()}
+            </div>
+            <span className="truncate font-medium text-[var(--color-text-secondary)]">
+              {session.name}
+            </span>
+          </div>
+        )}
       </div>
     </aside>
   );
