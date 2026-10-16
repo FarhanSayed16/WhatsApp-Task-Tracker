@@ -1,31 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981" />
+    <linearGradient id="tt-fav-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="60%" stop-color="#0D9E5F" />
       <stop offset="100%" stop-color="#047857" />
     </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-opacity="0.25" />
+    <filter id="tt-fav-shadow" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity="0.25" flood-color="#064E3B" />
     </filter>
   </defs>
-  
-  <rect width="512" height="512" rx="112" fill="url(#bg)" />
-  
-  <g filter="url(#shadow)" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Clipboard Outline -->
-    <rect x="116" y="128" width="280" height="312" rx="40" stroke="#ffffff" stroke-width="28" />
-    
-    <!-- Clip Top -->
-    <path d="M196 128V96a32 32 0 0 1 32-32h56a32 32 0 0 1 32 32v32" fill="#ffffff" fill-opacity="0.2" />
-    
-    <!-- Checklist items with checkmarks -->
-    <path d="M176 220l32 32 64-64" stroke="#34d399" stroke-width="24" />
-    <line x1="296" y1="236" x2="336" y2="236" stroke="#ffffff" stroke-width="20" stroke-opacity="0.8" />
-    
-    <path d="M176 308l32 32 64-64" stroke="#34d399" stroke-width="24" />
-    <line x1="296" y1="324" x2="336" y2="324" stroke="#ffffff" stroke-width="20" stroke-opacity="0.8" />
-    
-    <circle cx="192" cy="396" r="14" stroke="#ffffff" stroke-width="18" fill="none" />
-    <line x1="236" y1="396" x2="336" y2="396" stroke="#ffffff" stroke-width="20" stroke-opacity="0.6" />
-  </g>
+
+  <!-- Speech bubble with smooth contours and sleek tail -->
+  <path
+    d="M30 14 H70 C79.941 14 88 22.059 88 32 V78 C88 81.2 84.4 83 81.8 81.2 L68 72 H30 C20.059 72 12 63.941 12 54 V32 C12 22.059 20.059 14 30 14 Z"
+    fill="url(#tt-fav-grad)"
+    filter="url(#tt-fav-shadow)"
+  />
+
+  <!-- Bold Crisp Golden-Ratio Task Checkmark -->
+  <path
+    d="M33 44 L45 56 L67 32"
+    stroke="#FFFFFF"
+    stroke-width="9"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
 </svg>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -116,12 +116,12 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-[360px] p-6 sm:p-8 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-primary)] shadow-[var(--shadow-lg)] flex flex-col items-center">
         {/* Brand Mark */}
-        <div className="w-14 h-14 rounded-xl bg-[var(--color-primary-subtle)] text-[var(--color-primary)] flex items-center justify-center mb-4">
-          <MessageSquare className="w-7 h-7" />
+        <div className="mb-4">
+          <Logo size="lg" variant="badge" />
         </div>
 
-        <h1 className="text-lg font-bold text-[var(--color-text-primary)] tracking-tight">
-          TaskTracker
+        <h1 className="text-xl font-bold text-[var(--color-text-primary)] tracking-tight">
+          Task<span className="text-[var(--color-primary)]">Tracker</span>
         </h1>
         <p className="text-xs text-[var(--color-text-tertiary)] mt-1 mb-6 text-center">
           Enter your 6-digit PIN to continue

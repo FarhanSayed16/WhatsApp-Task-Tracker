@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useSWRFetch } from "@/hooks/useSWRFetch";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/ui/Logo";
 import {
   KeyRound,
   User,
@@ -651,8 +652,9 @@ export default function AdminSettingsPage() {
         {/* 6. About & System Health (Discreet footer) */}
         <div className="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface-sunken)]/60 flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
           <div className="flex items-center gap-2">
-            <Info className="w-3.5 h-3.5" />
-            <span>TaskTracker v{healthData?.version || "1.0.0"}</span>
+            <Logo size="xs" />
+            <span className="font-semibold text-[var(--color-text-secondary)]">TaskTracker</span>
+            <span>v{healthData?.version || "1.0.0"}</span>
             <span>·</span>
             <span className="inline-flex items-center gap-1">
               <span className={cn(

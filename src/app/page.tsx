@@ -1,17 +1,18 @@
 import Link from "next/link";
-import { MessageSquare, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 export default function Home() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-[var(--color-canvas)]">
       <div className="w-full max-w-sm p-8 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border-primary)] shadow-md text-center space-y-6">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] mb-1">
-          <MessageSquare className="w-7 h-7" />
+        <div className="flex justify-center mb-1">
+          <Logo size="lg" variant="badge" />
         </div>
         
         <div className="space-y-1.5">
           <h1 className="text-xl font-bold tracking-tight text-[var(--color-text-primary)]">
-            TaskTracker
+            Task<span className="text-[var(--color-primary)]">Tracker</span>
           </h1>
           <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
             Friction-free daily task management and dispatch for WhatsApp groups.

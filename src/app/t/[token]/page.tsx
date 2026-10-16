@@ -19,9 +19,9 @@ import {
   Clock,
   ShieldCheck,
   Lock,
-  MessageSquare,
   CheckCircle2,
 } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 interface PublicTaskListResponse {
   status: "active" | "readonly" | "expired";
@@ -246,15 +246,8 @@ export default function PublicMemberPage({
       <div className="w-full max-w-lg space-y-4 sm:space-y-5">
         {/* Top Brand Tag */}
         <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center">
-              <MessageSquare className="w-3.5 h-3.5" />
-            </div>
-            <span className="text-xs font-bold tracking-tight text-[var(--color-text-primary)]">
-              TaskTracker
-            </span>
-          </div>
-          <span className="text-[11px] text-[var(--color-text-tertiary)]">
+          <Logo size="xs" showWordmark />
+          <span className="text-[11px] text-[var(--color-text-tertiary)] font-medium">
             Member Dispatch
           </span>
         </div>

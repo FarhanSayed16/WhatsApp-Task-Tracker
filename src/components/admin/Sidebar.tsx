@@ -12,9 +12,9 @@ import {
   Layers,
   BarChart3,
   Settings,
-  MessageSquare,
   MoreHorizontal,
 } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 /** Navigation items grouped by purpose */
 const NAV_GROUPS = [
@@ -50,19 +50,13 @@ export function Sidebar({ className }: { className?: string }) {
       )}
     >
       {/* Brand / Logo */}
-      <div className="h-16 flex items-center px-5 border-b border-[var(--color-border-secondary)] gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center">
-          <MessageSquare className="w-4.5 h-4.5" />
-        </div>
-        <div>
-          <span className="font-bold text-[var(--color-text-primary)] tracking-tight text-sm">
-            TaskTracker
-          </span>
-          <span className="block text-[10px] text-[var(--color-primary-text)] font-medium">
-            Dispatch
-          </span>
-        </div>
-      </div>
+      <Link
+        href="/admin"
+        className="h-16 flex items-center px-5 border-b border-[var(--color-border-secondary)] hover:opacity-90 transition-opacity"
+        title="TaskTracker Dashboard"
+      >
+        <Logo size="sm" showWordmark subtitle="Dispatch" />
+      </Link>
 
       {/* Grouped Nav Items */}
       <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
