@@ -3,8 +3,10 @@
   "short_name": "TaskTracker",
   "description": "Frictionless WhatsApp group task tracking and checklist verification",
   "start_url": "/admin",
+  "scope": "/",
+  "id": "/admin",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#090d16",
   "theme_color": "#059669",
   "categories": ["education", "productivity", "utilities"],
@@ -32,6 +34,29 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Task List",
+      "short_name": "New List",
+      "description": "Create and dispatch a new checklist to WhatsApp",
+      "url": "/admin/tasks/new",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Admin Dashboard",
+      "short_name": "Dashboard",
+      "description": "View live task status and student progress",
+      "url": "/admin",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Student Groups",
+      "short_name": "Groups",
+      "description": "Manage groups and member rosters",
+      "url": "/admin/groups",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

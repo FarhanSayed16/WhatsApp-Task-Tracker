@@ -11,6 +11,7 @@ import { useSWRFetch } from "@/hooks/useSWRFetch";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
+import { usePWAInstall } from "@/components/ui/PWAInstallPrompt";
 import {
   KeyRound,
   User,
@@ -66,9 +67,8 @@ export default function AdminSettingsPage() {
   const [digestSaving, setDigestSaving] = useState(false);
   const [isTestingDigest, setIsTestingDigest] = useState(false);
 
-  // PWA Install Prompt State
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+  // PWA Install State from shared hook
+  const { isInstalled, isIOS, promptInstall } = usePWAInstall();
 
   useEffect(() => {
     if (profileData) {
@@ -83,38 +83,21 @@ export default function AdminSettingsPage() {
     }
   }, [profileData]);
 
-  useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      (window.matchMedia("(display-mode: standalone)").matches ||
-        (window.navigator as any).standalone === true)
-    ) {
-      setIsInstalled(true);
-    }
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
+    if (isIOS) {
       toast.info(
-        "To install, tap Share (or menu) in your browser and select 'Add to Home Screen'."
+        "To install on iOS: Tap Share at bottom of Safari and select 'Add to Home Screen'."
       );
       return;
     }
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    const outcome = await promptInstall();
     if (outcome === "accepted") {
-      setIsInstalled(true);
       toast.success("TaskTracker added to home screen!");
+    } else {
+      toast.info(
+        "To install, tap Share (or menu) in your browser and select 'Add to Home Screen'."
+      );
     }
-    setDeferredPrompt(null);
   };
 
   const handlePinSubmit = async (e: React.FormEvent) => {

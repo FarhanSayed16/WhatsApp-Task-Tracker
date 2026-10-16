@@ -3,6 +3,7 @@
 import React from "react";
 import { Sidebar, MobileBottomNav } from "./Sidebar";
 import { TopBar } from "./TopBar";
+import { PWAInstallBanner } from "@/components/ui/PWAInstallPrompt";
 
 export interface AdminLayoutProps {
   children: React.ReactNode;
@@ -32,6 +33,9 @@ export function AdminLayout({
 
       {/* Mobile Navigation */}
       <MobileBottomNav />
+
+      {/* PWA One-Tap Install Banner */}
+      <PWAInstallBanner />
     </div>
   );
 }

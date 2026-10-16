@@ -1,11 +1,13 @@
-const CACHE_NAME = "task-tracker-v2";
+const CACHE_NAME = "task-tracker-v3";
 const STATIC_ASSETS = [
   "/",
+  "/login",
   "/manifest.json",
   "/icon.svg",
   "/icon-192.png",
   "/icon-512.png",
   "/apple-touch-icon.png",
+  "/logo.png",
 ];
 
 function isCacheableRequest(request) {
