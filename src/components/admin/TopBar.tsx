@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { LogOut, Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
@@ -39,13 +38,13 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
 
   return (
     <>
-      <header className="h-16 px-4 sm:px-6 border-b border-[var(--color-border-primary)] bg-[var(--color-surface)]/80 backdrop-blur-sm sticky top-0 z-30 flex items-center justify-between gap-4">
+      <header className="h-[72px] px-4 sm:px-6 lg:px-8 z-30 flex items-center justify-between gap-4 bg-transparent">
         <div className="min-w-0">
-          <h1 className="text-lg font-bold text-[var(--color-text-primary)] truncate tracking-tight">
+          <h1 className="text-[1.35rem] font-bold text-[var(--color-text-primary)] truncate tracking-[-0.035em]">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-xs text-[var(--color-text-tertiary)] truncate">
+            <p className="text-xs text-[var(--color-text-tertiary)] truncate mt-0.5">
               {subtitle}
             </p>
           )}
@@ -54,14 +53,10 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
         <div className="flex items-center gap-2 shrink-0">
           {actions && <div className="flex items-center gap-2">{actions}</div>}
 
-          <div className="h-5 w-px bg-[var(--color-border-primary)] hidden sm:block" />
-
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
             onClick={toggleTheme}
-            className="p-2 text-[var(--color-text-tertiary)]"
+            className="w-9 h-9 rounded-full glass-card flex items-center justify-center text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             aria-label="Toggle light/dark theme"
           >
@@ -70,29 +65,24 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
             ) : (
               <Moon className="w-4 h-4" />
             )}
-          </Button>
+          </button>
 
-          {/* User profile / Logout */}
-          <div className="flex items-center gap-1.5">
-            <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--color-surface-sunken)] text-xs font-medium text-[var(--color-text-secondary)]">
-              <span className="w-5 h-5 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center text-[10px] font-bold">
-                {initial}
-              </span>
-              <span className="max-w-[120px] truncate">{displayName}</span>
-            </div>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowLogoutConfirm(true)}
-              className="p-2 text-[var(--color-text-tertiary)] hover:text-[var(--color-danger)]"
-              title="Logout"
-              aria-label="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
+          <div className="hidden sm:flex items-center gap-1.5 pl-1.5 pr-3 py-1 rounded-full glass-card text-xs font-medium text-[var(--color-text-secondary)]">
+            <span className="w-6 h-6 rounded-full bg-[var(--color-primary)] text-[var(--color-text-inverse)] flex items-center justify-center text-[10px] font-bold">
+              {initial}
+            </span>
+            <span className="max-w-[120px] truncate">{displayName}</span>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowLogoutConfirm(true)}
+            className="w-9 h-9 rounded-full glass-card flex items-center justify-center text-[var(--color-text-tertiary)] hover:text-[var(--color-danger)]"
+            title="Logout"
+            aria-label="Logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
 

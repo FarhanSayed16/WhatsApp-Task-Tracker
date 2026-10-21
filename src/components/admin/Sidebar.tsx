@@ -60,14 +60,14 @@ export function Sidebar({ className }: { className?: string }) {
   return (
     <aside
       className={cn(
-        "hidden md:flex flex-col w-[230px] border-r border-[var(--color-border-primary)] bg-[var(--color-surface)] h-screen sticky top-0 shrink-0 select-none",
+        "hidden md:flex flex-col w-[232px] shrink-0 select-none z-[2] self-stretch border-r border-[var(--color-border-secondary)]",
         className
       )}
     >
       {/* Brand / Logo */}
       <Link
         href="/admin"
-        className="h-16 flex items-center px-5 border-b border-[var(--color-border-secondary)] hover:opacity-95 transition-opacity"
+        className="h-[72px] flex items-center px-5 hover:opacity-95 transition-opacity"
         title="TaskTracker Dashboard"
       >
         <Logo size="sm" showWordmark subtitle="Dispatch" />
@@ -77,7 +77,8 @@ export function Sidebar({ className }: { className?: string }) {
       <div className="px-3.5 pt-3.5 pb-1">
         <Link
           href="/admin/tasks/new"
-          className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs shadow-sm hover:shadow transition-all duration-150 active:scale-[0.98]"
+          title="New Task List (N)"
+          className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-text-inverse)] font-semibold text-xs shadow-sm hover:shadow-[var(--shadow-md)] transition-all duration-150 active:scale-[0.98]"
         >
           <Plus className="w-4 h-4" />
           <span>New Task List</span>
@@ -104,16 +105,16 @@ export function Sidebar({ className }: { className?: string }) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150",
+                      "flex items-center gap-3 px-3 py-2.5 rounded-full text-xs font-semibold transition-all duration-150",
                       isActive
-                        ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] shadow-xs"
+                        ? "bg-[var(--color-text-primary)] text-[var(--color-text-inverse)] shadow-[var(--shadow-sm)]"
                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)]"
                     )}
                   >
                     <Icon
                       className={cn(
                         "w-4 h-4 shrink-0 transition-colors",
-                        isActive ? "text-[var(--color-primary)]" : "text-[var(--color-text-tertiary)]"
+                        isActive ? "text-[var(--color-text-inverse)]" : "text-[var(--color-text-tertiary)]"
                       )}
                     />
                     <span>{item.label}</span>
@@ -130,7 +131,7 @@ export function Sidebar({ className }: { className?: string }) {
         {/* Active checklists counter pill */}
         <Link
           href="/admin/tasks"
-          className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)] text-xs hover:border-[var(--color-primary)]/40 transition-colors"
+          className="flex items-center justify-between px-3 py-2 rounded-[14px] glass-card text-xs hover:border-[var(--color-primary)]/40 transition-colors"
         >
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
@@ -151,18 +152,18 @@ export function Sidebar({ className }: { className?: string }) {
         <Link
           href="/admin/settings"
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150",
+            "flex items-center gap-3 px-3 py-2.5 rounded-full text-xs font-semibold transition-all duration-150",
             pathname.startsWith("/admin/settings")
-              ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)]"
+              ? "bg-[var(--color-text-primary)] text-[var(--color-text-inverse)]"
               : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)]"
           )}
         >
-          <Settings className={cn("w-4 h-4 shrink-0", pathname.startsWith("/admin/settings") ? "text-[var(--color-primary)]" : "text-[var(--color-text-tertiary)]")} />
+          <Settings className={cn("w-4 h-4 shrink-0", pathname.startsWith("/admin/settings") ? "text-[var(--color-text-inverse)]" : "text-[var(--color-text-tertiary)]")} />
           <span>Settings</span>
         </Link>
 
         {session?.name && (
-          <div className="px-3 py-2 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-secondary)] flex items-center gap-2.5 text-xs">
+          <div className="px-3 py-2 rounded-[14px] glass-card flex items-center gap-2.5 text-xs">
             <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold flex items-center justify-center text-[10px] shadow-xs shrink-0">
               {session.name.slice(0, 1).toUpperCase()}
             </div>
@@ -206,7 +207,7 @@ export function MobileBottomNav() {
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--color-surface)]/95 backdrop-blur-sm border-t border-[var(--color-border-primary)] px-2 py-1.5 flex items-center justify-around">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-chrome border-t border-[var(--color-border-primary)] px-2 py-1.5 flex items-center justify-around">
         {mobileItems.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -259,7 +260,7 @@ export function MobileBottomNav() {
             aria-label="Close menu"
             onClick={() => setMoreOpen(false)}
           />
-          <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-[var(--color-surface)] border-t border-[var(--color-border-primary)] p-4 pb-8 shadow-float animate-slide-up">
+          <div className="absolute bottom-0 left-0 right-0 rounded-t-3xl glass-panel p-4 pb-8 shadow-[var(--shadow-float)] animate-slide-up">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-semibold text-[var(--color-text-primary)]">More</p>
               <button

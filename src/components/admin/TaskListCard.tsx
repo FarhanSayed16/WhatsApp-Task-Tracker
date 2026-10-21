@@ -48,6 +48,8 @@ export interface TaskListCardProps {
     source?: string;
   } | null;
   onDelete?: (id: string) => void;
+  /** Single-row layout for dense dashboards */
+  compact?: boolean;
 }
 
 const STATUS_BADGE: Record<
@@ -72,6 +74,7 @@ export function TaskListCard({
   completedItems,
   recurrence,
   onDelete,
+  compact = false,
 }: TaskListCardProps) {
   const { toast } = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -95,16 +98,13 @@ export function TaskListCard({
     label: String(status),
   };
 
-  const publicUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/t/${token}`
-      : `/t/${token}`;
+  const publicPath = `/t/${token}`;
 
   const copyLink = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      await navigator.clipboard.writeText(publicUrl);
+      await navigator.clipboard.writeText(`${window.location.origin}${publicPath}`);
       toast.success("Member link copied to clipboard!");
     } catch {
       toast.error("Failed to copy link");
@@ -125,7 +125,7 @@ export function TaskListCard({
       setShareItems(data.items || []);
       setShareMembers(data.members || []);
       setShareMeta({
-        member_link: data.task_list?.member_link || publicUrl,
+        member_link: data.task_list?.member_link || `${window.location.origin}${publicPath}`,
       });
       setShowShareSheet(true);
     } catch (err: unknown) {
@@ -136,6 +136,68 @@ export function TaskListCard({
       setShareLoading(false);
     }
   };
+
+  const shareSheet = (
+      <ShareSheet
+        isOpen={showShareSheet}
+        onClose={() => setShowShareSheet(false)}
+        taskList={{
+          id,
+          token,
+          title,
+          group_name: groupName,
+          list_date: listDate,
+          due_at: dueAt,
+          total_items: totalItems,
+          completed_items: completedItems,
+          member_link: shareMeta.member_link || publicPath,
+        }}
+        items={shareItems}
+        members={shareMembers}
+      />
+  );
+
+  if (compact) {
+    return (
+      <>
+        <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--color-surface-sunken)]/60 transition-colors">
+          <Link href={`/admin/tasks/${id}`} className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate hover:text-[var(--color-primary)]">
+              {title}
+            </p>
+            <p className="text-[11px] text-[var(--color-text-tertiary)] truncate mt-0.5">
+              {groupName} · {formatDate(listDate)} · {completedItems}/{totalItems}
+            </p>
+          </Link>
+          <div className="w-16 shrink-0 hidden sm:block">
+            <ProgressBar value={percentage} size="sm" showLabel={false} />
+          </div>
+          <span className="text-[11px] font-bold text-[var(--color-text-secondary)] w-8 text-right tabular-nums">
+            {percentage}%
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 px-2 text-[11px] hidden sm:inline-flex"
+            onClick={copyLink}
+          >
+            Copy
+          </Button>
+          <Button
+            size="sm"
+            variant="whatsapp"
+            className="h-8 px-2.5 text-[11px]"
+            onClick={handleShare}
+            disabled={shareLoading}
+          >
+            <WhatsAppIcon className="w-3.5 h-3.5" />
+            {shareLoading ? "…" : "WA"}
+          </Button>
+        </div>
+        {shareSheet}
+      </>
+    );
+  }
 
   return (
     <>
@@ -177,7 +239,7 @@ export function TaskListCard({
                     className="fixed inset-0 z-20"
                     onClick={() => setMenuOpen(false)}
                   />
-                  <div className="absolute right-0 mt-1 w-36 rounded-lg bg-[var(--color-surface-overlay)] border border-[var(--color-border-primary)] shadow-[var(--shadow-float)] z-30 py-1 text-xs">
+                  <div className="absolute right-0 mt-1 w-36 rounded-[var(--radius-md)] glass-panel z-30 py-1 text-xs">
                     <Link
                       href={`/admin/tasks/${id}`}
                       className="flex items-center gap-2 px-3 py-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)]"
@@ -193,7 +255,7 @@ export function TaskListCard({
                       <Copy className="w-3.5 h-3.5" /> Duplicate
                     </Link>
                     <a
-                      href={publicUrl}
+                      href={publicPath}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center gap-2 px-3 py-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)]"
@@ -270,23 +332,7 @@ export function TaskListCard({
         </div>
       </Card>
 
-      <ShareSheet
-        isOpen={showShareSheet}
-        onClose={() => setShowShareSheet(false)}
-        taskList={{
-          id,
-          token,
-          title,
-          group_name: groupName,
-          list_date: listDate,
-          due_at: dueAt,
-          total_items: totalItems,
-          completed_items: completedItems,
-          member_link: shareMeta.member_link || publicUrl,
-        }}
-        items={shareItems}
-        members={shareMembers}
-      />
+      {shareSheet}
     </>
   );
 }

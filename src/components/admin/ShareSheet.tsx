@@ -11,6 +11,7 @@ import {
   buildReminderMessage,
   formatWaDueTime,
   waLink,
+  waAppLink,
   waWebLink,
   inspectWaUrl,
   sanitizeWhatsAppText,
@@ -515,16 +516,35 @@ export function ShareSheet({
       /* clipboard write may fail if document focus lost */
     }
 
-    const link = useWeb ? waWebLink(clean, phone) : waLink(clean, phone);
-    window.open(link, "_blank");
+    const webOrMe = useWeb ? waWebLink(clean, phone) : waLink(clean, phone);
+
+    if (useWeb) {
+      window.open(webOrMe, "_blank");
+    } else {
+      // Native protocol skips api.whatsapp.com "Open app". If the OS
+      // does not handle it, fall back to wa.me after a short beat.
+      const appUrl = waAppLink(clean, phone);
+      const leftAt = Date.now();
+      const probe = document.createElement("a");
+      probe.href = appUrl;
+      probe.rel = "noopener";
+      probe.click();
+      window.setTimeout(() => {
+        if (document.hasFocus() && Date.now() - leftAt < 1800) {
+          window.open(webOrMe, "_blank");
+        }
+      }, 900);
+    }
 
     const channel = phone ? "whatsapp_individual" : "whatsapp_group";
     await logShareEvent(channel, memberId);
 
     toast.success(
       useWeb
-        ? "WhatsApp Web opened! Clean message copied to clipboard."
-        : "WhatsApp opened! Clean message copied to clipboard (press Ctrl+V if app skips newlines)."
+        ? "WhatsApp Web opened. Message is copied — pick the chat, then Send."
+        : phone
+        ? "WhatsApp opened on that chat. Tap Send."
+        : "Message copied. Fastest: paste into the open group (Ctrl+V), then Enter."
     );
   };
 
@@ -1166,7 +1186,7 @@ export function ShareSheet({
             >
               <span className="font-semibold block">WhatsApp group / any chat</span>
               <span className="text-[11px] text-[var(--color-text-tertiary)] leading-snug block mt-0.5">
-                Opens WhatsApp — you pick the group you&apos;re in (recommended)
+                WhatsApp has no group auto-send. Fastest: paste into the group that is already open.
               </span>
             </button>
             <button
@@ -1196,7 +1216,12 @@ export function ShareSheet({
         <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] text-[var(--color-text-secondary)] flex items-start gap-2.5">
           <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong className="text-[var(--color-text-primary)]">Pro Tip:</strong> When you tap <em className="font-semibold text-emerald-700 dark:text-emerald-400">Open WhatsApp</em>, we automatically copy the formatted checklist to your clipboard. If Windows WhatsApp Desktop strips linebreaks in its text preview, just press <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[10px]">Ctrl+V</kbd> to paste the clean multi-line checklist with zero glitches!
+            <strong className="text-[var(--color-text-primary)]">Fastest on this PC:</strong> keep the class group open in WhatsApp Desktop, tap{" "}
+            <em className="font-semibold">Copy Clean Message</em>, then{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[10px]">Alt+Tab</kbd>{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[10px]">Ctrl+V</kbd>{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[10px]">Enter</kbd>
+            . No chat picker. WhatsApp does not let a website send into a group by itself.
           </p>
         </div>
 

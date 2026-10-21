@@ -201,7 +201,7 @@ export default function PublicMemberPage({
   // Loading skeleton
   if (isLoading && !data) {
     return (
-      <main className="min-h-screen bg-[var(--color-canvas)] p-4 sm:p-6 flex flex-col items-center">
+      <main className="app-atmosphere min-h-screen p-4 sm:p-6 flex flex-col items-center">
         <div className="w-full max-w-lg space-y-4">
           <Skeleton variant="card" className="h-40" />
           <Skeleton variant="card" className="h-28" />
@@ -214,7 +214,7 @@ export default function PublicMemberPage({
   // Error / Not Found / Expired state
   if (error || !data || data.status === "expired") {
     return (
-      <main className="min-h-screen bg-[var(--color-canvas)] p-4 sm:p-6 flex flex-col items-center justify-center">
+      <main className="app-atmosphere min-h-screen p-4 sm:p-6 flex flex-col items-center justify-center">
         <Card className="w-full max-w-md p-8 text-center space-y-4 shadow-sm">
           <div className="w-14 h-14 mx-auto rounded-xl bg-[var(--color-status-overdue-bg)] text-[var(--color-status-overdue)] flex items-center justify-center">
             <AlertCircle className="w-7 h-7" />
@@ -242,8 +242,8 @@ export default function PublicMemberPage({
     !isAllComplete;
 
   return (
-    <main className="min-h-screen bg-[var(--color-canvas)] p-3 sm:p-6 flex flex-col items-center pb-24">
-      <div className="w-full max-w-lg space-y-4 sm:space-y-5">
+    <main className="app-atmosphere min-h-screen p-3 sm:p-6 flex flex-col items-center pb-24">
+      <div className="relative z-[1] w-full max-w-lg space-y-4 sm:space-y-5">
         {/* Top Brand Tag */}
         <div className="flex items-center justify-between px-1">
           <Logo size="xs" showWordmark />
