@@ -14,15 +14,16 @@ interface BeforeInstallPromptEvent extends Event {
 
 let globalDeferredPrompt: BeforeInstallPromptEvent | null = null;
 const listeners = new Set<() => void>();
+let pwaListenersBound = false;
 
-// Register global listener once
-if (typeof window !== "undefined") {
+function ensurePwaListeners() {
+  if (pwaListenersBound || typeof window === "undefined") return;
+  pwaListenersBound = true;
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     globalDeferredPrompt = e as BeforeInstallPromptEvent;
     listeners.forEach((l) => l());
   });
-
   window.addEventListener("appinstalled", () => {
     globalDeferredPrompt = null;
     listeners.forEach((l) => l());
@@ -35,6 +36,7 @@ export function usePWAInstall() {
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
+    ensurePwaListeners();
     // Detect standalone mode
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||

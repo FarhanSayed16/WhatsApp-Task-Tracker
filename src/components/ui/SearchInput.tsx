@@ -70,7 +70,7 @@ export function SearchInput({
         value={internalValue}
         onChange={handleChange}
         placeholder={placeholder}
-        className="w-full rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-input)] text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] text-sm pl-10 pr-9 py-2 h-10 focus:outline-none focus-visible:border-[var(--color-border-focus)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 transition-all"
+        className="w-full rounded-[var(--radius-md)] bg-[var(--color-surface-solid)]/70 border border-[var(--color-border-input)] text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] text-sm pl-10 pr-9 py-2 h-10 focus:outline-none focus-visible:border-[var(--color-border-focus)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 transition-all"
       />
       {internalValue && !loading && (
         <button

@@ -17,6 +17,17 @@ export function waLink(text: string, phone?: string | null): string {
 }
 
 /**
+ * Native WhatsApp app protocol — skips the api.whatsapp.com "Open app" webpage.
+ * Still cannot target a group; with a phone it opens that 1:1 composer.
+ */
+export function waAppLink(text: string, phone?: string | null): string {
+  const cleanPhone = phone ? phone.replace(/[^0-9]/g, "") : "";
+  const safe = sanitizeWhatsAppText(text);
+  const phonePart = cleanPhone ? `phone=${cleanPhone}&` : "";
+  return `whatsapp://send?${phonePart}text=${encodeURIComponent(safe)}`;
+}
+
+/**
  * Builds an official web.whatsapp.com link for direct browser tab dispatch.
  * Ideal for desktop browsers to bypass desktop app protocol mangling.
  */

@@ -114,7 +114,7 @@ function ToastCard({
   return (
     <div
       className={cn(
-        "pointer-events-auto flex items-start gap-3 p-4 rounded-lg border border-[var(--color-border-primary)] border-l-[3px] bg-[var(--color-surface)] shadow-[var(--shadow-float)] transition-all animate-slide-up",
+        "pointer-events-auto flex items-start gap-3 p-4 rounded-[var(--radius-md)] glass-panel border-l-[3px] shadow-[var(--shadow-float)] transition-all animate-slide-up",
         borderColor
       )}
       role="alert"
