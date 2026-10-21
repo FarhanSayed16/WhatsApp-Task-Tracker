@@ -17,6 +17,7 @@ import type {
   DashboardData,
   DashboardOverdueItem,
   DashboardPendingVerifyItem,
+  DashboardRecentList,
   DashboardReminderReady,
 } from "@/types";
 import {
@@ -131,10 +132,10 @@ export default function AdminDashboardPage() {
   const pendingCount = kpis?.total_pending ?? 0;
   const completionRate = kpis?.completion_rate ?? 0;
 
-  const { data: activeListsData } = useSWRFetch<any>(
-    "/api/admin/task-lists?status=active&limit=6"
-  );
-  const activeLists = Array.isArray(activeListsData)
+  const { data: activeListsData } = useSWRFetch<
+    DashboardRecentList[] | { data: DashboardRecentList[] }
+  >("/api/admin/task-lists?status=active&limit=6");
+  const activeLists: DashboardRecentList[] = Array.isArray(activeListsData)
     ? activeListsData
     : activeListsData?.data || [];
   const showActiveFallback =
@@ -143,7 +144,7 @@ export default function AdminDashboardPage() {
     overdueItems.length > 0 ||
     pendingVerifyItems.length > 0 ||
     remindersReady.length > 0;
-  const dashboardLists = (
+  const dashboardLists: DashboardRecentList[] = (
     showActiveFallback ? activeLists : recentLists
   ).slice(0, 5);
 
@@ -725,7 +726,12 @@ export default function AdminDashboardPage() {
                     status={list.status || "active"}
                     totalItems={list.total_items}
                     completedItems={list.completed_items}
-                    recurrence={list.recurrence}
+                    recurrence={
+                      list.recurrence as {
+                        freq?: string;
+                        auto_generated?: boolean;
+                      } | null
+                    }
                     onDelete={handleDeleteList}
                   />
                 ))}
