@@ -223,7 +223,7 @@ export default function TemplatesPage() {
       <div className="space-y-6 pb-12">
         {/* Active Recurring Schedules (Only shown if schedules exist) */}
         {recurringLists.length > 0 && (
-          <section className="rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] p-5 shadow-sm space-y-3">
+          <section className="rounded-[var(--radius-lg)] glass-card p-5 space-y-3">
             <div className="flex items-center gap-2">
               <Repeat className="w-4 h-4 text-[var(--color-primary)]" />
               <h2 className="text-sm font-bold text-[var(--color-text-primary)]">

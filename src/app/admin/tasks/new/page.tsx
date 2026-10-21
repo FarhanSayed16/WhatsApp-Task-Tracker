@@ -15,7 +15,7 @@ import { VoiceTaskInput } from "@/components/admin/VoiceTaskInput";
 import { useSWRFetch } from "@/hooks/useSWRFetch";
 import { useSession } from "@/hooks/useSession";
 import { useToast } from "@/components/ui/Toast";
-import { zonedDateTimeToUtcIso, cn, parsePastedTasks } from "@/lib/utils";
+import { zonedDateTimeToUtcIso, cn, parsePastedTasks, calendarDateInTimeZone } from "@/lib/utils";
 import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import type { ParsedAITaskItem } from "@/lib/ai";
 import {
@@ -69,7 +69,9 @@ function NewTaskForm() {
 
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState(preselectedGroupId);
-  const [listDate, setListDate] = useState(new Date().toISOString().split("T")[0]);
+  const [listDate, setListDate] = useState(() =>
+    calendarDateInTimeZone(new Date(), DEFAULT_TIMEZONE)
+  );
   const [dueTime, setDueTime] = useState("");
   const [items, setItems] = useState<ItemDraft[]>([]);
   const [newItemText, setNewItemText] = useState("");

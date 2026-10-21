@@ -113,21 +113,18 @@ export default function LoginPage() {
   const isLocked = lockoutSeconds !== null && lockoutSeconds > 0;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--color-canvas)] select-none">
-      {/* Subtle gradient overlay for visual interest */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,var(--color-primary-subtle),transparent_70%)] pointer-events-none" />
-
+    <div className="app-atmosphere min-h-screen flex items-center justify-center p-4 select-none">
       <button
         type="button"
         onClick={toggleTheme}
-        className="fixed top-4 right-4 z-10 p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-primary)] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] shadow-sm"
+        className="fixed top-4 right-4 z-10 w-10 h-10 rounded-full glass-card flex items-center justify-center text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]"
         title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         aria-label="Toggle theme"
       >
         {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
       </button>
 
-      <div className="relative w-full max-w-[360px] p-6 sm:p-8 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border-primary)] shadow-[var(--shadow-lg)] flex flex-col items-center">
+      <div className="relative z-[1] w-full max-w-[380px] p-7 sm:p-9 rounded-[var(--radius-xl)] glass-panel shadow-[var(--shadow-float)] flex flex-col items-center">
         {/* Brand Mark */}
         <div className="mb-4">
           <Logo size="lg" variant="badge" />
@@ -188,7 +185,7 @@ export default function LoginPage() {
               aria-label={`Digit ${num}`}
               disabled={loading || isLocked}
               onClick={() => handleDigit(num)}
-              className="h-14 rounded-xl text-xl font-semibold text-[var(--color-text-primary)] bg-[var(--color-surface-sunken)] hover:bg-[var(--color-primary-subtle)] active:scale-95 transition-all duration-100 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
+              className="h-14 rounded-[14px] text-xl font-semibold text-[var(--color-text-primary)] glass-card hover:bg-[var(--color-primary-subtle)] active:scale-95 transition-all duration-100 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
             >
               {num}
             </button>
@@ -203,7 +200,7 @@ export default function LoginPage() {
               setPin("");
               setError(null);
             }}
-            className="h-14 rounded-xl text-xs font-semibold text-[var(--color-text-tertiary)] bg-[var(--color-surface-sunken)]/50 hover:bg-[var(--color-surface-sunken)] active:scale-95 transition-all duration-100 flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none"
+            className="h-14 rounded-xl text-xs font-semibold text-[var(--color-text-tertiary)] glass-card hover:bg-[var(--color-surface-sunken)] active:scale-95 transition-all duration-100 flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none"
           >
             Clear
           </button>
@@ -214,7 +211,7 @@ export default function LoginPage() {
             aria-label="Digit 0"
             disabled={loading || isLocked}
             onClick={() => handleDigit("0")}
-            className="h-14 rounded-xl text-xl font-semibold text-[var(--color-text-primary)] bg-[var(--color-surface-sunken)] hover:bg-[var(--color-primary-subtle)] active:scale-95 transition-all duration-100 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
+            className="h-14 rounded-xl text-xl font-semibold text-[var(--color-text-primary)] glass-card hover:bg-[var(--color-primary-subtle)] active:scale-95 transition-all duration-100 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
           >
             0
           </button>
@@ -225,7 +222,7 @@ export default function LoginPage() {
             aria-label="Delete last digit"
             disabled={loading || pin.length === 0}
             onClick={handleDelete}
-            className="h-14 rounded-xl text-base font-medium text-[var(--color-text-secondary)] bg-[var(--color-surface-sunken)]/50 hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] active:scale-95 transition-all duration-100 flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none"
+            className="h-14 rounded-xl text-base font-medium text-[var(--color-text-secondary)] glass-card hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] active:scale-95 transition-all duration-100 flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none"
           >
             ⌫
           </button>

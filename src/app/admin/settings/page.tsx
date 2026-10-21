@@ -348,7 +348,7 @@ export default function AdminSettingsPage() {
     >
       <div className="max-w-3xl space-y-6 pb-12">
         {/* 1. Profile & Preferences */}
-        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-5">
+        <section className="glass-card rounded-[var(--radius-lg)] p-5 sm:p-6 space-y-5">
           <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-border-secondary)]">
             <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center">
               <User className="w-4 h-4" />
@@ -471,7 +471,7 @@ export default function AdminSettingsPage() {
         </section>
 
         {/* 2. Public Checklist Link & Mobile Access */}
-        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-5">
+        <section className="glass-card rounded-[var(--radius-lg)] p-5 sm:p-6 space-y-5">
           <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-border-secondary)]">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <Wifi className="w-4 h-4" />
@@ -566,7 +566,7 @@ export default function AdminSettingsPage() {
         </section>
 
         {/* 3. Security: Change PIN (Collapsible) */}
-        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-4">
+        <section className="glass-card rounded-[var(--radius-lg)] p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-secondary)]">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] flex items-center justify-center">
@@ -657,7 +657,7 @@ export default function AdminSettingsPage() {
         </section>
 
         {/* 3. Notifications: Email Digest */}
-        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-5">
+        <section className="glass-card rounded-[var(--radius-lg)] p-5 sm:p-6 space-y-5">
           <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-border-secondary)]">
             <div className="w-8 h-8 rounded-lg bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] flex items-center justify-center">
               <Mail className="w-4 h-4" />
@@ -756,7 +756,7 @@ export default function AdminSettingsPage() {
         </section>
 
         {/* 4. Data Storage & CSV Backup */}
-        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-5">
+        <section className="glass-card rounded-[var(--radius-lg)] p-5 sm:p-6 space-y-5">
           <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-border-secondary)]">
             <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center">
               <Database className="w-4 h-4" />
@@ -810,7 +810,7 @@ export default function AdminSettingsPage() {
         </section>
 
         {/* 5. Mobile App & PWA */}
-        <section className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-primary)] p-5 sm:p-6 shadow-sm space-y-4">
+        <section className="glass-card rounded-[var(--radius-lg)] p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] flex items-center justify-center">

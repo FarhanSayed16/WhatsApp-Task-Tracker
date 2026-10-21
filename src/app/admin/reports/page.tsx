@@ -266,7 +266,7 @@ export default function ReportsPage() {
     >
       <div className="space-y-6 pb-16">
         {/* Filter Controls Row */}
-        <div className="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <div className="p-4 rounded-[var(--radius-lg)] glass-card flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Preset Buttons */}
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-xs font-semibold text-[var(--color-text-secondary)] mr-1 flex items-center gap-1">
@@ -334,7 +334,7 @@ export default function ReportsPage() {
         </div>
 
         {/* 1. Concise Summary Card (§12.9) */}
-        <div className="p-4 sm:p-5 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-l-4 border-l-[var(--color-primary)]">
+        <div className="p-4 sm:p-5 rounded-[var(--radius-lg)] glass-card flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-l-4 border-l-[var(--color-primary)]">
           <div>
             <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
               {summary.totalTasks} tasks assigned · {summary.completedTasks} completed ({summary.completionRate}%) · {summary.overdueTasks} overdue
