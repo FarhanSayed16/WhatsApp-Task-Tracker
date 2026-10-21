@@ -11,6 +11,7 @@ export interface TaskChecklistProps {
   members: Member[];
   currentMemberId: string | null;
   readOnly?: boolean;
+  verifyRequired?: boolean;
   onToggleItem: (item: TaskItem, isCurrentlyDone: boolean) => Promise<void> | void;
   onAddNote?: (item: TaskItem) => void;
 }
@@ -21,6 +22,7 @@ export function TaskChecklist({
   members,
   currentMemberId,
   readOnly = false,
+  verifyRequired = false,
   onToggleItem,
   onAddNote,
 }: TaskChecklistProps) {
@@ -39,10 +41,13 @@ export function TaskChecklist({
   };
 
   const handleToggle = async (item: TaskItem) => {
-    if (readOnly || !currentMemberId || togglingId) return;
+    if (readOnly || !currentMemberId) return;
+    if (togglingId === item.id) return;
 
     const completion = getCompletion(item.id);
     const isDone = item.status === "done" || item.status === "verified" || !!completion;
+    const isVerified = item.status === "verified";
+    if (verifyRequired && isVerified) return;
 
     try {
       setTogglingId(item.id);
@@ -60,6 +65,9 @@ export function TaskChecklist({
           item.status === "done" || item.status === "verified" || !!completion;
         const isVerified = item.status === "verified";
         const isToggling = togglingId === item.id;
+        const lockedVerified = Boolean(verifyRequired && isVerified);
+        const canToggle =
+          !readOnly && Boolean(currentMemberId) && !lockedVerified;
         const assignedMember = members.find(
           (m) => m.id === item.assigned_member_id
         );
@@ -67,15 +75,12 @@ export function TaskChecklist({
         return (
           <div
             key={item.id}
-            onClick={() => !readOnly && currentMemberId && handleToggle(item)}
             className={cn(
-              "p-3.5 rounded-xl border transition-all duration-200 select-none",
+              "p-3.5 rounded-xl border transition-all duration-200",
               isDone
                 ? "bg-[var(--color-surface-sunken)] border-[var(--color-border-secondary)]"
-                : "bg-[var(--color-surface)] border-[var(--color-border-primary)] shadow-[var(--shadow-sm)] hover:border-[var(--color-primary)]/30",
-              !readOnly && currentMemberId
-                ? "cursor-pointer active:scale-[0.99]"
-                : "cursor-default",
+                : "bg-[var(--color-surface)] border-[var(--color-border-primary)] shadow-[var(--shadow-sm)]",
+              canToggle && "hover:border-[var(--color-primary)]/30",
               isToggling && "opacity-60"
             )}
           >
@@ -83,15 +88,24 @@ export function TaskChecklist({
               {/* Custom Checkbox */}
               <button
                 type="button"
-                disabled={readOnly || !currentMemberId || isToggling}
-                aria-label={`Mark task ${item.text}`}
+                disabled={!canToggle || isToggling}
+                onClick={() => handleToggle(item)}
+                aria-pressed={isDone}
+                aria-label={
+                  lockedVerified
+                    ? `${item.text} verified by professor`
+                    : isDone
+                    ? `Uncheck ${item.text}`
+                    : `Check ${item.text}`
+                }
                 className={cn(
                   "w-11 h-11 min-w-[44px] min-h-[44px] -m-2 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200",
                   isVerified
                     ? "text-[var(--color-status-verified-fg)]"
                     : isDone
                     ? "text-[var(--color-status-done-fg)]"
-                    : "text-[var(--color-border-input)] hover:text-[var(--color-primary)]"
+                    : "text-[var(--color-border-input)] hover:text-[var(--color-primary)]",
+                  canToggle && "cursor-pointer active:scale-95"
                 )}
               >
                 <span
@@ -147,10 +161,15 @@ export function TaskChecklist({
                     </span>
                   )}
 
-                  {isVerified && !completion && (
+                  {lockedVerified && (
                     <span className="text-[11px] text-[var(--color-status-verified-fg)] font-medium flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3" />
-                      Verified by Professor
+                      Verified — cannot uncheck
+                    </span>
+                  )}
+                  {isDone && !lockedVerified && currentMemberId && (
+                    <span className="text-[11px] text-[var(--color-text-tertiary)]">
+                      Tap the box to uncheck
                     </span>
                   )}
                 </div>
@@ -185,7 +204,7 @@ export function TaskChecklist({
       {!currentMemberId && !readOnly && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-fg)] text-xs font-medium">
           <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>Pick your name above to check off items.</span>
+          <span>Pick or type your name above, then tap a box to check or uncheck.</span>
         </div>
       )}
     </div>

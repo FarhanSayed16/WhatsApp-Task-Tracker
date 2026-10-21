@@ -161,16 +161,36 @@ export default function PublicMemberPage({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ member_id: selectedMember.id }),
       });
+      const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error("Failed to update task state");
+        if (newDoneState && res.status === 409) {
+          mutate();
+          return;
+        }
+        throw new Error(json?.error?.message || "Failed to update task");
       }
 
       mutate();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update item");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to update item");
       mutate();
     }
+  };
+
+  const handleJoinName = async (name: string): Promise<Member> => {
+    const res = await fetch(`/api/t/${token}/join`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json?.data?.id) {
+      throw new Error(json?.error?.message || "Could not save your name");
+    }
+    await mutate();
+    setSelectedMember(json.data as Member);
+    return json.data as Member;
   };
 
   const handleSaveNote = async () => {
@@ -297,7 +317,7 @@ export default function PublicMemberPage({
               {task_list.title}
             </h1>
             <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-              Tap any task to mark it done. Updates sync live with your professor.
+              Tap the box to check or uncheck. Updates sync live with your professor.
             </p>
           </div>
 
@@ -313,7 +333,9 @@ export default function PublicMemberPage({
         <NamePicker
           members={members}
           selectedMemberId={selectedMember?.id || null}
+          selectedMember={selectedMember}
           onSelectMember={(m) => setSelectedMember(m)}
+          onJoinName={isReadOnly ? undefined : handleJoinName}
           disabled={isReadOnly}
         />
 
@@ -342,6 +364,7 @@ export default function PublicMemberPage({
             members={members}
             currentMemberId={selectedMember?.id || null}
             readOnly={isReadOnly}
+            verifyRequired={Boolean(data.verify_required)}
             onToggleItem={handleToggleItem}
             onAddNote={(item) => {
               setNoteModalItem(item);

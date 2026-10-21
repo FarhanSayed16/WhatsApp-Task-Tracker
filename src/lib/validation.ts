@@ -189,6 +189,14 @@ export const completeItemSchema = z.object({
   note: z.string().trim().max(1000).optional().nullable(),
 });
 
+export const joinAsMemberSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Enter at least 2 characters")
+    .max(80, "Name is too long"),
+});
+
 export const reorderItemsSchema = z.object({
   task_list_id: z.string().uuid(),
   ordered_ids: z.array(z.string().uuid()).min(1),
