@@ -6,6 +6,21 @@ export const APP_NAME = "WhatsApp Task Tracker";
 export const DEFAULT_TIMEZONE = "Asia/Kolkata";
 export const APP_URL = process.env.APP_URL || "http://localhost:3000";
 
+/** Public HTTPS origin for Open Graph / WhatsApp link previews. */
+export function getSiteUrl(): string {
+  const raw = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "").replace(
+    /\/$/,
+    ""
+  );
+  if (raw && !/localhost|127\.0\.0\.1/i.test(raw)) return raw;
+  const vercel =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  if (vercel) {
+    return `https://${vercel.replace(/^https?:\/\//, "")}`;
+  }
+  return "https://whats-app-task-tracker.vercel.app";
+}
+
 // Auth & Session
 export const SESSION_COOKIE_NAME = "wt_session";
 export const SESSION_MAX_AGE_DAYS = 30;

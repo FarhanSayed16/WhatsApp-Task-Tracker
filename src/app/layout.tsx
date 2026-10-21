@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { getSiteUrl } from "@/lib/constants";
 
 const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -34,11 +35,15 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "WhatsApp Task Tracker",
   description:
     "Frictionless task tracking for WhatsApp groups with one-tap web checklists and live dashboard",
   manifest: "/manifest.json",
+  applicationName: "TaskTracker",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -46,11 +51,33 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon", sizes: "512x512", type: "image/png" },
       { url: "/icon.svg", type: "image/svg+xml" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+  },
+  openGraph: {
+    type: "website",
+    siteName: "TaskTracker",
+    title: "TaskTracker",
+    description:
+      "WhatsApp group checklists — tap the link, tick tasks, live dashboard.",
+    url: siteUrl,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "TaskTracker — WhatsApp group checklists",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TaskTracker",
+    description:
+      "WhatsApp group checklists — tap the link, tick tasks, live dashboard.",
+    images: ["/opengraph-image"],
   },
 };
 
@@ -62,7 +89,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${plusJakarta.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/apple-icon" />
         {/* Prevent dark flash: default light unless user saved dark */}
         <Script
           id="theme-initializer"
