@@ -50,12 +50,13 @@ export default function GroupsListPage() {
       }
     >
       <div className="space-y-6">
-        {/* Controls: Search & Meta */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div className="rounded-[var(--radius-lg)] glass-card p-3 sm:p-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="w-full sm:max-w-xs">
             <SearchInput
+              value={search}
               placeholder="Search groups..."
               onDebouncedChange={(val) => {
+                if (val === search) return;
                 setSearch(val);
                 setPage(1);
               }}

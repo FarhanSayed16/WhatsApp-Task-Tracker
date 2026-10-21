@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -8,7 +8,6 @@ import { TaskListCard } from "@/components/admin/TaskListCard";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { useSWRFetch } from "@/hooks/useSWRFetch";
 import { useSession } from "@/hooks/useSession";
 import { useToast } from "@/components/ui/Toast";
@@ -23,8 +22,6 @@ import type {
 import {
   AlertTriangle,
   Bell,
-  Check,
-  Clock,
   CopyPlus,
   Download,
   Plus,
@@ -39,7 +36,6 @@ import {
 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/icons/WhatsApp";
 import { ShareSheet } from "@/components/admin/ShareSheet";
-import { formatWaDueTime } from "@/lib/whatsapp";
 
 function getGreeting(name?: string) {
   const hour = new Date().getHours();
@@ -50,6 +46,13 @@ function getGreeting(name?: string) {
     timeGreeting = "Good evening";
   }
   return name ? `${timeGreeting}, ${name}` : timeGreeting;
+}
+
+function periodCopy(filter: "today" | "week" | "month" | "custom") {
+  if (filter === "today") return "today";
+  if (filter === "week") return "this week";
+  if (filter === "month") return "this month";
+  return "this range";
 }
 
 export default function AdminDashboardPage() {
@@ -122,6 +125,27 @@ export default function AdminDashboardPage() {
   const overdueItems = dashboardData?.overdue_items || [];
   const pendingVerifyItems = dashboardData?.pending_verify_items || [];
   const remindersReady = dashboardData?.reminders_ready || [];
+  const kpis = dashboardData?.kpis;
+  const createdCount = kpis?.total_created ?? 0;
+  const doneCount = kpis?.total_done ?? 0;
+  const pendingCount = kpis?.total_pending ?? 0;
+  const completionRate = kpis?.completion_rate ?? 0;
+
+  const { data: activeListsData } = useSWRFetch<any>(
+    "/api/admin/task-lists?status=active&limit=6"
+  );
+  const activeLists = Array.isArray(activeListsData)
+    ? activeListsData
+    : activeListsData?.data || [];
+  const showActiveFallback =
+    dateFilter === "today" && recentLists.length === 0 && activeLists.length > 0;
+  const hasNeedsYou =
+    overdueItems.length > 0 ||
+    pendingVerifyItems.length > 0 ||
+    remindersReady.length > 0;
+  const dashboardLists = (
+    showActiveFallback ? activeLists : recentLists
+  ).slice(0, 5);
 
   const openListReminder = async (row: DashboardReminderReady) => {
     try {
@@ -321,17 +345,24 @@ export default function AdminDashboardPage() {
 
   const displayedOverdueItems = showOverdueExpanded
     ? overdueItems
-    : overdueItems.slice(0, 3);
+    : overdueItems.slice(0, 5);
 
-  const greeting = getGreeting(session?.name);
-  const todayFormatted = formatDate(new Date(), undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const [greeting, setGreeting] = useState(
+    session?.name ? session.name : "Dashboard"
+  );
+  const [todayFormatted, setTodayFormatted] = useState("");
 
-  const hasActionRequired = overdueItems.length > 0 || pendingVerifyItems.length > 0;
+  useEffect(() => {
+    setGreeting(getGreeting(session?.name));
+    setTodayFormatted(
+      formatDate(new Date(), undefined, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    );
+  }, [session?.name]);
 
   return (
     <AdminLayout
@@ -362,507 +393,447 @@ export default function AdminDashboardPage() {
         </div>
       }
     >
-      <div className="space-y-8 pb-12">
-        {/* REMINDERS READY — one-tap WhatsApp (free automation) */}
-        {remindersReady.length > 0 && (
-          <section className="rounded-xl border border-[var(--color-warning)]/35 bg-[var(--color-surface)] shadow-sm overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-[var(--color-border-primary)] flex items-center justify-between bg-[var(--color-warning-bg)]">
-              <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-[var(--color-warning)]" />
-                <h2 className="text-sm font-semibold tracking-tight text-[var(--color-text-primary)]">
-                  Reminders ready
-                </h2>
-              </div>
-              <span className="text-xs font-medium text-[var(--color-text-secondary)]">
-                {remindersReady.length} list{remindersReady.length === 1 ? "" : "s"} · one tap to WhatsApp
-              </span>
-            </div>
-            <div className="p-4 space-y-2">
-              {remindersReady.map((row) => (
-                <div
-                  key={`${row.id}-${row.kind}`}
-                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface)]"
+      <div className="space-y-4 pb-6">
+        <section className="rounded-[var(--radius-lg)] glass-card px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2.5">
+          <p className="text-xs font-semibold text-[var(--color-text-primary)] min-w-0 flex-1">
+            {showActiveFallback
+              ? `No lists dated today · ${activeLists.length} still running`
+              : `${recentLists.length === 1 ? "1 list" : `${recentLists.length} lists`} · ${createdCount} items ${periodCopy(dateFilter)}`}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-full glass-chrome p-1 border border-[var(--color-border-primary)]">
+              {(
+                [
+                  { id: "today", label: "Today" },
+                  { id: "week", label: "Week" },
+                  { id: "month", label: "Month" },
+                  { id: "custom", label: "Custom" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setDateFilter(tab.id)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-semibold transition-all",
+                    dateFilter === tab.id
+                      ? "bg-[var(--color-text-primary)] text-[var(--color-text-inverse)]"
+                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                  )}
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                      <span
-                        className={cn(
-                          "text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded",
-                          row.kind === "overdue"
-                            ? "bg-[var(--color-status-overdue-bg)] text-[var(--color-status-overdue-fg)]"
-                            : "bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-fg)]"
-                        )}
-                      >
-                        {row.kind === "overdue" ? "Overdue" : "Due soon"}
-                      </span>
-                      <span className="text-[11px] text-[var(--color-text-tertiary)] truncate">
-                        {row.group_name}
-                      </span>
-                    </div>
-                    <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
-                      {row.title}
-                    </p>
-                    <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
-                      {row.pending_count} pending · Due {formatWaDueTime(row.due_at) || row.due_at}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="text-[11px] h-8"
-                      onClick={() => snoozeReminder(row.id)}
-                    >
-                      Snooze 4h
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="whatsapp"
-                      className="text-[11px] h-8"
-                      disabled={reminderLoadingId === row.id}
-                      onClick={() => openListReminder(row)}
-                    >
-                      <WhatsAppIcon className="w-3.5 h-3.5 mr-1" />
-                      {reminderLoadingId === row.id ? "Loading…" : "Send reminder"}
-                    </Button>
-                  </div>
-                </div>
+                  {tab.label}
+                </button>
               ))}
-              <p className="text-[11px] text-[var(--color-text-tertiary)] px-1 pt-1">
-                Opens a ready-made WhatsApp message — pick your class group and send. No paid WhatsApp Business API needed.
-              </p>
             </div>
-          </section>
-        )}
-
-        {/* ACTION REQUIRED BANNER (Conditional: only shown when items need attention) */}
-        {hasActionRequired && (
-          <section className="rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-[var(--color-border-primary)] flex items-center justify-between bg-[var(--color-surface-sunken)]">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-status-overdue)] animate-pulse" />
-                <h2 className="text-sm font-semibold tracking-tight text-[var(--color-text-primary)]">
-                  Action required
-                </h2>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-secondary)]">
-                {overdueItems.length > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[var(--color-status-overdue)]">
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    {overdueItems.length} overdue
-                  </span>
-                )}
-                {overdueItems.length > 0 && pendingVerifyItems.length > 0 && <span>·</span>}
-                {pendingVerifyItems.length > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[var(--color-status-done)]">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    {pendingVerifyItems.length} awaiting verification
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="p-5 space-y-5">
-              {/* Overdue items preview */}
-              {overdueItems.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[var(--color-text-secondary)]">
-                      Overdue Items
-                    </span>
-                    {overdueItems.length > 3 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowOverdueExpanded(!showOverdueExpanded)}
-                        className="text-xs font-medium text-[var(--color-primary-text)] hover:underline flex items-center gap-1"
-                      >
-                        {showOverdueExpanded ? (
-                          <>Show less <ChevronUp className="w-3.5 h-3.5" /></>
-                        ) : (
-                          <>View all ({overdueItems.length}) <ChevronDown className="w-3.5 h-3.5" /></>
-                        )}
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {displayedOverdueItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="p-3.5 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface)] shadow-xs flex flex-col justify-between gap-3 hover:border-[var(--color-status-overdue)]/40 transition-all border-l-4 border-l-[var(--color-status-overdue)]"
-                      >
-                        <div>
-                          <div className="flex items-center justify-between gap-2 mb-1.5">
-                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)] truncate">
-                              {item.group_name}
-                            </span>
-                            <span className="text-[10px] font-semibold text-[var(--color-status-overdue)] flex items-center gap-1 shrink-0">
-                              <Clock className="w-3 h-3" />
-                              {item.time_overdue_label}
-                            </span>
-                          </div>
-                          <p className="text-xs font-semibold text-[var(--color-text-primary)] line-clamp-2">
-                            {item.text}
-                          </p>
-                          <p className="text-[11px] text-[var(--color-text-tertiary)] mt-1 truncate">
-                            {item.task_list_title}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-2 border-t border-[var(--color-border-secondary)]">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="flex-1 text-[11px] h-7"
-                            onClick={() => handleQuickTick(item)}
-                            disabled={tickingItemId === item.id}
-                          >
-                            <Check className="w-3 h-3 mr-1 text-[var(--color-primary)]" />
-                            {tickingItemId === item.id ? "Saving…" : "Mark Done"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="whatsapp"
-                            className="flex-1 text-[11px] h-7"
-                            onClick={() => handleQuickRemind(item)}
-                          >
-                            <WhatsAppIcon className="w-3.5 h-3.5 mr-1" />
-                            Remind
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Pending verification items */}
-              {pendingVerifyItems.length > 0 && (
-                <div className="space-y-3 pt-2">
-                  <span className="text-xs font-semibold text-[var(--color-text-secondary)]">
-                    Awaiting Verification
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {pendingVerifyItems.slice(0, 6).map((item) => (
-                      <div
-                        key={item.id}
-                        className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface)] p-3 space-y-2 border-l-4 border-l-[var(--color-status-done)]"
-                      >
-                        <p className="text-xs font-semibold text-[var(--color-text-primary)] line-clamp-2">
-                          {item.text}
-                        </p>
-                        <p className="text-[11px] text-[var(--color-text-tertiary)] truncate">
-                          {item.group_name} · {item.task_list_title}
-                          {item.completed_by_name ? ` · by ${item.completed_by_name}` : ""}
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          className="w-full text-[11px] h-7"
-                          onClick={() => handleQuickVerify(item)}
-                          disabled={tickingItemId === item.id}
-                        >
-                          <ShieldCheck className="w-3 h-3 mr-1" />
-                          {tickingItemId === item.id ? "Verifying…" : "Confirm & Verify"}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* TODAY'S TASK LISTS (with subtle inline filter tabs) */}
-        <section className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-[var(--color-text-primary)]">
-                  {dateFilter === "today" ? "Today's Task Lists" : "Task Lists"}
-                </h2>
-                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]">
-                  {recentLists.length}
-                </span>
-              </div>
-              <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5">
-                Active checklists for student dispatch & tracking
-              </p>
-            </div>
-
-            {/* Inline subtle filter controls */}
-            <div className="flex items-center gap-2">
-              <div className="inline-flex rounded-lg bg-[var(--color-surface-sunken)] p-1 border border-[var(--color-border-primary)]">
-                {(
-                  [
-                    { id: "today", label: "Today" },
-                    { id: "week", label: "Week" },
-                    { id: "month", label: "Month" },
-                    { id: "custom", label: "Custom" },
-                  ] as const
-                ).map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setDateFilter(tab.id)}
-                    className={cn(
-                      "px-3 py-1 rounded-md text-xs font-medium transition-all",
-                      dateFilter === tab.id
-                        ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-xs font-semibold"
-                        : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              {allGroups.length > 0 && (
-                <select
-                  value={selectedGroupId}
-                  onChange={(e) => setSelectedGroupId(e.target.value)}
-                  className="rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-primary)] text-xs px-2.5 py-1.5 text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
-                  title="Filter by group"
-                >
-                  <option value="">All Groups</option>
-                  {allGroups.map((g: any) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              <Link
-                href="/admin/tasks"
-                className="text-xs font-medium text-[var(--color-primary-text)] hover:underline flex items-center gap-0.5 ml-1 shrink-0"
+            {allGroups.length > 0 && (
+              <select
+                value={selectedGroupId}
+                onChange={(e) => setSelectedGroupId(e.target.value)}
+                className="field-control h-9 py-1 rounded-full"
+                title="Filter by group"
               >
-                View all <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
+                <option value="">All groups</option>
+                {allGroups.map((g: any) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
-
-          {/* Custom Date Inputs if active */}
           {dateFilter === "custom" && (
-            <div className="flex items-center gap-2 text-xs pt-1">
-              <span className="text-[var(--color-text-tertiary)]">Range:</span>
+            <div className="flex items-center gap-2 text-xs w-full lg:w-auto">
               <input
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="px-2.5 py-1 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)]"
+                className="field-control h-9 py-1"
               />
               <span className="text-[var(--color-text-tertiary)]">to</span>
               <input
                 type="date"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="px-2.5 py-1 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)]"
+                className="field-control h-9 py-1"
               />
             </div>
           )}
-
-          {/* List Cards Grid */}
-          {isLoading && recentLists.length === 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} variant="card" className="h-60" />
-              ))}
-            </div>
-          ) : recentLists.length === 0 ? (
-            <EmptyState
-              icon={<ClipboardList className="w-8 h-8 text-[var(--color-text-tertiary)]" />}
-              title="No task lists for today yet"
-              description="Create a task checklist and share it directly with your students on WhatsApp, or duplicate yesterday's lists."
-              actionLabel="+ Create Task List"
-              onAction={() => router.push("/admin/tasks/new")}
-              secondaryActionLabel="Duplicate Yesterday"
-              onSecondaryAction={handleDuplicateYesterday}
-            />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {recentLists.map((list) => (
-                <TaskListCard
-                  key={list.id}
-                  id={list.id}
-                  token={list.token}
-                  title={list.title}
-                  groupName={list.group_name}
-                  listDate={list.list_date}
-                  dueAt={list.due_at}
-                  status={list.status || "active"}
-                  totalItems={list.total_items}
-                  completedItems={list.completed_items}
-                  recurrence={
-                    list.recurrence as {
-                      freq?: string;
-                      auto_generated?: boolean;
-                    } | null
-                  }
-                  onDelete={handleDeleteList}
-                />
-              ))}
-            </div>
-          )}
         </section>
 
-        {/* GROUP SNAPSHOT */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
+        <section className="grid grid-cols-2 xl:grid-cols-4 gap-2">
+          <div className="ink-card px-3.5 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">
+              Completion
+            </p>
+            <p className="text-2xl font-bold text-white tracking-tight mt-1">
+              {isLoading ? "—" : `${completionRate}%`}
+            </p>
+            <p className="text-[11px] text-white/50 mt-0.5">
+              {doneCount}/{createdCount} {periodCopy(dateFilter)}
+            </p>
+          </div>
+          <div className="glass-card px-3.5 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]">
+              Pending
+            </p>
+            <p className="text-2xl font-bold text-[var(--color-text-primary)] tracking-tight mt-1">
+              {isLoading ? "—" : pendingCount}
+            </p>
+            <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
+              Open items
+            </p>
+          </div>
+          <a href="#needs-you" className="glass-card px-3.5 py-3 hover:border-[var(--color-status-overdue-fg)]/30">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--color-status-overdue-fg)]">
+              Overdue
+            </p>
+            <p className="text-2xl font-bold text-[var(--color-text-primary)] tracking-tight mt-1">
+              {isLoading ? "—" : overdueItems.length}
+            </p>
+            <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
+              Needs a nudge
+            </p>
+          </a>
+          <a href="#needs-you" className="glass-card px-3.5 py-3 hover:border-[var(--color-status-done-fg)]/30">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--color-status-done-fg)]">
+              To verify
+            </p>
+            <p className="text-2xl font-bold text-[var(--color-text-primary)] tracking-tight mt-1">
+              {isLoading ? "—" : pendingVerifyItems.length}
+            </p>
+            <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
+              {remindersReady.length === 1
+                ? "1 reminder"
+                : `${remindersReady.length} reminders`}
+            </p>
+          </a>
+        </section>
+
+        {hasNeedsYou && (
+          <section id="needs-you" className="rounded-[var(--radius-lg)] glass-card overflow-hidden">
+            <div className="px-3.5 py-2.5 border-b border-[var(--color-border-primary)] flex items-center justify-between gap-3">
+              <h2 className="text-sm font-bold text-[var(--color-text-primary)]">Needs you</h2>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--color-status-overdue-bg)] text-[var(--color-status-overdue-fg)]">
+                {overdueItems.length + pendingVerifyItems.length + remindersReady.length} open
+              </span>
+            </div>
+            <div className="divide-y divide-[var(--color-border-secondary)]">
+              {remindersReady.map((row) => (
+                <div
+                  key={`${row.id}-${row.kind}`}
+                  className="flex items-center gap-3 px-3.5 py-2"
+                >
+                  <Bell className="w-3.5 h-3.5 text-[var(--color-warning)] shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                      {row.title}
+                    </p>
+                    <p className="text-[11px] text-[var(--color-text-tertiary)] truncate">
+                      {row.kind === "overdue" ? "Overdue" : "Due soon"} · {row.group_name} · {row.pending_count} pending
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-[11px] h-7 px-2 hidden sm:inline-flex"
+                    onClick={() => snoozeReminder(row.id)}
+                  >
+                    Snooze
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="whatsapp"
+                    className="text-[11px] h-7 px-2.5"
+                    disabled={reminderLoadingId === row.id}
+                    onClick={() => openListReminder(row)}
+                  >
+                    <WhatsAppIcon className="w-3.5 h-3.5" />
+                    {reminderLoadingId === row.id ? "…" : "Remind"}
+                  </Button>
+                </div>
+              ))}
+              {displayedOverdueItems.map((item) => (
+                <div key={item.id} className="flex items-center gap-3 px-3.5 py-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-[var(--color-status-overdue)] shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                      {item.text}
+                    </p>
+                    <p className="text-[11px] text-[var(--color-text-tertiary)] truncate">
+                      {item.group_name} · {item.task_list_title} · {item.time_overdue_label}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="text-[11px] h-7 px-2 hidden sm:inline-flex"
+                    onClick={() => handleQuickTick(item)}
+                    disabled={tickingItemId === item.id}
+                  >
+                    {tickingItemId === item.id ? "…" : "Done"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="whatsapp"
+                    className="text-[11px] h-7 px-2.5"
+                    onClick={() => handleQuickRemind(item)}
+                  >
+                    <WhatsAppIcon className="w-3.5 h-3.5" />
+                    Remind
+                  </Button>
+                </div>
+              ))}
+              {overdueItems.length > 3 && (
+                <button
+                  type="button"
+                  onClick={() => setShowOverdueExpanded(!showOverdueExpanded)}
+                  className="w-full px-3.5 py-1.5 text-[11px] font-semibold text-[var(--color-primary-text)] hover:bg-[var(--color-surface-sunken)]/50 flex items-center justify-center gap-1"
+                >
+                  {showOverdueExpanded ? (
+                    <>Show less <ChevronUp className="w-3.5 h-3.5" /></>
+                  ) : (
+                    <>View all {overdueItems.length} overdue <ChevronDown className="w-3.5 h-3.5" /></>
+                  )}
+                </button>
+              )}
+              {pendingVerifyItems.slice(0, 4).map((item) => (
+                <div key={item.id} className="flex items-center gap-3 px-3.5 py-2">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[var(--color-status-done)] shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                      {item.text}
+                    </p>
+                    <p className="text-[11px] text-[var(--color-text-tertiary)] truncate">
+                      {item.group_name} · {item.task_list_title}
+                      {item.completed_by_name ? ` · ${item.completed_by_name}` : ""}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    className="text-[11px] h-7 px-2.5"
+                    onClick={() => handleQuickVerify(item)}
+                    disabled={tickingItemId === item.id}
+                  >
+                    {tickingItemId === item.id ? "…" : "Verify"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+          <section className="lg:col-span-3 rounded-[var(--radius-lg)] glass-card overflow-hidden">
+            <div className="px-3.5 py-2.5 border-b border-[var(--color-border-primary)] flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-[var(--color-text-primary)]">
+                    {showActiveFallback
+                      ? "Still active"
+                      : dateFilter === "today"
+                      ? "Today's lists"
+                      : "Lists in this period"}
+                  </h2>
+                  <span className="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]">
+                    {showActiveFallback ? activeLists.length : recentLists.length}
+                  </span>
+                </div>
+                {showActiveFallback && (
+                  <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5 truncate">
+                    Nothing dated today — share these again, or create one for today.
+                  </p>
+                )}
+              </div>
+              <Link
+                href="/admin/tasks"
+                className="text-[11px] font-semibold text-[var(--color-primary-text)] hover:underline flex items-center gap-0.5 shrink-0"
+              >
+                All lists <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {showActiveFallback && (
+              <div className="px-3.5 py-2 border-b border-[var(--color-border-primary)] flex items-center gap-2 bg-[var(--color-surface-sunken)]/40">
+                <p className="text-[11px] text-[var(--color-text-secondary)] min-w-0 flex-1 truncate">
+                  No checklist dated today
+                </p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 px-2.5 text-[11px]"
+                  onClick={handleDuplicateYesterday}
+                  disabled={duplicatingYesterday}
+                >
+                  <CopyPlus className="w-3.5 h-3.5" />
+                  {duplicatingYesterday ? "…" : "Duplicate"}
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7 px-2.5 text-[11px]"
+                  onClick={() => router.push("/admin/tasks/new")}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Create
+                </Button>
+              </div>
+            )}
+
+            {isLoading && recentLists.length === 0 && !showActiveFallback ? (
+              <div className="p-3 space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                ))}
+              </div>
+            ) : dashboardLists.length === 0 ? (
+              <div className="px-3.5 py-8 text-center">
+                <ClipboardList className="w-7 h-7 mx-auto text-[var(--color-text-tertiary)] mb-2" />
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                  {dateFilter === "today" ? "Nothing dispatched today" : "No lists in this period"}
+                </p>
+                <p className="text-[11px] text-[var(--color-text-tertiary)] mt-1 mb-3">
+                  Create a checklist and share it to WhatsApp.
+                </p>
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-8"
+                    onClick={handleDuplicateYesterday}
+                  >
+                    Duplicate yesterday
+                  </Button>
+                  <Button size="sm" className="h-8" onClick={() => router.push("/admin/tasks/new")}>
+                    Create list
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-[var(--color-border-secondary)]">
+                {dashboardLists.map((list) => (
+                  <TaskListCard
+                    key={list.id}
+                    compact
+                    id={list.id}
+                    token={list.token}
+                    title={list.title}
+                    groupName={list.group_name}
+                    listDate={list.list_date}
+                    dueAt={list.due_at}
+                    status={list.status || "active"}
+                    totalItems={list.total_items}
+                    completedItems={list.completed_items}
+                    recurrence={list.recurrence}
+                    onDelete={handleDeleteList}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <aside className="lg:col-span-2 rounded-[var(--radius-lg)] glass-card overflow-hidden">
+            <div className="px-3.5 py-2.5 border-b border-[var(--color-border-primary)] flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-[var(--color-text-primary)]">
-                  Group Snapshot
-                </h2>
-                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]">
+                <h2 className="text-sm font-bold text-[var(--color-text-primary)]">Groups</h2>
+                <span className="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]">
                   {groupStats.length}
                 </span>
               </div>
-              <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5">
-                Current progress and activity across your student rosters
-              </p>
+              <Link
+                href="/admin/groups"
+                className="text-[11px] font-semibold text-[var(--color-primary-text)] hover:underline flex items-center gap-0.5"
+              >
+                Manage <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
 
-            <Link
-              href="/admin/groups"
-              className="text-xs font-medium text-[var(--color-primary-text)] hover:underline flex items-center gap-0.5"
-            >
-              Manage groups <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {isLoading && groupStats.length === 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} variant="card" className="h-32" />
-              ))}
-            </div>
-          ) : groupStats.length === 0 ? (
-            <EmptyState
-              icon={<Users className="w-8 h-8 text-[var(--color-text-tertiary)]" />}
-              title="No groups found"
-              description="Create student groups to organize tasks and track team submissions."
-              actionLabel="+ Create Group"
-              onAction={() => router.push("/admin/groups/new")}
-            />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {groupStats.map((grp) => (
-                <Link
-                  key={grp.id}
-                  href={`/admin/groups/${grp.id}`}
-                  className="group block"
+            {isLoading && groupStats.length === 0 ? (
+              <div className="p-3 space-y-2">
+                {[1, 2].map((i) => (
+                  <Skeleton key={i} className="h-11 w-full rounded-lg" />
+                ))}
+              </div>
+            ) : groupStats.length === 0 ? (
+              <div className="px-3.5 py-6 text-center">
+                <Users className="w-6 h-6 mx-auto text-[var(--color-text-tertiary)] mb-2" />
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">No groups yet</p>
+                <Button
+                  size="sm"
+                  className="h-8 mt-2"
+                  onClick={() => router.push("/admin/groups/new")}
                 >
-                  <div className="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/40 hover:shadow-sm transition-all flex flex-col justify-between h-full space-y-3">
-                    <div>
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <h3 className="font-semibold text-sm text-[var(--color-text-primary)] group-hover:text-[var(--color-primary)] transition-colors truncate">
-                          {grp.name}
-                        </h3>
-                        <span className="text-[11px] font-medium text-[var(--color-text-tertiary)] shrink-0 flex items-center gap-1">
-                          <Users className="w-3 h-3" />
-                          {grp.members_total}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 mt-2">
-                        <ProgressBar
-                          value={grp.done}
-                          max={Math.max(grp.created, 1)}
-                          showLabel={false}
-                          size="sm"
-                          animateColor={true}
-                        />
-                        <div className="flex justify-between items-center text-[11px] text-[var(--color-text-secondary)]">
-                          <span>{grp.done} of {grp.created} done</span>
-                          <span className="font-semibold text-[var(--color-text-primary)]">
-                            {grp.completion_rate}%
-                          </span>
-                        </div>
-                      </div>
+                  Create group
+                </Button>
+              </div>
+            ) : (
+              <div className="divide-y divide-[var(--color-border-secondary)]">
+                {groupStats.slice(0, 5).map((grp) => (
+                  <Link
+                    key={grp.id}
+                    href={`/admin/groups/${grp.id}`}
+                    className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-[var(--color-surface-sunken)]/60 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                        {grp.name}
+                      </p>
+                      <p className="text-[11px] text-[var(--color-text-tertiary)] truncate mt-0.5">
+                        {grp.members_opened}/{grp.members_total} opened
+                        {grp.overdue > 0
+                          ? ` · ${grp.overdue} overdue`
+                          : grp.pending > 0
+                          ? ` · ${grp.pending} pending`
+                          : ""}
+                      </p>
                     </div>
-
-                    <div className="pt-2 border-t border-[var(--color-border-secondary)] flex items-center justify-between text-[11px] text-[var(--color-text-tertiary)]">
-                      <span>{grp.members_opened} of {grp.members_total} opened links</span>
-                      <span className="text-[var(--color-primary-text)] font-medium group-hover:translate-x-0.5 transition-transform flex items-center">
-                        Details <ChevronRight className="w-3 h-3 ml-0.5" />
-                      </span>
+                    <div className="w-14 shrink-0 hidden sm:block">
+                      <ProgressBar
+                        value={grp.done}
+                        max={Math.max(grp.created, 1)}
+                        showLabel={false}
+                        size="sm"
+                        animateColor
+                      />
                     </div>
-                  </div>
-                </Link>
-              ))}
+                    <span className="text-[11px] font-bold text-[var(--color-text-secondary)] w-8 text-right tabular-nums">
+                      {grp.completion_rate}%
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <div className="border-t border-[var(--color-border-primary)] px-2 py-2 grid grid-cols-3 gap-1">
+              <button
+                type="button"
+                onClick={handleDuplicateYesterday}
+                disabled={duplicatingYesterday}
+                className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-[11px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
+              >
+                <CopyPlus className="w-4 h-4" />
+                {duplicatingYesterday ? "…" : "Duplicate"}
+              </button>
+              <Link
+                href="/admin/reports"
+                className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-[11px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)]"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Reports
+              </Link>
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                disabled={exportingCsv}
+                className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-[11px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                {exportingCsv ? "…" : "Export"}
+              </button>
             </div>
-          )}
-        </section>
-
-        {/* QUICK ACTIONS ROW (Bottom) */}
-        <section className="space-y-3 pt-2">
-          <h2 className="text-sm font-semibold tracking-tight text-[var(--color-text-tertiary)]">
-            Quick actions
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Duplicate Yesterday */}
-            <button
-              type="button"
-              onClick={handleDuplicateYesterday}
-              disabled={duplicatingYesterday}
-              className="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-sunken)] hover:border-[var(--color-primary)]/40 transition-all text-left flex items-start gap-3 disabled:opacity-50"
-            >
-              <div className="p-2.5 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary)] shrink-0">
-                <CopyPlus className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-[var(--color-text-primary)]">
-                  {duplicatingYesterday ? "Duplicating…" : "Duplicate Yesterday"}
-                </h3>
-                <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
-                  Clone yesterday’s lists into today as new drafts
-                </p>
-              </div>
-            </button>
-
-            {/* Reports */}
-            <Link
-              href="/admin/reports"
-              className="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-sunken)] hover:border-[var(--color-primary)]/40 transition-all text-left flex items-start gap-3"
-            >
-              <div className="p-2.5 rounded-lg bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] shrink-0">
-                <BarChart3 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-[var(--color-text-primary)]">
-                  View Reports
-                </h3>
-                <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
-                  Completion analytics & PDF export
-                </p>
-              </div>
-            </Link>
-
-            {/* Export CSV */}
-            <button
-              type="button"
-              onClick={handleExportCsv}
-              disabled={exportingCsv}
-              className="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-sunken)] hover:border-[var(--color-primary)]/40 transition-all text-left flex items-start gap-3 disabled:opacity-50"
-            >
-              <div className="p-2.5 rounded-lg bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] shrink-0">
-                <Download className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-[var(--color-text-primary)]">
-                  {exportingCsv ? "Exporting…" : "Export CSV"}
-                </h3>
-                <p className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">
-                  Download spreadsheet records for selected period
-                </p>
-              </div>
-            </button>
-          </div>
-        </section>
+          </aside>
+        </div>
       </div>
 
       {reminderSheetData && (
