@@ -49,7 +49,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             disabled={disabled}
             className={cn(
-              "w-full rounded-lg bg-[var(--color-surface)] border text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] text-sm transition-all duration-150 h-11",
+              "w-full rounded-[var(--radius-md)] bg-[var(--color-surface-solid)]/70 border text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] text-sm transition-all duration-150 h-11",
               "focus:outline-none focus-visible:ring-2",
               "disabled:opacity-50 disabled:cursor-not-allowed",
               leftIcon ? "pl-10" : "pl-3.5",

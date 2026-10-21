@@ -1,4 +1,4 @@
-import React, { useId } from "react";
+import React from "react";
 import { cn } from "@/lib/utils";
 
 export interface LogoProps {
@@ -20,9 +20,8 @@ export function Logo({
   variant = "mark",
   className,
 }: LogoProps) {
-  const reactId = useId().replace(/:/g, "");
-  const gradientId = `logo-grad-${reactId}`;
-  const shadowId = `logo-shadow-${reactId}`;
+  const gradientId = `logo-grad-${size}-${variant}`;
+  const shadowId = `logo-shadow-${size}-${variant}`;
 
   // Dimension mappings
   const dimensions = {

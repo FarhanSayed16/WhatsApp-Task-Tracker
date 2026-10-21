@@ -35,7 +35,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-[var(--color-border-primary)] bg-[var(--color-surface-sunken)]/50",
+        "flex flex-col items-center justify-center text-center rounded-[var(--radius-xl)] border border-dashed border-[var(--color-border-primary)] glass-card bg-[var(--color-surface-sunken)]",
         compact ? "p-6" : "p-8 sm:p-12",
         className
       )}
@@ -59,7 +59,7 @@ export function EmptyState({
           {steps.map((step, i) => (
             <div
               key={i}
-              className="flex items-start gap-3 p-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-secondary)]"
+              className="flex items-start gap-3 p-3 rounded-[var(--radius-md)] bg-[var(--color-surface-solid)]/70 border border-[var(--color-border-secondary)]"
             >
               <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary-text)] flex items-center justify-center shrink-0 text-sm">
                 {step.icon}

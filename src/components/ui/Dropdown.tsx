@@ -51,7 +51,7 @@ export const Dropdown = React.forwardRef<HTMLSelectElement, DropdownProps>(
             ref={ref}
             disabled={disabled}
             className={cn(
-              "w-full appearance-none rounded-lg bg-[var(--color-surface)] border text-[var(--color-text-primary)] text-sm transition-all duration-150 h-11",
+              "w-full appearance-none rounded-[var(--radius-md)] bg-[var(--color-surface-solid)]/70 border text-[var(--color-text-primary)] text-sm transition-all duration-150 h-11",
               "focus:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed pl-3.5 pr-10 cursor-pointer",
               error
                 ? "border-[var(--color-danger)] focus-visible:ring-[var(--color-danger)]/20"

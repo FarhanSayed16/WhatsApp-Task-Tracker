@@ -102,7 +102,7 @@ export function Modal({
     >
       {/* Overlay — lighter for friendlier feel */}
       <div
-        className="fixed inset-0 bg-black/40 transition-opacity"
+        className="fixed inset-0 bg-[#14241C]/35 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -111,7 +111,7 @@ export function Modal({
       <div
         ref={modalRef}
         className={cn(
-          "relative w-full rounded-t-2xl sm:rounded-xl bg-[var(--color-surface-overlay)] border-t sm:border border-[var(--color-border-primary)] shadow-[var(--shadow-float)] overflow-hidden z-10 transition-all transform animate-slide-up sm:animate-scale-in my-0 sm:my-8 max-h-[92vh] flex flex-col",
+          "relative w-full rounded-t-3xl sm:rounded-[var(--radius-xl)] glass-panel bg-[var(--color-surface-overlay)] border-t sm:border border-[var(--color-border-primary)] shadow-[var(--shadow-float)] overflow-hidden z-10 transition-all transform animate-slide-up sm:animate-scale-in my-0 sm:my-8 max-h-[92vh] flex flex-col",
           sizeClasses
         )}
       >

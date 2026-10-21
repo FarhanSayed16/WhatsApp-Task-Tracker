@@ -22,13 +22,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
+      "inline-flex items-center justify-center font-semibold rounded-full transition-all duration-150 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none tracking-tight";
 
     const variantStyles = {
       primary:
         "bg-[var(--color-primary)] text-[var(--color-text-inverse)] hover:bg-[var(--color-primary-hover)] shadow-sm focus-visible:ring-[var(--color-primary)]",
       secondary:
-        "bg-[var(--color-surface)] text-[var(--color-text-primary)] border border-[var(--color-border-primary)] hover:bg-[var(--color-surface-sunken)] focus-visible:ring-[var(--color-border-focus)]",
+        "glass-chrome text-[var(--color-text-primary)] border border-[var(--color-border-primary)] hover:bg-[var(--color-surface-raised)] focus-visible:ring-[var(--color-border-focus)]",
       danger:
         "bg-transparent text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] border border-transparent hover:border-[var(--color-danger)]/20 focus-visible:ring-[var(--color-danger)]",
       ghost:
