@@ -516,13 +516,14 @@ export function ShareSheet({
       /* clipboard write may fail if document focus lost */
     }
 
-    const webOrMe = useWeb ? waWebLink(clean, phone) : waLink(clean, phone);
+    const numbered = Boolean(phone);
+    // Desktop `whatsapp://` only focuses the laptop app and drops the number.
+    // Numbered chats must use https so the recipient is in the URL.
+    const link = useWeb || numbered ? waWebLink(clean, phone) : waLink(clean, phone);
 
-    if (useWeb) {
-      window.open(webOrMe, "_blank");
+    if (useWeb || numbered) {
+      window.open(link, "_blank");
     } else {
-      // Native protocol skips api.whatsapp.com "Open app". If the OS
-      // does not handle it, fall back to wa.me after a short beat.
       const appUrl = waAppLink(clean, phone);
       const leftAt = Date.now();
       const probe = document.createElement("a");
@@ -531,7 +532,7 @@ export function ShareSheet({
       probe.click();
       window.setTimeout(() => {
         if (document.hasFocus() && Date.now() - leftAt < 1800) {
-          window.open(webOrMe, "_blank");
+          window.open(link, "_blank");
         }
       }, 900);
     }
@@ -540,10 +541,10 @@ export function ShareSheet({
     await logShareEvent(channel, memberId);
 
     toast.success(
-      useWeb
+      phone
+        ? `Opening chat with +${String(phone).replace(/[^\d]/g, "")}. Sender is whoever is logged into WhatsApp here — scan the QR with the other phone to send from that number.`
+        : useWeb
         ? "WhatsApp Web opened. Message is copied — pick the chat, then Send."
-        : phone
-        ? "WhatsApp opened on that chat. Tap Send."
         : "Message copied. Fastest: paste into the open group (Ctrl+V), then Enter."
     );
   };
@@ -616,13 +617,19 @@ export function ShareSheet({
               type="button"
               variant="whatsapp"
               size="lg"
-              onClick={() => handleOpenWhatsApp(targetPhone, undefined, false)}
+              onClick={() =>
+                handleOpenWhatsApp(
+                  targetPhone,
+                  undefined,
+                  Boolean(targetPhone)
+                )
+              }
               disabled={urlStats.isExceeded}
               className="w-full text-xs sm:text-sm font-bold py-2.5 flex items-center justify-center gap-2 shadow-sm"
             >
               <WhatsAppIcon className="w-4 h-4 mr-1 shrink-0" />
               {sendTarget === "saved_number" && defaultWaPhone
-                ? `WhatsApp (+${defaultWaPhone})`
+                ? `Chat with +${defaultWaPhone}`
                 : "Open WhatsApp"}
             </Button>
 
@@ -1205,7 +1212,7 @@ export function ShareSheet({
               </span>
               <span className="text-[11px] text-[var(--color-text-tertiary)] leading-snug block mt-0.5">
                 {defaultWaPhone
-                  ? "1:1 chat only — not a group. Change under Settings."
+                  ? "Opens a chat WITH this number. Your laptop WhatsApp is still the sender unless you scan Web with the other phone."
                   : "Optional — set a number in Settings for personal testing."}
               </span>
             </button>

@@ -33,11 +33,12 @@ export function waAppLink(text: string, phone?: string | null): string {
  */
 export function waWebLink(text: string, phone?: string | null): string {
   const cleanPhone = phone ? phone.replace(/[^0-9]/g, "") : "";
-  const base = cleanPhone
-    ? `https://web.whatsapp.com/send?phone=${cleanPhone}`
-    : "https://web.whatsapp.com/send";
   const safe = sanitizeWhatsAppText(text);
-  return `${base}?text=${encodeURIComponent(safe)}`;
+  const textQ = `text=${encodeURIComponent(safe)}`;
+  if (cleanPhone) {
+    return `https://web.whatsapp.com/send?phone=${cleanPhone}&${textQ}&type=phone_number&app_absent=0`;
+  }
+  return `https://web.whatsapp.com/send?${textQ}`;
 }
 
 export function getEncodedUrlLength(text: string, phone?: string | null): number {
